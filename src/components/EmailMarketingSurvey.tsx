@@ -51,7 +51,7 @@ const SurveyButton = ({
 }: { 
   children: React.ReactNode; 
   onClick: () => void; 
-  variant?: 'primary' | 'option' | 'secondary';
+  variant?: 'primary' | 'option' | 'secondary' | 'orange';
   disabled?: boolean;
   className?: string;
 }) => {
@@ -60,7 +60,8 @@ const SurveyButton = ({
   const variants = {
     primary: "bg-gradient-primary text-primary-foreground hover:shadow-glow hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed",
     option: "bg-secondary/50 text-secondary-foreground border border-border/50 hover:bg-secondary hover:border-primary/30 hover:shadow-elegant hover:scale-102",
-    secondary: "bg-muted text-muted-foreground hover:bg-muted/80"
+    secondary: "bg-muted text-muted-foreground hover:bg-muted/80",
+    orange: "bg-orange text-orange-foreground hover:bg-orange/90 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
   };
 
   return (
@@ -526,8 +527,8 @@ export const EmailMarketingSurvey = () => {
                   Ready to transform your email marketing? Your personalized plan has been sent to {surveyData.email}!
                 </p>
                 <a href="https://mailift.com/calendario" target="_blank" rel="noopener noreferrer">
-                  <SurveyButton variant="primary" onClick={() => {}}>
-                    Book Your Strategy Call →
+                  <SurveyButton variant="orange" onClick={() => {}}>
+                    Vai al prossimo step
                   </SurveyButton>
                 </a>
               </div>
