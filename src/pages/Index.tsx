@@ -1,4 +1,4 @@
-import { EmailMarketingSurvey } from "@/components/EmailMarketingSurvey";
+import EmailMarketingSurvey from "@/components/EmailMarketingSurvey";
 
 const Index = () => {
   return <EmailMarketingSurvey />;
