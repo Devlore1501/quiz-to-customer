@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
+import { toast } from '@/hooks/use-toast';
 
 interface FormData {
   sector: string;
@@ -22,6 +23,7 @@ interface FormData {
 
 const EmailMarketingSurvey = () => {
   const [currentStep, setCurrentStep] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     sector: '',
     monthlyRevenue: '',
@@ -184,47 +186,186 @@ const EmailMarketingSurvey = () => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = () => {
-    console.log('Form submitted:', formData);
-    // Here you would typically send the data to your backend
+  const calculateBusinessReport = () => {
+    // Calcoli basati sui dati inseriti
+    const monthlyRevenue = parseFloat(formData.monthlyRevenue.split('-')[0].replace('k', '000')) || 0;
+    const emailPercent = parseFloat(formData.emailRevenuePercentage.split('-')[0]) || 0;
+    
+    const currentEmailRevenue = monthlyRevenue * (emailPercent / 100);
+    const potentialEmailRevenue = monthlyRevenue * 0.25; // 25% benchmark
+    const lostPotential = potentialEmailRevenue - currentEmailRevenue;
+    
+    return {
+      currentEmailRevenue: currentEmailRevenue * 1000,
+      potentialEmailRevenue: potentialEmailRevenue * 1000,
+      lostPotential: lostPotential * 1000,
+      yearlyLost: lostPotential * 12 * 1000
+    };
+  };
+
+  const handleSubmit = async () => {
+    if (!formData.acceptTerms) {
+      toast({
+        title: "Errore",
+        description: "Devi accettare i termini e condizioni per continuare",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    
+    try {
+      // Invia i dati al webhook
+      const dataToSend = {
+        ...formData,
+        timestamp: new Date().toISOString(),
+        source: 'business-analysis-tool',
+        report: calculateBusinessReport()
+      };
+
+      await fetch('https://hook.eu1.make.com/hi1xrv57zvt5kilh1fye9130gb132vx3', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        mode: 'no-cors',
+        body: JSON.stringify(dataToSend)
+      });
+
+      toast({
+        title: "Dati inviati con successo!",
+        description: "Riceverai il report personalizzato via WhatsApp a breve.",
+      });
+
+      // Mostra il report finale
+      setCurrentStep(steps.length);
+      
+    } catch (error) {
+      toast({
+        title: "Errore",
+        description: "Si è verificato un errore. Riprova più tardi.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const currentStepData = steps[currentStep];
   const isLastStep = currentStep === steps.length - 1;
 
+  // Report finale
+  if (currentStep === steps.length) {
+    const report = calculateBusinessReport();
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
+        <div className="w-full max-w-4xl animate-fade-in">
+          <div className="bg-slate-800 p-8 rounded-xl shadow-2xl border border-orange/20">
+            <div className="text-center mb-8">
+              <h1 className="text-3xl font-bold text-orange mb-4">
+                ✨ Report Generato con Successo!
+              </h1>
+              <p className="text-slate-300">
+                I tuoi dati sono stati analizzati. Ecco un'anteprima del potenziale:
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+              <div className="bg-slate-700 p-6 rounded-lg hover-scale">
+                <h3 className="text-orange font-semibold mb-2">💰 Fatturato Email Attuale</h3>
+                <p className="text-2xl font-bold text-white">€{report.currentEmailRevenue.toLocaleString()}/mese</p>
+              </div>
+              
+              <div className="bg-slate-700 p-6 rounded-lg hover-scale">
+                <h3 className="text-orange font-semibold mb-2">🎯 Potenziale Ottimizzato</h3>
+                <p className="text-2xl font-bold text-white">€{report.potentialEmailRevenue.toLocaleString()}/mese</p>
+              </div>
+              
+              <div className="bg-gradient-to-r from-red-600 to-red-500 p-6 rounded-lg hover-scale">
+                <h3 className="text-white font-semibold mb-2">⚠️ Potenziale Perso</h3>
+                <p className="text-2xl font-bold text-white">€{report.lostPotential.toLocaleString()}/mese</p>
+              </div>
+              
+              <div className="bg-gradient-to-r from-orange to-orange-hover p-6 rounded-lg hover-scale">
+                <h3 className="text-white font-semibold mb-2">📈 Potenziale Annuo</h3>
+                <p className="text-2xl font-bold text-white">€{report.yearlyLost.toLocaleString()}/anno</p>
+              </div>
+            </div>
+
+            <div className="text-center">
+              <p className="text-slate-300 mb-4">
+                📱 Riceverai il report completo con strategie dettagliate su WhatsApp al numero: <span className="text-orange font-semibold">{formData.phone}</span>
+              </p>
+              <Button 
+                onClick={() => window.location.reload()} 
+                className="bg-orange hover:bg-orange-hover text-white px-8 py-3 rounded-lg font-medium hover-scale"
+              >
+                Fai un'altra analisi
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-      <div className="w-full max-w-2xl">
+      <div className="w-full max-w-2xl animate-fade-in">
+        {/* Progress indicator */}
+        <div className="mb-6">
+          <div className="flex justify-between text-sm text-slate-400 mb-2">
+            <span>Progresso</span>
+            <span>{currentStep + 1} di {steps.length}</span>
+          </div>
+          <div className="w-full bg-slate-700 rounded-full h-2">
+            <div 
+              className="bg-gradient-to-r from-orange to-orange-hover h-2 rounded-full transition-all duration-500 ease-out"
+              style={{ width: `${((currentStep + 1) / steps.length) * 100}%` }}
+            />
+          </div>
+        </div>
+
         {/* Navigation header */}
-        <div className="flex bg-orange rounded-t-xl">
+        <div className="flex bg-orange rounded-t-xl shadow-lg">
           <button
             onClick={handlePrevious}
             disabled={currentStep === 0}
-            className={`flex-1 py-4 px-6 text-white font-medium rounded-tl-xl ${
-              currentStep === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-orange-hover'
+            className={`flex-1 py-4 px-6 text-white font-medium rounded-tl-xl transition-all duration-300 ${
+              currentStep === 0 
+                ? 'opacity-50 cursor-not-allowed' 
+                : 'hover:bg-orange-hover hover:scale-105 active:scale-95'
             }`}
           >
             ← Precedente
           </button>
           <button
             onClick={isLastStep ? handleSubmit : handleNext}
-            disabled={isLastStep && !formData.acceptTerms}
-            className={`flex-1 py-4 px-6 text-white font-medium rounded-tr-xl ${
-              (isLastStep && !formData.acceptTerms) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-orange-hover'
+            disabled={(isLastStep && !formData.acceptTerms) || isSubmitting}
+            className={`flex-1 py-4 px-6 text-white font-medium rounded-tr-xl transition-all duration-300 ${
+              (isLastStep && !formData.acceptTerms) || isSubmitting
+                ? 'opacity-50 cursor-not-allowed' 
+                : 'hover:bg-orange-hover hover:scale-105 active:scale-95'
             }`}
           >
-            {isLastStep ? '✓ Invia' : 'Prossima →'}
+            {isSubmitting ? (
+              <span className="flex items-center justify-center gap-2">
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                Invio...
+              </span>
+            ) : isLastStep ? '✓ Invia' : 'Prossima →'}
           </button>
         </div>
 
         {/* Main content */}
-        <div className="bg-slate-800 p-8 rounded-b-xl">
+        <div className="bg-slate-800 p-8 rounded-b-xl shadow-2xl border-l border-r border-b border-slate-700">
           <div className="mb-8">
-            <h1 className="text-2xl md:text-3xl font-bold text-orange mb-4 leading-tight whitespace-pre-line">
+            <h1 className="text-2xl md:text-3xl font-bold text-orange mb-4 leading-tight whitespace-pre-line animate-scale-in">
               {currentStepData.title}
             </h1>
             {currentStepData.subtitle && (
-              <p className="text-slate-300 text-sm">
+              <p className="text-slate-300 text-sm animate-fade-in">
                 {currentStepData.subtitle}
               </p>
             )}
@@ -237,8 +378,12 @@ const EmailMarketingSurvey = () => {
                 onValueChange={(value) => handleRadioChange(currentStepData.field, value)}
                 className="space-y-4"
               >
-                {currentStepData.options?.map((option) => (
-                  <div key={option.id} className="flex items-center space-x-3">
+                {currentStepData.options?.map((option, index) => (
+                  <div 
+                    key={option.id} 
+                    className="flex items-center space-x-3 animate-fade-in hover-scale"
+                    style={{ animationDelay: `${index * 100}ms` }}
+                  >
                     <RadioGroupItem 
                       value={option.value} 
                       id={option.id}
@@ -246,7 +391,7 @@ const EmailMarketingSurvey = () => {
                     />
                     <Label 
                       htmlFor={option.id} 
-                      className="text-white text-lg cursor-pointer"
+                      className="text-white text-lg cursor-pointer hover:text-orange transition-colors duration-200"
                     >
                       {option.label}
                     </Label>
@@ -257,8 +402,12 @@ const EmailMarketingSurvey = () => {
 
             {currentStepData.type === "checkbox" && (
               <div className="space-y-4">
-                {currentStepData.options?.map((option) => (
-                  <div key={option.id} className="flex items-center space-x-3">
+                {currentStepData.options?.map((option, index) => (
+                  <div 
+                    key={option.id} 
+                    className="flex items-center space-x-3 animate-fade-in hover-scale"
+                    style={{ animationDelay: `${index * 100}ms` }}
+                  >
                     <Checkbox
                       id={option.id}
                       checked={formData.activeFlows.includes(option.value)}
@@ -267,7 +416,7 @@ const EmailMarketingSurvey = () => {
                     />
                     <Label 
                       htmlFor={option.id} 
-                      className="text-white text-lg cursor-pointer"
+                      className="text-white text-lg cursor-pointer hover:text-orange transition-colors duration-200"
                     >
                       {option.label}
                     </Label>
@@ -277,7 +426,7 @@ const EmailMarketingSurvey = () => {
             )}
 
             {currentStepData.type === "input" && (
-              <div className="space-y-4">
+              <div className="space-y-4 animate-fade-in">
                 <Label htmlFor="website" className="text-white text-lg">
                   Sito web
                 </Label>
@@ -285,14 +434,14 @@ const EmailMarketingSurvey = () => {
                   id="website"
                   value={formData.website}
                   onChange={(e) => handleInputChange('website', e.target.value)}
-                  className="bg-white border-0 text-slate-900 h-12 text-lg"
+                  className="bg-white border-0 text-slate-900 h-12 text-lg focus:ring-2 focus:ring-orange transition-all duration-200"
                 />
               </div>
             )}
 
             {currentStepData.type === "contact" && (
               <div className="space-y-6">
-                <div className="space-y-2">
+                <div className="space-y-2 animate-fade-in">
                   <Label htmlFor="fullName" className="text-white text-lg">
                     Nome completo
                   </Label>
@@ -300,12 +449,12 @@ const EmailMarketingSurvey = () => {
                     id="fullName"
                     value={formData.fullName}
                     onChange={(e) => handleInputChange('fullName', e.target.value)}
-                    className="bg-white border-0 text-slate-900 h-12 text-lg"
+                    className="bg-white border-0 text-slate-900 h-12 text-lg focus:ring-2 focus:ring-orange transition-all duration-200"
                     placeholder="Full Name"
                   />
                 </div>
                 
-                <div className="space-y-2">
+                <div className="space-y-2 animate-fade-in" style={{ animationDelay: '100ms' }}>
                   <Label htmlFor="phone" className="text-white text-lg">
                     Numero di telefono
                   </Label>
@@ -313,7 +462,7 @@ const EmailMarketingSurvey = () => {
                     id="phone"
                     value={formData.phone}
                     onChange={(e) => handleInputChange('phone', e.target.value)}
-                    className="bg-white border-0 text-slate-900 h-12 text-lg"
+                    className="bg-white border-0 text-slate-900 h-12 text-lg focus:ring-2 focus:ring-orange transition-all duration-200"
                     placeholder="+39"
                   />
                   <p className="text-white text-sm">
@@ -321,7 +470,7 @@ const EmailMarketingSurvey = () => {
                   </p>
                 </div>
                 
-                <div className="space-y-2">
+                <div className="space-y-2 animate-fade-in" style={{ animationDelay: '200ms' }}>
                   <Label htmlFor="email" className="text-white text-lg">
                     Email
                   </Label>
@@ -330,12 +479,12 @@ const EmailMarketingSurvey = () => {
                     type="email"
                     value={formData.email}
                     onChange={(e) => handleInputChange('email', e.target.value)}
-                    className="bg-white border-0 text-slate-900 h-12 text-lg"
+                    className="bg-white border-0 text-slate-900 h-12 text-lg focus:ring-2 focus:ring-orange transition-all duration-200"
                     placeholder="Email"
                   />
                 </div>
                 
-                <div className="flex items-start space-x-3">
+                <div className="flex items-start space-x-3 animate-fade-in" style={{ animationDelay: '300ms' }}>
                   <Checkbox
                     id="terms"
                     checked={formData.acceptTerms}
