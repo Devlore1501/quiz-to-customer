@@ -110,48 +110,50 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
         </div>
 
         {/* Sezione: Analisi Strategica */}
-        <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 animate-fade-in" style={{ animationDelay: '150ms' }}>
-          <h2 className="text-xl font-bold text-orange mb-6 flex items-center gap-2">
-            📋 Analisi Strategica
-          </h2>
-          
-          <div className="space-y-5">
-            {/* Situazione Attuale */}
-            <div className="bg-slate-700/30 p-4 rounded-lg border-l-4 border-slate-500">
-              <h3 className="text-white font-semibold mb-2 flex items-center gap-2">
-                <span className="text-slate-400">📍</span> Situazione Attuale
-              </h3>
-              <p className="text-slate-300 leading-relaxed text-sm">
-                {report.strategicAnalysis.currentSituation}
-              </p>
-            </div>
+        {report.strategicAnalysis && (
+          <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 animate-fade-in" style={{ animationDelay: '150ms' }}>
+            <h2 className="text-xl font-bold text-orange mb-6 flex items-center gap-2">
+              📋 Analisi Strategica
+            </h2>
             
-            {/* Situazione Desiderata */}
-            <div className="bg-green-900/20 p-4 rounded-lg border-l-4 border-green-500">
-              <h3 className="text-white font-semibold mb-2 flex items-center gap-2">
-                <span className="text-green-400">🎯</span> Situazione Desiderata
-              </h3>
-              <p className="text-slate-300 leading-relaxed text-sm">
-                {report.strategicAnalysis.desiredSituation}
-              </p>
-            </div>
-            
-            {/* Potenziali Impedimenti */}
-            <div className="bg-red-900/20 p-4 rounded-lg border-l-4 border-red-500">
-              <h3 className="text-white font-semibold mb-2 flex items-center gap-2">
-                <span className="text-red-400">⚠️</span> Potenziali Impedimenti
-              </h3>
-              <ul className="space-y-2">
-                {report.strategicAnalysis.potentialObstacles.map((obstacle, i) => (
-                  <li key={i} className="text-slate-300 text-sm flex items-start gap-2">
-                    <span className="text-red-400 mt-0.5">•</span>
-                    {obstacle}
-                  </li>
-                ))}
-              </ul>
+            <div className="space-y-5">
+              {/* Situazione Attuale */}
+              <div className="bg-slate-700/30 p-4 rounded-lg border-l-4 border-slate-500">
+                <h3 className="text-white font-semibold mb-2 flex items-center gap-2">
+                  <span className="text-slate-400">📍</span> Situazione Attuale
+                </h3>
+                <p className="text-slate-300 leading-relaxed text-sm">
+                  {report.strategicAnalysis.currentSituation}
+                </p>
+              </div>
+              
+              {/* Situazione Desiderata */}
+              <div className="bg-green-900/20 p-4 rounded-lg border-l-4 border-green-500">
+                <h3 className="text-white font-semibold mb-2 flex items-center gap-2">
+                  <span className="text-green-400">🎯</span> Situazione Desiderata
+                </h3>
+                <p className="text-slate-300 leading-relaxed text-sm">
+                  {report.strategicAnalysis.desiredSituation}
+                </p>
+              </div>
+              
+              {/* Potenziali Impedimenti */}
+              <div className="bg-red-900/20 p-4 rounded-lg border-l-4 border-red-500">
+                <h3 className="text-white font-semibold mb-2 flex items-center gap-2">
+                  <span className="text-red-400">⚠️</span> Potenziali Impedimenti
+                </h3>
+                <ul className="space-y-2">
+                  {report.strategicAnalysis.potentialObstacles.map((obstacle, i) => (
+                    <li key={i} className="text-slate-300 text-sm flex items-start gap-2">
+                      <span className="text-red-400 mt-0.5">•</span>
+                      {obstacle}
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Sezione 1: Situazione Attuale vs Benchmark */}
         <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 animate-fade-in" style={{ animationDelay: '200ms' }}>
