@@ -348,72 +348,74 @@ export const generatePdfReport = async (
   // ============================================
   // PAGE 3: STRATEGIC ANALYSIS
   // ============================================
-  addNewPage();
-  
-  pdf.setTextColor(COLORS.primary);
-  pdf.setFontSize(20);
-  pdf.setFont('helvetica', 'bold');
-  pdf.text('ANALISI STRATEGICA', margin, y);
-  y += 5;
-  drawRect(margin, y, 60, 2, COLORS.accent);
-  y += 15;
-  
-  // Situazione Attuale
-  drawRoundedRect(margin, y, contentWidth, 55, 4, COLORS.lightGray);
-  drawRect(margin, y, 4, 55, COLORS.textSecondary);
-  
-  pdf.setTextColor(COLORS.primary);
-  pdf.setFontSize(12);
-  pdf.setFont('helvetica', 'bold');
-  pdf.text('SITUAZIONE ATTUALE', margin + 12, y + 12);
-  
-  pdf.setTextColor(COLORS.textSecondary);
-  pdf.setFontSize(9);
-  pdf.setFont('helvetica', 'normal');
-  const wrappedCurrent = wrapText(report.strategicAnalysis.currentSituation, contentWidth - 24);
-  wrappedCurrent.slice(0, 6).forEach((line, i) => {
-    pdf.text(line, margin + 12, y + 22 + (i * 5));
-  });
-  
-  y += 62;
-  
-  // Situazione Desiderata
-  drawRoundedRect(margin, y, contentWidth, 50, 4, '#dcfce7');
-  drawRect(margin, y, 4, 50, COLORS.success);
-  
-  pdf.setTextColor(COLORS.success);
-  pdf.setFontSize(12);
-  pdf.setFont('helvetica', 'bold');
-  pdf.text('SITUAZIONE DESIDERATA', margin + 12, y + 12);
-  
-  pdf.setTextColor(COLORS.primary);
-  pdf.setFontSize(9);
-  pdf.setFont('helvetica', 'normal');
-  const wrappedDesired = wrapText(report.strategicAnalysis.desiredSituation, contentWidth - 24);
-  wrappedDesired.slice(0, 5).forEach((line, i) => {
-    pdf.text(line, margin + 12, y + 22 + (i * 5));
-  });
-  
-  y += 57;
-  
-  // Potenziali Impedimenti
-  const obstacleBoxHeight = 15 + (report.strategicAnalysis.potentialObstacles.length * 10);
-  drawRoundedRect(margin, y, contentWidth, obstacleBoxHeight, 4, '#fef2f2');
-  drawRect(margin, y, 4, obstacleBoxHeight, COLORS.danger);
-  
-  pdf.setTextColor(COLORS.danger);
-  pdf.setFontSize(12);
-  pdf.setFont('helvetica', 'bold');
-  pdf.text('POTENZIALI IMPEDIMENTI', margin + 12, y + 12);
-  
-  pdf.setTextColor(COLORS.primary);
-  pdf.setFontSize(9);
-  pdf.setFont('helvetica', 'normal');
-  report.strategicAnalysis.potentialObstacles.forEach((obstacle, i) => {
-    pdf.text(`•  ${obstacle}`, margin + 12, y + 22 + (i * 8));
-  });
-  
-  drawPageFooter();
+  if (report.strategicAnalysis) {
+    addNewPage();
+    
+    pdf.setTextColor(COLORS.primary);
+    pdf.setFontSize(20);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('ANALISI STRATEGICA', margin, y);
+    y += 5;
+    drawRect(margin, y, 60, 2, COLORS.accent);
+    y += 15;
+    
+    // Situazione Attuale
+    drawRoundedRect(margin, y, contentWidth, 55, 4, COLORS.lightGray);
+    drawRect(margin, y, 4, 55, COLORS.textSecondary);
+    
+    pdf.setTextColor(COLORS.primary);
+    pdf.setFontSize(12);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('SITUAZIONE ATTUALE', margin + 12, y + 12);
+    
+    pdf.setTextColor(COLORS.textSecondary);
+    pdf.setFontSize(9);
+    pdf.setFont('helvetica', 'normal');
+    const wrappedCurrent = wrapText(report.strategicAnalysis.currentSituation, contentWidth - 24);
+    wrappedCurrent.slice(0, 6).forEach((line, i) => {
+      pdf.text(line, margin + 12, y + 22 + (i * 5));
+    });
+    
+    y += 62;
+    
+    // Situazione Desiderata
+    drawRoundedRect(margin, y, contentWidth, 50, 4, '#dcfce7');
+    drawRect(margin, y, 4, 50, COLORS.success);
+    
+    pdf.setTextColor(COLORS.success);
+    pdf.setFontSize(12);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('SITUAZIONE DESIDERATA', margin + 12, y + 12);
+    
+    pdf.setTextColor(COLORS.primary);
+    pdf.setFontSize(9);
+    pdf.setFont('helvetica', 'normal');
+    const wrappedDesired = wrapText(report.strategicAnalysis.desiredSituation, contentWidth - 24);
+    wrappedDesired.slice(0, 5).forEach((line, i) => {
+      pdf.text(line, margin + 12, y + 22 + (i * 5));
+    });
+    
+    y += 57;
+    
+    // Potenziali Impedimenti
+    const obstacleBoxHeight = 15 + (report.strategicAnalysis.potentialObstacles.length * 10);
+    drawRoundedRect(margin, y, contentWidth, obstacleBoxHeight, 4, '#fef2f2');
+    drawRect(margin, y, 4, obstacleBoxHeight, COLORS.danger);
+    
+    pdf.setTextColor(COLORS.danger);
+    pdf.setFontSize(12);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('POTENZIALI IMPEDIMENTI', margin + 12, y + 12);
+    
+    pdf.setTextColor(COLORS.primary);
+    pdf.setFontSize(9);
+    pdf.setFont('helvetica', 'normal');
+    report.strategicAnalysis.potentialObstacles.forEach((obstacle, i) => {
+      pdf.text(`•  ${obstacle}`, margin + 12, y + 22 + (i * 8));
+    });
+    
+    drawPageFooter();
+  }
 
   // ============================================
   // PAGE 4: AUTOMATION ANALYSIS
