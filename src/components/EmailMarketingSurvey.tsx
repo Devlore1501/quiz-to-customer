@@ -11,6 +11,7 @@ import { ChevronLeft, Check, Loader2, CheckCircle2, Circle, BarChart3, Users, Tr
 import { supabase } from '@/integrations/supabase/client';
 interface FormData {
   sector: string;
+  customSector: string;
   monthlyRevenue: string;
   adsInvestment: string;
   emailRevenuePercentage: string;
@@ -440,6 +441,7 @@ const EmailMarketingSurvey = () => {
   const [emailValidation, setEmailValidation] = useState<EmailValidation>({ status: 'idle' });
   const [formData, setFormData] = useState<FormData>({
     sector: '',
+    customSector: '',
     monthlyRevenue: '',
     adsInvestment: '',
     emailRevenuePercentage: '',
@@ -461,7 +463,8 @@ const EmailMarketingSurvey = () => {
     { id: 'home', label: 'Articoli per la casa', icon: '🏠', value: 'home' },
     { id: 'jewelry', label: 'Gioielli', icon: '💎', value: 'jewelry' },
     { id: 'food', label: 'Food & Beverage', icon: '🍔', value: 'food' },
-    { id: 'health', label: 'Salute e integrazione', icon: '❤️', value: 'health' }
+    { id: 'health', label: 'Salute e integrazione', icon: '❤️', value: 'health' },
+    { id: 'other', label: 'Altro settore', icon: '🏢', value: 'other' }
   ];
 
   const revenueRanges = [
@@ -590,6 +593,12 @@ const EmailMarketingSurvey = () => {
     setSelectedValue(value);
     setFormData(prev => ({ ...prev, [field]: value }));
     
+    // Don't auto-advance for "other" sector - need to enter custom sector name
+    if (field === 'sector' && value === 'other') {
+      setTimeout(() => setSelectedValue(null), 400);
+      return;
+    }
+    
     // Auto-advance with animation delay
     setTimeout(() => {
       setSelectedValue(null);
@@ -705,6 +714,9 @@ const EmailMarketingSurvey = () => {
   };
 
   const getSectorLabel = () => {
+    if (formData.sector === 'other' && formData.customSector) {
+      return formData.customSector;
+    }
     const sector = sectors.find(s => s.value === formData.sector);
     return sector?.label || 'E-commerce';
   };
@@ -748,7 +760,8 @@ const EmailMarketingSurvey = () => {
         formData.monthlyRevenue,
         formData.emailRevenuePercentage,
         formData.listSize,
-        formData.activeFlows
+        formData.activeFlows,
+        formData.sector === 'other' ? formData.customSector : undefined
       );
       
       const adminReport = generateAdminReport(formData, advancedReport);
@@ -811,6 +824,7 @@ const EmailMarketingSurvey = () => {
     setEmailValidation({ status: 'idle' });
     setFormData({
       sector: '',
+      customSector: '',
       monthlyRevenue: '',
       adsInvestment: '',
       emailRevenuePercentage: '',
@@ -919,46 +933,94 @@ const EmailMarketingSurvey = () => {
               initial="hidden"
               animate="visible"
             >
-              {currentStepData.type === "radio" && currentStepData.options?.map((option) => {
-                const isSelected = formData[currentStepData.field] === option.value;
-                const isAnimating = selectedValue === option.value;
-                
-                return (
-                  <motion.button
-                    key={option.id}
-                    variants={cardVariants}
-                    onClick={() => handleRadioSelect(currentStepData.field, option.value)}
-                    animate={isAnimating ? selectedPulse : {}}
-                    whileHover={{ scale: 1.02, borderColor: 'rgba(249, 115, 22, 0.5)' }}
-                    whileTap={{ scale: 0.98 }}
-                    className={`
-                      w-full p-4 rounded-xl border-2 text-left transition-colors duration-200
-                      flex items-center gap-4
-                      ${isSelected
-                        ? 'bg-orange border-orange text-white'
-                        : 'bg-slate-800/50 border-slate-700 text-white'
-                      }
-                    `}
-                  >
-                    {'icon' in option && option.icon && (
-                      <span className="text-2xl">{option.icon as string}</span>
-                    )}
-                    <span className="text-lg font-medium flex-1">{option.label}</span>
-                    <AnimatePresence>
-                      {isSelected && (
-                        <motion.div
-                          initial={{ scale: 0, opacity: 0 }}
-                          animate={{ scale: 1, opacity: 1 }}
-                          exit={{ scale: 0, opacity: 0 }}
-                          transition={{ type: "spring", stiffness: 500, damping: 25 }}
+              {currentStepData.type === "radio" && (
+                <>
+                  {currentStepData.options?.map((option) => {
+                    const isSelected = formData[currentStepData.field] === option.value;
+                    const isAnimating = selectedValue === option.value;
+                    
+                    return (
+                      <motion.button
+                        key={option.id}
+                        variants={cardVariants}
+                        onClick={() => handleRadioSelect(currentStepData.field, option.value)}
+                        animate={isAnimating ? selectedPulse : {}}
+                        whileHover={{ scale: 1.02, borderColor: 'rgba(249, 115, 22, 0.5)' }}
+                        whileTap={{ scale: 0.98 }}
+                        className={`
+                          w-full p-4 rounded-xl border-2 text-left transition-colors duration-200
+                          flex items-center gap-4
+                          ${isSelected
+                            ? 'bg-orange border-orange text-white'
+                            : 'bg-slate-800/50 border-slate-700 text-white'
+                          }
+                        `}
+                      >
+                        {'icon' in option && option.icon && (
+                          <span className="text-2xl">{option.icon as string}</span>
+                        )}
+                        <span className="text-lg font-medium flex-1">{option.label}</span>
+                        <AnimatePresence>
+                          {isSelected && (
+                            <motion.div
+                              initial={{ scale: 0, opacity: 0 }}
+                              animate={{ scale: 1, opacity: 1 }}
+                              exit={{ scale: 0, opacity: 0 }}
+                              transition={{ type: "spring", stiffness: 500, damping: 25 }}
+                            >
+                              <Check className="h-5 w-5" />
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </motion.button>
+                    );
+                  })}
+                  
+                  {/* Custom sector input for "other" option */}
+                  <AnimatePresence>
+                    {currentStepData.field === 'sector' && formData.sector === 'other' && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="space-y-4 mt-4"
+                      >
+                        <Input
+                          value={formData.customSector}
+                          onChange={(e) => handleInputChange('customSector', e.target.value)}
+                          placeholder="Specifica il tuo settore..."
+                          className="bg-slate-800 text-white h-14 text-lg rounded-xl border-2 border-slate-700 focus:border-orange focus:ring-orange"
+                          autoFocus
+                        />
+                        <motion.button
+                          onClick={() => {
+                            if (formData.customSector.trim()) {
+                              goToNextStep();
+                            } else {
+                              toast({
+                                title: "Errore",
+                                description: "Inserisci il nome del tuo settore",
+                                variant: "destructive"
+                              });
+                            }
+                          }}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          className={`
+                            w-full py-4 px-6 rounded-xl font-semibold text-lg transition-all duration-200
+                            ${formData.customSector.trim()
+                              ? 'bg-orange text-white hover:bg-orange/90'
+                              : 'bg-slate-700 text-slate-400 cursor-not-allowed'
+                            }
+                          `}
                         >
-                          <Check className="h-5 w-5" />
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </motion.button>
-                );
-              })}
+                          Continua
+                        </motion.button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </>
+              )}
 
               {currentStepData.type === "checkbox" && (
                 <>
