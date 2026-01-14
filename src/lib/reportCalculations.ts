@@ -12,7 +12,8 @@ export const sectorBenchmarks: Record<string, {
   digital: { emailShare: 40, revenuePerSub: 5.0, openRate: 25, clickRate: 4.0, label: 'Prodotti Digitali' },
   jewelry: { emailShare: 25, revenuePerSub: 3.0, openRate: 20, clickRate: 2.5, label: 'Gioielli' },
   home: { emailShare: 22, revenuePerSub: 1.8, openRate: 19, clickRate: 2.6, label: 'Articoli Casa' },
-  health: { emailShare: 32, revenuePerSub: 2.8, openRate: 24, clickRate: 3.5, label: 'Salute & Integrazione' }
+  health: { emailShare: 32, revenuePerSub: 2.8, openRate: 24, clickRate: 3.5, label: 'Salute & Integrazione' },
+  other: { emailShare: 25, revenuePerSub: 2.0, openRate: 20, clickRate: 2.8, label: 'Altro Settore' }
 };
 
 // Impatto dei flussi automatici sul fatturato email
@@ -177,7 +178,8 @@ export const calculateAdvancedReport = (
   monthlyRevenueRange: string,
   emailPercentRange: string,
   listSizeRange: string,
-  activeFlows: string[]
+  activeFlows: string[],
+  customSectorLabel?: string
 ): AdvancedReport => {
   // Parse input values
   const monthlyRevenue = parseRevenueRange(monthlyRevenueRange);
@@ -185,7 +187,11 @@ export const calculateAdvancedReport = (
   const listSize = parseListSize(listSizeRange);
   
   // Get sector benchmark
-  const sectorBenchmark = sectorBenchmarks[sector] || sectorBenchmarks.fashion;
+  const baseBenchmark = sectorBenchmarks[sector] || sectorBenchmarks.other;
+  // Use custom label if provided (for "other" sector)
+  const sectorBenchmark = sector === 'other' && customSectorLabel 
+    ? { ...baseBenchmark, label: customSectorLabel }
+    : baseBenchmark;
   
   // Calcoli situazione attuale
   const currentEmailRevenue = monthlyRevenue * (currentEmailPercent / 100);
