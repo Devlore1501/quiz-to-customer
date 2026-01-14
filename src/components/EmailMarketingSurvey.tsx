@@ -5,6 +5,8 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/hooks/use-toast';
+import { calculateAdvancedReport, type AdvancedReport } from '@/lib/reportCalculations';
+import AdvancedReportComponent from '@/components/AdvancedReport';
 
 interface FormData {
   sector: string;
@@ -24,6 +26,7 @@ interface FormData {
 const EmailMarketingSurvey = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [report, setReport] = useState<AdvancedReport | null>(null);
   const [formData, setFormData] = useState<FormData>({
     sector: '',
     monthlyRevenue: '',
@@ -186,23 +189,6 @@ const EmailMarketingSurvey = () => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const calculateBusinessReport = () => {
-    // Calcoli basati sui dati inseriti
-    const monthlyRevenue = parseFloat(formData.monthlyRevenue.split('-')[0].replace('k', '000')) || 0;
-    const emailPercent = parseFloat(formData.emailRevenuePercentage.split('-')[0]) || 0;
-    
-    const currentEmailRevenue = monthlyRevenue * (emailPercent / 100);
-    const potentialEmailRevenue = monthlyRevenue * 0.25; // 25% benchmark
-    const lostPotential = potentialEmailRevenue - currentEmailRevenue;
-    
-    return {
-      currentEmailRevenue: currentEmailRevenue * 1000,
-      potentialEmailRevenue: potentialEmailRevenue * 1000,
-      lostPotential: lostPotential * 1000,
-      yearlyLost: lostPotential * 12 * 1000
-    };
-  };
-
   const handleSubmit = async () => {
     if (!formData.acceptTerms) {
       toast({
@@ -216,12 +202,21 @@ const EmailMarketingSurvey = () => {
     setIsSubmitting(true);
     
     try {
+      // Calcola il report avanzato
+      const advancedReport = calculateAdvancedReport(
+        formData.sector,
+        formData.monthlyRevenue,
+        formData.emailRevenuePercentage,
+        formData.listSize,
+        formData.activeFlows
+      );
+      
       // Invia i dati al webhook
       const dataToSend = {
         ...formData,
         timestamp: new Date().toISOString(),
         source: 'business-analysis-tool',
-        report: calculateBusinessReport()
+        report: advancedReport
       };
 
       await fetch('https://hook.eu1.make.com/hi1xrv57zvt5kilh1fye9130gb132vx3', {
@@ -238,7 +233,8 @@ const EmailMarketingSurvey = () => {
         description: "Riceverai il report personalizzato via WhatsApp a breve.",
       });
 
-      // Mostra il report finale
+      // Salva il report e mostra la schermata finale
+      setReport(advancedReport);
       setCurrentStep(steps.length);
       
     } catch (error) {
@@ -252,61 +248,36 @@ const EmailMarketingSurvey = () => {
     }
   };
 
+  const handleRestart = () => {
+    setCurrentStep(0);
+    setReport(null);
+    setFormData({
+      sector: '',
+      monthlyRevenue: '',
+      adsInvestment: '',
+      emailRevenuePercentage: '',
+      emailFrequency: '',
+      listSize: '',
+      activeFlows: [],
+      website: '',
+      fullName: '',
+      phone: '',
+      email: '',
+      acceptTerms: false
+    });
+  };
+
   const currentStepData = steps[currentStep];
   const isLastStep = currentStep === steps.length - 1;
 
-  // Report finale
-  if (currentStep === steps.length) {
-    const report = calculateBusinessReport();
+  // Report finale avanzato
+  if (currentStep === steps.length && report) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-        <div className="w-full max-w-4xl animate-fade-in">
-          <div className="bg-slate-800 p-8 rounded-xl shadow-2xl border border-orange/20">
-            <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold text-orange mb-4">
-                ✨ Report Generato con Successo!
-              </h1>
-              <p className="text-slate-300">
-                I tuoi dati sono stati analizzati. Ecco un'anteprima del potenziale:
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-              <div className="bg-slate-700 p-6 rounded-lg hover-scale">
-                <h3 className="text-orange font-semibold mb-2">💰 Fatturato Email Attuale</h3>
-                <p className="text-2xl font-bold text-white">€{report.currentEmailRevenue.toLocaleString()}/mese</p>
-              </div>
-              
-              <div className="bg-slate-700 p-6 rounded-lg hover-scale">
-                <h3 className="text-orange font-semibold mb-2">🎯 Potenziale Ottimizzato</h3>
-                <p className="text-2xl font-bold text-white">€{report.potentialEmailRevenue.toLocaleString()}/mese</p>
-              </div>
-              
-              <div className="bg-gradient-to-r from-red-600 to-red-500 p-6 rounded-lg hover-scale">
-                <h3 className="text-white font-semibold mb-2">⚠️ Potenziale Perso</h3>
-                <p className="text-2xl font-bold text-white">€{report.lostPotential.toLocaleString()}/mese</p>
-              </div>
-              
-              <div className="bg-gradient-to-r from-orange to-orange-hover p-6 rounded-lg hover-scale">
-                <h3 className="text-white font-semibold mb-2">📈 Potenziale Annuo</h3>
-                <p className="text-2xl font-bold text-white">€{report.yearlyLost.toLocaleString()}/anno</p>
-              </div>
-            </div>
-
-            <div className="text-center">
-              <p className="text-slate-300 mb-4">
-                📱 Riceverai il report completo con strategie dettagliate su WhatsApp al numero: <span className="text-orange font-semibold">{formData.phone}</span>
-              </p>
-              <Button 
-                onClick={() => window.location.reload()} 
-                className="bg-orange hover:bg-orange-hover text-white px-8 py-3 rounded-lg font-medium hover-scale"
-              >
-                Fai un'altra analisi
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
+      <AdvancedReportComponent 
+        report={report} 
+        phone={formData.phone}
+        onRestart={handleRestart}
+      />
     );
   }
 
@@ -321,7 +292,7 @@ const EmailMarketingSurvey = () => {
           </div>
           <div className="w-full bg-slate-700 rounded-full h-2">
             <div 
-              className="bg-gradient-to-r from-orange to-orange-hover h-2 rounded-full transition-all duration-500 ease-out"
+              className="bg-gradient-to-r from-orange to-orange/80 h-2 rounded-full transition-all duration-500 ease-out"
               style={{ width: `${((currentStep + 1) / steps.length) * 100}%` }}
             />
           </div>
@@ -335,7 +306,7 @@ const EmailMarketingSurvey = () => {
             className={`flex-1 py-4 px-6 text-white font-medium rounded-tl-xl transition-all duration-300 ${
               currentStep === 0 
                 ? 'opacity-50 cursor-not-allowed' 
-                : 'hover:bg-orange-hover hover:scale-105 active:scale-95'
+                : 'hover:bg-orange/80 hover:scale-105 active:scale-95'
             }`}
           >
             ← Precedente
@@ -346,7 +317,7 @@ const EmailMarketingSurvey = () => {
             className={`flex-1 py-4 px-6 text-white font-medium rounded-tr-xl transition-all duration-300 ${
               (isLastStep && !formData.acceptTerms) || isSubmitting
                 ? 'opacity-50 cursor-not-allowed' 
-                : 'hover:bg-orange-hover hover:scale-105 active:scale-95'
+                : 'hover:bg-orange/80 hover:scale-105 active:scale-95'
             }`}
           >
             {isSubmitting ? (
