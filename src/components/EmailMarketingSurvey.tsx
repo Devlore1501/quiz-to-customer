@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -6,7 +7,7 @@ import { toast } from '@/hooks/use-toast';
 import { calculateAdvancedReport, type AdvancedReport } from '@/lib/reportCalculations';
 import { generateAdminReport } from '@/lib/adminReportGenerator';
 import AdvancedReportComponent from '@/components/AdvancedReport';
-import { ChevronLeft, Check, Loader2 } from 'lucide-react';
+import { ChevronLeft, Check, Loader2, CheckCircle2, Circle, BarChart3, Users, TrendingUp, FileText, Sparkles } from 'lucide-react';
 
 interface FormData {
   sector: string;
@@ -23,11 +24,296 @@ interface FormData {
   acceptTerms: boolean;
 }
 
+// Animation variants
+const pageVariants = {
+  enter: (direction: number) => ({
+    x: direction > 0 ? 100 : -100,
+    opacity: 0
+  }),
+  center: {
+    x: 0,
+    opacity: 1
+  },
+  exit: (direction: number) => ({
+    x: direction < 0 ? 100 : -100,
+    opacity: 0
+  })
+};
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.08,
+      delayChildren: 0.1
+    }
+  }
+} as const;
+
+const cardVariants = {
+  hidden: { opacity: 0, y: 20, scale: 0.95 },
+  visible: { 
+    opacity: 1, 
+    y: 0, 
+    scale: 1,
+    transition: { type: "spring" as const, stiffness: 300, damping: 24 }
+  }
+};
+
+const selectedPulse = {
+  scale: [1, 1.03, 1],
+  transition: { duration: 0.3 }
+};
+
+const progressVariants = {
+  initial: { width: 0 },
+  animate: (progress: number) => ({
+    width: `${progress}%`,
+    transition: { duration: 0.5, ease: "easeOut" }
+  })
+};
+
+// Analysis screen component
+const AnalysisScreen = ({ 
+  sectorLabel, 
+  onComplete 
+}: { 
+  sectorLabel: string; 
+  onComplete: () => void;
+}) => {
+  const [currentAnalysisStep, setCurrentAnalysisStep] = useState(0);
+  const [progress, setProgress] = useState(0);
+  const [counters, setCounters] = useState({ revenue: 0, subscribers: 0, opportunities: 0 });
+  const [tipIndex, setTipIndex] = useState(0);
+
+  const analysisSteps = [
+    { icon: BarChart3, text: `Analisi settore ${sectorLabel}`, duration: 1200 },
+    { icon: TrendingUp, text: 'Calcolo benchmark di mercato', duration: 1000 },
+    { icon: Users, text: 'Valutazione automazioni attive', duration: 1500 },
+    { icon: Sparkles, text: 'Stima potenziale di crescita', duration: 1000 },
+    { icon: FileText, text: 'Generazione report personalizzato', duration: 1300 }
+  ];
+
+  const tips = [
+    `Le aziende del settore ${sectorLabel} generano in media il 25% del fatturato dall'email`,
+    "Il recupero carrello può aumentare le vendite del 15%",
+    "Una lista email ben segmentata converte 3x di più",
+    "Le automazioni possono generare revenue 24/7",
+    "L'email marketing ha un ROI medio di 42€ per ogni 1€ speso"
+  ];
+
+  const targetCounters = { revenue: 45000, subscribers: 8500, opportunities: 7 };
+
+  useEffect(() => {
+    // Progress animation
+    const totalDuration = analysisSteps.reduce((acc, step) => acc + step.duration, 0);
+    const progressInterval = setInterval(() => {
+      setProgress(prev => Math.min(prev + 1, 100));
+    }, totalDuration / 100);
+
+    // Step progression
+    let stepTimeout: NodeJS.Timeout;
+    const advanceStep = (stepIndex: number) => {
+      if (stepIndex < analysisSteps.length) {
+        stepTimeout = setTimeout(() => {
+          setCurrentAnalysisStep(stepIndex + 1);
+          advanceStep(stepIndex + 1);
+        }, analysisSteps[stepIndex].duration);
+      } else {
+        setTimeout(onComplete, 500);
+      }
+    };
+    advanceStep(0);
+
+    // Counter animation
+    const counterDuration = 4000;
+    const counterSteps = 60;
+    let counterStep = 0;
+    const counterInterval = setInterval(() => {
+      counterStep++;
+      const progress = counterStep / counterSteps;
+      const eased = 1 - Math.pow(1 - progress, 3); // ease out cubic
+      setCounters({
+        revenue: Math.round(targetCounters.revenue * eased),
+        subscribers: Math.round(targetCounters.subscribers * eased),
+        opportunities: Math.round(targetCounters.opportunities * eased)
+      });
+      if (counterStep >= counterSteps) clearInterval(counterInterval);
+    }, counterDuration / counterSteps);
+
+    // Tip rotation
+    const tipInterval = setInterval(() => {
+      setTipIndex(prev => (prev + 1) % tips.length);
+    }, 2500);
+
+    return () => {
+      clearInterval(progressInterval);
+      clearTimeout(stepTimeout);
+      clearInterval(counterInterval);
+      clearInterval(tipInterval);
+    };
+  }, []);
+
+  return (
+    <motion.div 
+      className="min-h-screen bg-slate-900 flex flex-col items-center justify-center px-4"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+    >
+      <div className="w-full max-w-lg">
+        {/* Header */}
+        <motion.div 
+          className="text-center mb-10"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+            className="inline-block mb-4"
+          >
+            <div className="w-16 h-16 rounded-full border-4 border-orange border-t-transparent" />
+          </motion.div>
+          <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">
+            Stiamo analizzando i tuoi dati
+          </h1>
+          <p className="text-slate-400">
+            Preparazione del report personalizzato...
+          </p>
+        </motion.div>
+
+        {/* Analysis Steps */}
+        <motion.div 
+          className="bg-slate-800/50 rounded-2xl p-6 mb-8 border border-slate-700"
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.3 }}
+        >
+          <div className="space-y-4">
+            {analysisSteps.map((step, index) => {
+              const Icon = step.icon;
+              const isCompleted = index < currentAnalysisStep;
+              const isCurrent = index === currentAnalysisStep;
+
+              return (
+                <motion.div
+                  key={index}
+                  className="flex items-center gap-4"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.4 + index * 0.1 }}
+                >
+                  <div className="flex-shrink-0">
+                    {isCompleted ? (
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ type: "spring", stiffness: 500, damping: 25 }}
+                      >
+                        <CheckCircle2 className="w-6 h-6 text-green-500" />
+                      </motion.div>
+                    ) : isCurrent ? (
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                      >
+                        <Loader2 className="w-6 h-6 text-orange" />
+                      </motion.div>
+                    ) : (
+                      <Circle className="w-6 h-6 text-slate-600" />
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3 flex-1">
+                    <Icon className={`w-5 h-5 ${isCompleted ? 'text-green-500' : isCurrent ? 'text-orange' : 'text-slate-500'}`} />
+                    <span className={`text-sm ${isCompleted ? 'text-green-400' : isCurrent ? 'text-white' : 'text-slate-500'}`}>
+                      {step.text}
+                    </span>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        </motion.div>
+
+        {/* Progress Bar */}
+        <motion.div 
+          className="mb-8"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5 }}
+        >
+          <div className="h-3 bg-slate-700 rounded-full overflow-hidden">
+            <motion.div
+              className="h-full bg-gradient-to-r from-orange to-orange/80 rounded-full"
+              initial={{ width: 0 }}
+              animate={{ width: `${progress}%` }}
+              transition={{ duration: 0.3 }}
+            />
+          </div>
+          <p className="text-center text-slate-400 text-sm mt-2">
+            Elaborazione {progress}%
+          </p>
+        </motion.div>
+
+        {/* Animated Counters */}
+        <motion.div 
+          className="grid grid-cols-3 gap-4 mb-8"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6 }}
+        >
+          <div className="bg-slate-800/30 rounded-xl p-4 text-center border border-slate-700/50">
+            <p className="text-2xl font-bold text-orange">€{counters.revenue.toLocaleString()}</p>
+            <p className="text-xs text-slate-400 mt-1">Fatturato analizzato</p>
+          </div>
+          <div className="bg-slate-800/30 rounded-xl p-4 text-center border border-slate-700/50">
+            <p className="text-2xl font-bold text-orange">{counters.subscribers.toLocaleString()}</p>
+            <p className="text-xs text-slate-400 mt-1">Iscritti valutati</p>
+          </div>
+          <div className="bg-slate-800/30 rounded-xl p-4 text-center border border-slate-700/50">
+            <p className="text-2xl font-bold text-orange">{counters.opportunities}</p>
+            <p className="text-xs text-slate-400 mt-1">Opportunità</p>
+          </div>
+        </motion.div>
+
+        {/* Rotating Tips */}
+        <motion.div 
+          className="bg-orange/10 border border-orange/20 rounded-xl p-4"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.7 }}
+        >
+          <div className="flex items-start gap-3">
+            <Sparkles className="w-5 h-5 text-orange flex-shrink-0 mt-0.5" />
+            <AnimatePresence mode="wait">
+              <motion.p
+                key={tipIndex}
+                className="text-sm text-slate-300"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.3 }}
+              >
+                💡 {tips[tipIndex]}
+              </motion.p>
+            </AnimatePresence>
+          </div>
+        </motion.div>
+      </div>
+    </motion.div>
+  );
+};
+
 const EmailMarketingSurvey = () => {
   const [currentStep, setCurrentStep] = useState(0);
+  const [direction, setDirection] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [report, setReport] = useState<AdvancedReport | null>(null);
-  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [phase, setPhase] = useState<'quiz' | 'analyzing' | 'report'>('quiz');
+  const [selectedValue, setSelectedValue] = useState<string | null>(null);
   const [formData, setFormData] = useState<FormData>({
     sector: '',
     monthlyRevenue: '',
@@ -163,31 +449,27 @@ const EmailMarketingSurvey = () => {
 
   const goToNextStep = () => {
     if (currentStep < steps.length - 1) {
-      setIsTransitioning(true);
-      setTimeout(() => {
-        setCurrentStep(prev => prev + 1);
-        setIsTransitioning(false);
-      }, 150);
+      setDirection(1);
+      setCurrentStep(prev => prev + 1);
     }
   };
 
   const handlePrevious = () => {
     if (currentStep > 0) {
-      setIsTransitioning(true);
-      setTimeout(() => {
-        setCurrentStep(prev => prev - 1);
-        setIsTransitioning(false);
-      }, 150);
+      setDirection(-1);
+      setCurrentStep(prev => prev - 1);
     }
   };
 
   const handleRadioSelect = (field: keyof FormData, value: string) => {
+    setSelectedValue(value);
     setFormData(prev => ({ ...prev, [field]: value }));
     
-    // Auto-advance for radio questions
+    // Auto-advance with animation delay
     setTimeout(() => {
+      setSelectedValue(null);
       goToNextStep();
-    }, 300);
+    }, 400);
   };
 
   const handleCheckboxChange = (value: string, checked: boolean) => {
@@ -201,6 +483,11 @@ const EmailMarketingSurvey = () => {
 
   const handleInputChange = (field: keyof FormData, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const getSectorLabel = () => {
+    const sector = sectors.find(s => s.value === formData.sector);
+    return sector?.label || 'E-commerce';
   };
 
   const handleSubmit = async () => {
@@ -246,20 +533,17 @@ const EmailMarketingSurvey = () => {
         clientReport: advancedReport
       };
 
-      await fetch('https://hook.eu1.make.com/hi1xrv57zvt5kilh1fye9130gb132vx3', {
+      // Send data in background
+      fetch('https://hook.eu1.make.com/hi1xrv57zvt5kilh1fye9130gb132vx3', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         mode: 'no-cors',
         body: JSON.stringify(dataToSend)
       });
 
-      toast({
-        title: "Dati inviati con successo!",
-        description: "Riceverai il report personalizzato via WhatsApp a breve.",
-      });
-
+      // Store report and show analysis screen
       setReport(advancedReport);
-      setCurrentStep(steps.length);
+      setPhase('analyzing');
       
     } catch (error) {
       toast({
@@ -267,14 +551,23 @@ const EmailMarketingSurvey = () => {
         description: "Si è verificato un errore. Riprova più tardi.",
         variant: "destructive"
       });
-    } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleAnalysisComplete = () => {
+    setPhase('report');
+    toast({
+      title: "Report pronto!",
+      description: "Ecco la tua analisi personalizzata.",
+    });
   };
 
   const handleRestart = () => {
     setCurrentStep(0);
     setReport(null);
+    setPhase('quiz');
+    setIsSubmitting(false);
     setFormData({
       sector: '',
       monthlyRevenue: '',
@@ -292,20 +585,35 @@ const EmailMarketingSurvey = () => {
   };
 
   const currentStepData = steps[currentStep];
-  const isLastStep = currentStep === steps.length - 1;
   const showContinueButton = currentStepData?.type === 'checkbox' || currentStepData?.type === 'input';
 
-  // Report finale
-  if (currentStep === steps.length && report) {
+  // Analysis screen
+  if (phase === 'analyzing') {
     return (
-      <AdvancedReportComponent 
-        report={report} 
-        phone={formData.phone}
-        userName={formData.fullName}
-        userEmail={formData.email}
-        website={formData.website}
-        onRestart={handleRestart}
+      <AnalysisScreen 
+        sectorLabel={getSectorLabel()} 
+        onComplete={handleAnalysisComplete} 
       />
+    );
+  }
+
+  // Report finale
+  if (phase === 'report' && report) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.5 }}
+      >
+        <AdvancedReportComponent 
+          report={report} 
+          phone={formData.phone}
+          userName={formData.fullName}
+          userEmail={formData.email}
+          website={formData.website}
+          onRestart={handleRestart}
+        />
+      </motion.div>
     );
   }
 
@@ -315,197 +623,289 @@ const EmailMarketingSurvey = () => {
       <div className="w-full bg-slate-800 px-4 py-6">
         <div className="max-w-xl mx-auto">
           <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-orange rounded-full transition-all duration-500 ease-out"
-              style={{ width: `${((currentStep + 1) / steps.length) * 100}%` }}
+            <motion.div 
+              className="h-full bg-orange rounded-full"
+              initial={{ width: 0 }}
+              animate={{ width: `${((currentStep + 1) / steps.length) * 100}%` }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
             />
           </div>
-          <p className="text-slate-400 text-sm text-center mt-3">
+          <motion.p 
+            className="text-slate-400 text-sm text-center mt-3"
+            key={currentStep}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+          >
             {currentStep + 1} di {steps.length}
-          </p>
+          </motion.p>
         </div>
       </div>
 
       {/* Main content */}
-      <div className="flex-1 flex items-center justify-center px-4 py-8">
-        <div 
-          className={`w-full max-w-xl transition-all duration-150 ${
-            isTransitioning ? 'opacity-0 translate-y-2' : 'opacity-100 translate-y-0'
-          }`}
-        >
-          {/* Question */}
-          <div className="text-center mb-8">
-            <h1 className="text-2xl md:text-3xl font-bold text-white mb-3">
-              {currentStepData.title}
-            </h1>
-            {currentStepData.subtitle && (
-              <p className="text-slate-400">
-                {currentStepData.subtitle}
-              </p>
-            )}
-          </div>
-
-          {/* Options */}
-          <div className="space-y-3">
-            {currentStepData.type === "radio" && currentStepData.options?.map((option, index) => {
-              const isSelected = formData[currentStepData.field] === option.value;
-              return (
-                <button
-                  key={option.id}
-                  onClick={() => handleRadioSelect(currentStepData.field, option.value)}
-                  className={`
-                    w-full p-4 rounded-xl border-2 text-left transition-all duration-200
-                    flex items-center gap-4
-                    ${isSelected
-                      ? 'bg-orange border-orange text-white scale-[1.02]'
-                      : 'bg-slate-800/50 border-slate-700 text-white hover:border-orange/50 hover:bg-slate-800'
-                    }
-                  `}
-                  style={{ animationDelay: `${index * 50}ms` }}
-                >
-                  {'icon' in option && option.icon && (
-                    <span className="text-2xl">{option.icon as string}</span>
-                  )}
-                  <span className="text-lg font-medium">{option.label}</span>
-                  {isSelected && (
-                    <Check className="ml-auto h-5 w-5" />
-                  )}
-                </button>
-              );
-            })}
-
-            {currentStepData.type === "checkbox" && (
-              <>
-                <div className="grid grid-cols-2 gap-3">
-                  {currentStepData.options?.map((option) => {
-                    const isChecked = formData.activeFlows.includes(option.value);
-                    return (
-                      <button
-                        key={option.id}
-                        onClick={() => handleCheckboxChange(option.value, !isChecked)}
-                        className={`
-                          p-4 rounded-xl border-2 text-left transition-all duration-200
-                          ${isChecked
-                            ? 'bg-orange border-orange text-white'
-                            : 'bg-slate-800/50 border-slate-700 text-white hover:border-orange/50'
-                          }
-                        `}
-                      >
-                        <span className="text-sm font-medium">{option.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-                {formData.activeFlows.length > 0 && (
-                  <p className="text-center text-slate-400 text-sm mt-4">
-                    {formData.activeFlows.length} flusso/i selezionato/i
-                  </p>
-                )}
-              </>
-            )}
-
-            {currentStepData.type === "input" && (
-              <div className="space-y-4">
-                <Input
-                  value={formData.website}
-                  onChange={(e) => handleInputChange('website', e.target.value)}
-                  placeholder="www.tuosito.com"
-                  className="bg-slate-800 border-slate-700 text-white h-14 text-lg rounded-xl focus:border-orange focus:ring-orange"
-                />
-              </div>
-            )}
-
-            {currentStepData.type === "contact" && (
-              <div className="space-y-4">
-                <Input
-                  value={formData.fullName}
-                  onChange={(e) => handleInputChange('fullName', e.target.value)}
-                  placeholder="Nome completo"
-                  className="bg-slate-800 border-slate-700 text-white h-14 text-lg rounded-xl focus:border-orange focus:ring-orange"
-                />
-                <Input
-                  value={formData.phone}
-                  onChange={(e) => handleInputChange('phone', e.target.value)}
-                  placeholder="Numero WhatsApp (+39...)"
-                  className="bg-slate-800 border-slate-700 text-white h-14 text-lg rounded-xl focus:border-orange focus:ring-orange"
-                />
-                <Input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => handleInputChange('email', e.target.value)}
-                  placeholder="Email"
-                  className="bg-slate-800 border-slate-700 text-white h-14 text-lg rounded-xl focus:border-orange focus:ring-orange"
-                />
-                
-                <div className="flex items-start gap-3 pt-4">
-                  <Checkbox
-                    id="terms"
-                    checked={formData.acceptTerms}
-                    onCheckedChange={(checked) => handleInputChange('acceptTerms', checked as boolean)}
-                    className="border-slate-500 data-[state=checked]:bg-orange data-[state=checked]:border-orange mt-1"
-                  />
-                  <Label 
-                    htmlFor="terms" 
-                    className="text-slate-400 text-sm cursor-pointer leading-relaxed"
-                  >
-                    Accetto i termini e condizioni. Fornendo il mio numero, accetto di ricevere messaggi per il report personalizzato.
-                  </Label>
-                </div>
-
-                <button
-                  onClick={handleSubmit}
-                  disabled={!formData.acceptTerms || isSubmitting}
-                  className={`
-                    w-full py-4 rounded-xl font-semibold text-lg transition-all duration-200
-                    flex items-center justify-center gap-2
-                    ${formData.acceptTerms && !isSubmitting
-                      ? 'bg-orange text-white hover:bg-orange/90 active:scale-[0.98]'
-                      : 'bg-slate-700 text-slate-400 cursor-not-allowed'
-                    }
-                  `}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                      Invio in corso...
-                    </>
-                  ) : (
-                    <>
-                      <Check className="h-5 w-5" />
-                      Ricevi il Report
-                    </>
-                  )}
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Continue button for checkbox/input steps */}
-          {showContinueButton && (
-            <button
-              onClick={goToNextStep}
-              className="w-full mt-6 py-4 rounded-xl bg-orange text-white font-semibold text-lg hover:bg-orange/90 active:scale-[0.98] transition-all duration-200"
+      <div className="flex-1 flex items-center justify-center px-4 py-8 overflow-hidden">
+        <AnimatePresence mode="wait" custom={direction}>
+          <motion.div
+            key={currentStep}
+            custom={direction}
+            variants={pageVariants}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            className="w-full max-w-xl"
+          >
+            {/* Question */}
+            <motion.div 
+              className="text-center mb-8"
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
             >
-              Continua
-            </button>
-          )}
-        </div>
+              <h1 className="text-2xl md:text-3xl font-bold text-white mb-3">
+                {currentStepData.title}
+              </h1>
+              {currentStepData.subtitle && (
+                <p className="text-slate-400">
+                  {currentStepData.subtitle}
+                </p>
+              )}
+            </motion.div>
+
+            {/* Options */}
+            <motion.div 
+              className="space-y-3"
+              variants={containerVariants}
+              initial="hidden"
+              animate="visible"
+            >
+              {currentStepData.type === "radio" && currentStepData.options?.map((option) => {
+                const isSelected = formData[currentStepData.field] === option.value;
+                const isAnimating = selectedValue === option.value;
+                
+                return (
+                  <motion.button
+                    key={option.id}
+                    variants={cardVariants}
+                    onClick={() => handleRadioSelect(currentStepData.field, option.value)}
+                    animate={isAnimating ? selectedPulse : {}}
+                    whileHover={{ scale: 1.02, borderColor: 'rgba(249, 115, 22, 0.5)' }}
+                    whileTap={{ scale: 0.98 }}
+                    className={`
+                      w-full p-4 rounded-xl border-2 text-left transition-colors duration-200
+                      flex items-center gap-4
+                      ${isSelected
+                        ? 'bg-orange border-orange text-white'
+                        : 'bg-slate-800/50 border-slate-700 text-white'
+                      }
+                    `}
+                  >
+                    {'icon' in option && option.icon && (
+                      <span className="text-2xl">{option.icon as string}</span>
+                    )}
+                    <span className="text-lg font-medium flex-1">{option.label}</span>
+                    <AnimatePresence>
+                      {isSelected && (
+                        <motion.div
+                          initial={{ scale: 0, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          exit={{ scale: 0, opacity: 0 }}
+                          transition={{ type: "spring", stiffness: 500, damping: 25 }}
+                        >
+                          <Check className="h-5 w-5" />
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </motion.button>
+                );
+              })}
+
+              {currentStepData.type === "checkbox" && (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    {currentStepData.options?.map((option, index) => {
+                      const isChecked = formData.activeFlows.includes(option.value);
+                      return (
+                        <motion.button
+                          key={option.id}
+                          variants={cardVariants}
+                          custom={index}
+                          onClick={() => handleCheckboxChange(option.value, !isChecked)}
+                          whileHover={{ scale: 1.03 }}
+                          whileTap={{ scale: 0.97 }}
+                          className={`
+                            p-4 rounded-xl border-2 text-left transition-colors duration-200
+                            flex items-center gap-2
+                            ${isChecked
+                              ? 'bg-orange border-orange text-white'
+                              : 'bg-slate-800/50 border-slate-700 text-white'
+                            }
+                          `}
+                        >
+                          <span className="text-sm font-medium flex-1">{option.label}</span>
+                          <AnimatePresence>
+                            {isChecked && (
+                              <motion.div
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                exit={{ scale: 0 }}
+                              >
+                                <Check className="h-4 w-4" />
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </motion.button>
+                      );
+                    })}
+                  </div>
+                  <AnimatePresence>
+                    {formData.activeFlows.length > 0 && (
+                      <motion.p 
+                        className="text-center text-slate-400 text-sm mt-4"
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0 }}
+                      >
+                        {formData.activeFlows.length} flusso/i selezionato/i
+                      </motion.p>
+                    )}
+                  </AnimatePresence>
+                </>
+              )}
+
+              {currentStepData.type === "input" && (
+                <motion.div 
+                  className="space-y-4"
+                  variants={cardVariants}
+                >
+                  <Input
+                    value={formData.website}
+                    onChange={(e) => handleInputChange('website', e.target.value)}
+                    placeholder="www.tuosito.com"
+                    className="bg-slate-800 border-slate-700 text-white h-14 text-lg rounded-xl focus:border-orange focus:ring-orange"
+                  />
+                </motion.div>
+              )}
+
+              {currentStepData.type === "contact" && (
+                <motion.div 
+                  className="space-y-4"
+                  variants={containerVariants}
+                >
+                  <motion.div variants={cardVariants}>
+                    <Input
+                      value={formData.fullName}
+                      onChange={(e) => handleInputChange('fullName', e.target.value)}
+                      placeholder="Nome completo"
+                      className="bg-slate-800 border-slate-700 text-white h-14 text-lg rounded-xl focus:border-orange focus:ring-orange"
+                    />
+                  </motion.div>
+                  <motion.div variants={cardVariants}>
+                    <Input
+                      value={formData.phone}
+                      onChange={(e) => handleInputChange('phone', e.target.value)}
+                      placeholder="Numero WhatsApp (+39...)"
+                      className="bg-slate-800 border-slate-700 text-white h-14 text-lg rounded-xl focus:border-orange focus:ring-orange"
+                    />
+                  </motion.div>
+                  <motion.div variants={cardVariants}>
+                    <Input
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => handleInputChange('email', e.target.value)}
+                      placeholder="Email"
+                      className="bg-slate-800 border-slate-700 text-white h-14 text-lg rounded-xl focus:border-orange focus:ring-orange"
+                    />
+                  </motion.div>
+                  
+                  <motion.div 
+                    className="flex items-start gap-3 pt-4"
+                    variants={cardVariants}
+                  >
+                    <Checkbox
+                      id="terms"
+                      checked={formData.acceptTerms}
+                      onCheckedChange={(checked) => handleInputChange('acceptTerms', checked as boolean)}
+                      className="border-slate-500 data-[state=checked]:bg-orange data-[state=checked]:border-orange mt-1"
+                    />
+                    <Label 
+                      htmlFor="terms" 
+                      className="text-slate-400 text-sm cursor-pointer leading-relaxed"
+                    >
+                      Accetto i termini e condizioni. Fornendo il mio numero, accetto di ricevere messaggi per il report personalizzato.
+                    </Label>
+                  </motion.div>
+
+                  <motion.button
+                    variants={cardVariants}
+                    onClick={handleSubmit}
+                    disabled={!formData.acceptTerms || isSubmitting}
+                    whileHover={formData.acceptTerms && !isSubmitting ? { scale: 1.02 } : {}}
+                    whileTap={formData.acceptTerms && !isSubmitting ? { scale: 0.98 } : {}}
+                    className={`
+                      w-full py-4 rounded-xl font-semibold text-lg transition-colors duration-200
+                      flex items-center justify-center gap-2
+                      ${formData.acceptTerms && !isSubmitting
+                        ? 'bg-orange text-white hover:bg-orange/90'
+                        : 'bg-slate-700 text-slate-400 cursor-not-allowed'
+                      }
+                    `}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                        Invio in corso...
+                      </>
+                    ) : (
+                      <>
+                        <Check className="h-5 w-5" />
+                        Ricevi il Report
+                      </>
+                    )}
+                  </motion.button>
+                </motion.div>
+              )}
+            </motion.div>
+
+            {/* Continue button for checkbox/input steps */}
+            {showContinueButton && (
+              <motion.button
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                onClick={goToNextStep}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="w-full mt-6 py-4 rounded-xl bg-orange text-white font-semibold text-lg hover:bg-orange/90 transition-colors duration-200"
+              >
+                Continua
+              </motion.button>
+            )}
+          </motion.div>
+        </AnimatePresence>
       </div>
 
       {/* Back button */}
-      {currentStep > 0 && (
-        <div className="px-4 pb-8">
-          <div className="max-w-xl mx-auto">
-            <button
-              onClick={handlePrevious}
-              className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
-            >
-              <ChevronLeft className="h-5 w-5" />
-              <span>Indietro</span>
-            </button>
-          </div>
-        </div>
-      )}
+      <AnimatePresence>
+        {currentStep > 0 && (
+          <motion.div 
+            className="px-4 pb-8"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+          >
+            <div className="max-w-xl mx-auto">
+              <motion.button
+                onClick={handlePrevious}
+                whileHover={{ x: -5 }}
+                className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
+              >
+                <ChevronLeft className="h-5 w-5" />
+                <span>Indietro</span>
+              </motion.button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
