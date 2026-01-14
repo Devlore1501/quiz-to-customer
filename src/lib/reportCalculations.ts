@@ -191,8 +191,9 @@ export const calculateAdvancedReport = (
   const currentEmailRevenue = monthlyRevenue * (currentEmailPercent / 100);
   const currentRevenuePerSub = listSize > 0 ? currentEmailRevenue / listSize : 0;
   
-  // Calcoli benchmark
-  const benchmarkEmailRevenue = monthlyRevenue * (sectorBenchmark.emailShare / 100);
+  // Calcoli benchmark - fisso al 35% per tutti i settori
+  const fixedBenchmarkPercent = 35;
+  const benchmarkEmailRevenue = monthlyRevenue * (fixedBenchmarkPercent / 100);
   const benchmarkRevenuePerSub = sectorBenchmark.revenuePerSub;
   
   // Gap Analysis
@@ -323,8 +324,8 @@ export const calculateAdvancedReport = (
   const performanceLevel = emailHealthScore >= 60 ? 'discreta' : 
                            emailHealthScore >= 40 ? 'sotto le aspettative' : 'critica';
   
-  const currentSituation = `Il tuo e-commerce nel settore ${sectorBenchmark.label} mostra una performance email ${performanceLevel}. Attualmente generi il ${currentEmailPercent}% del fatturato mensile dall'email marketing (${formatCurrencyInternal(currentEmailRevenue)}/mese), contro un benchmark di settore del ${sectorBenchmark.emailShare}%. ${
-    automationRating === 'D' || automationRating === 'C' 
+  const currentSituation = `Il tuo e-commerce nel settore ${sectorBenchmark.label} mostra una performance email ${performanceLevel}. Attualmente generi il ${currentEmailPercent}% del fatturato mensile dall'email marketing (${formatCurrencyInternal(currentEmailRevenue)}/mese), contro un benchmark di settore del 35%. ${
+    automationRating === 'D' || automationRating === 'C'
       ? `Con sole ${activeFlowsCount} automazioni attive su ${totalFlowsCount} disponibili (rating ${automationRating}), stai lasciando sul tavolo opportunità di vendita automatizzate per circa ${formatCurrencyInternal(totalFlowGap)}/mese.` 
       : `Hai una buona base di ${activeFlowsCount} automazioni attive, ma c'è ancora margine per ottimizzare ulteriormente e raggiungere il benchmark di settore.`
   }`;
