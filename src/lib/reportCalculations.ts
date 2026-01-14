@@ -160,6 +160,13 @@ export interface AdvancedReport {
     roi: string;
   }>;
   
+  // Analisi Strategica
+  strategicAnalysis: {
+    currentSituation: string;
+    desiredSituation: string;
+    potentialObstacles: string[];
+  };
+  
   // Score complessivo
   emailHealthScore: number;
   yearlyPotential: number;
@@ -310,6 +317,43 @@ export const calculateAdvancedReport = (
   // Potenziale annuo
   const yearlyPotential = (revenueGap + totalFlowGap) * 12;
   
+  // Analisi Strategica - Generazione testi dinamici
+  const formatCurrencyInternal = (value: number) => `€${Math.round(value).toLocaleString('it-IT')}`;
+  
+  const performanceLevel = emailHealthScore >= 60 ? 'discreta' : 
+                           emailHealthScore >= 40 ? 'sotto le aspettative' : 'critica';
+  
+  const currentSituation = `Il tuo e-commerce nel settore ${sectorBenchmark.label} mostra una performance email ${performanceLevel}. Attualmente generi il ${currentEmailPercent}% del fatturato mensile dall'email marketing (${formatCurrencyInternal(currentEmailRevenue)}/mese), contro un benchmark di settore del ${sectorBenchmark.emailShare}%. ${
+    automationRating === 'D' || automationRating === 'C' 
+      ? `Con sole ${activeFlowsCount} automazioni attive su ${totalFlowsCount} disponibili (rating ${automationRating}), stai lasciando sul tavolo opportunità di vendita automatizzate per circa ${formatCurrencyInternal(totalFlowGap)}/mese.` 
+      : `Hai una buona base di ${activeFlowsCount} automazioni attive, ma c'è ancora margine per ottimizzare ulteriormente e raggiungere il benchmark di settore.`
+  }`;
+  
+  const desiredSituation = `Allineandoti al benchmark del settore ${sectorBenchmark.label}, potresti generare ${formatCurrencyInternal(benchmarkEmailRevenue)}/mese dall'email marketing, con un incremento di ${formatCurrencyInternal(revenueGap)}/mese rispetto ad oggi. Un sistema completo di automazioni trasformerebbe l'email nel tuo canale più profittevole, con un ROI medio di 35-42x sull'investimento. Questo significa ${formatCurrencyInternal(yearlyPotential)}/anno di fatturato aggiuntivo senza aumentare il budget pubblicitario.`;
+  
+  const potentialObstacles: string[] = [];
+  potentialObstacles.push("Mancanza di tempo e risorse interne dedicate all'email marketing");
+  
+  if (automationRating === 'C' || automationRating === 'D') {
+    potentialObstacles.push("Competenze tecniche limitate per implementare automazioni avanzate");
+  }
+  
+  if (activeFlowsCount < 3) {
+    potentialObstacles.push("Assenza di strategia strutturata per le automazioni email");
+  }
+  
+  if (currentEmailPercent < 15) {
+    potentialObstacles.push("Lista email sottosviluppata o non adeguatamente segmentata");
+  }
+  
+  potentialObstacles.push("Difficoltà nel misurare e attribuire correttamente il ROI dell'email");
+  
+  const strategicAnalysis = {
+    currentSituation,
+    desiredSituation,
+    potentialObstacles: potentialObstacles.slice(0, 4)
+  };
+  
   return {
     currentEmailRevenue,
     currentEmailPercent,
@@ -330,6 +374,7 @@ export const calculateAdvancedReport = (
     totalFlowGap,
     scenarios,
     topActions,
+    strategicAnalysis,
     emailHealthScore,
     yearlyPotential
   };
