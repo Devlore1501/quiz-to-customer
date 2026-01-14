@@ -18,10 +18,75 @@ interface FormData {
   listSize: string;
   activeFlows: string[];
   website: string;
+  companyName: string;
   fullName: string;
   phone: string;
   email: string;
   acceptTerms: boolean;
+}
+
+// Email validation state interface
+interface EmailValidation {
+  status: 'idle' | 'valid' | 'invalid' | 'warning';
+  message?: string;
+}
+
+// Business email validation
+const personalDomains = [
+  'gmail.com', 'googlemail.com',
+  'yahoo.com', 'yahoo.it', 'ymail.com',
+  'hotmail.com', 'hotmail.it', 'outlook.com', 'live.com', 'live.it', 'msn.com',
+  'icloud.com', 'me.com', 'mac.com',
+  'libero.it', 'virgilio.it', 'alice.it', 'tin.it', 'tiscali.it',
+  'aruba.it', 'fastwebnet.it', 'pec.it',
+  'protonmail.com', 'proton.me',
+  'aol.com', 'mail.com', 'email.com', 'inbox.com'
+];
+
+function extractDomainFromUrl(url: string): string {
+  try {
+    let normalized = url.toLowerCase().trim();
+    if (!normalized.startsWith('http://') && !normalized.startsWith('https://')) {
+      normalized = 'https://' + normalized;
+    }
+    const urlObj = new URL(normalized);
+    return urlObj.hostname.replace(/^www\./, '');
+  } catch {
+    return '';
+  }
+}
+
+function validateBusinessEmail(email: string, website: string): EmailValidation {
+  if (!email || !email.includes('@')) {
+    return { status: 'idle' };
+  }
+  
+  const emailDomain = email.split('@')[1]?.toLowerCase();
+  
+  if (!emailDomain) {
+    return { status: 'invalid', message: 'Email non valida' };
+  }
+  
+  // Check if personal email domain
+  if (personalDomains.includes(emailDomain)) {
+    return {
+      status: 'invalid',
+      message: 'Inserisci un\'email aziendale (non Gmail, Yahoo, Outlook, etc.)'
+    };
+  }
+  
+  // Extract domain from website
+  const websiteDomain = extractDomainFromUrl(website);
+  
+  // Check if email domain matches website domain
+  if (websiteDomain && emailDomain !== websiteDomain) {
+    return {
+      status: 'warning',
+      message: `L'email dovrebbe idealmente essere @${websiteDomain}`
+    };
+  }
+  
+  return { status: 'valid' };
 }
 
 // Animation variants
@@ -372,6 +437,7 @@ const EmailMarketingSurvey = () => {
   const [phase, setPhase] = useState<'quiz' | 'analyzing' | 'report'>('quiz');
   const [selectedValue, setSelectedValue] = useState<string | null>(null);
   const [websiteVerification, setWebsiteVerification] = useState<WebsiteVerification>({ status: 'idle' });
+  const [emailValidation, setEmailValidation] = useState<EmailValidation>({ status: 'idle' });
   const [formData, setFormData] = useState<FormData>({
     sector: '',
     monthlyRevenue: '',
@@ -381,6 +447,7 @@ const EmailMarketingSurvey = () => {
     listSize: '',
     activeFlows: [],
     website: '',
+    companyName: '',
     fullName: '',
     phone: '',
     email: '',
@@ -500,7 +567,7 @@ const EmailMarketingSurvey = () => {
     },
     {
       title: "Dove ti inviamo il report?",
-      subtitle: "Ti contatteremo su WhatsApp con il tuo report personalizzato",
+      subtitle: "Inserisci i dati della tua azienda per ricevere il report personalizzato",
       type: "contact" as const
     }
   ];
@@ -545,6 +612,12 @@ const EmailMarketingSurvey = () => {
     // Reset website verification when website changes
     if (field === 'website') {
       setWebsiteVerification({ status: 'idle' });
+    }
+    
+    // Validate email in real-time
+    if (field === 'email' && typeof value === 'string') {
+      const validation = validateBusinessEmail(value, formData.website);
+      setEmailValidation(validation);
     }
   };
 
@@ -637,6 +710,27 @@ const EmailMarketingSurvey = () => {
   };
 
   const handleSubmit = async () => {
+    // Validate company name
+    if (!formData.companyName.trim()) {
+      toast({
+        title: "Errore",
+        description: "Inserisci il nome della tua azienda",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Validate business email
+    const emailCheck = validateBusinessEmail(formData.email, formData.website);
+    if (emailCheck.status === 'invalid') {
+      toast({
+        title: "Email non valida",
+        description: emailCheck.message || "Inserisci un'email aziendale valida",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     if (!formData.acceptTerms) {
       toast({
         title: "Errore",
@@ -714,6 +808,7 @@ const EmailMarketingSurvey = () => {
     setReport(null);
     setPhase('quiz');
     setIsSubmitting(false);
+    setEmailValidation({ status: 'idle' });
     setFormData({
       sector: '',
       monthlyRevenue: '',
@@ -723,6 +818,7 @@ const EmailMarketingSurvey = () => {
       listSize: '',
       activeFlows: [],
       website: '',
+      companyName: '',
       fullName: '',
       phone: '',
       email: '',
@@ -1061,9 +1157,17 @@ const EmailMarketingSurvey = () => {
                 >
                   <motion.div variants={cardVariants}>
                     <Input
+                      value={formData.companyName}
+                      onChange={(e) => handleInputChange('companyName', e.target.value)}
+                      placeholder="Nome Azienda *"
+                      className="bg-slate-800 border-slate-700 text-white h-14 text-lg rounded-xl focus:border-orange focus:ring-orange"
+                    />
+                  </motion.div>
+                  <motion.div variants={cardVariants}>
+                    <Input
                       value={formData.fullName}
                       onChange={(e) => handleInputChange('fullName', e.target.value)}
-                      placeholder="Nome completo"
+                      placeholder="Nome e Cognome *"
                       className="bg-slate-800 border-slate-700 text-white h-14 text-lg rounded-xl focus:border-orange focus:ring-orange"
                     />
                   </motion.div>
@@ -1071,18 +1175,77 @@ const EmailMarketingSurvey = () => {
                     <Input
                       value={formData.phone}
                       onChange={(e) => handleInputChange('phone', e.target.value)}
-                      placeholder="Numero WhatsApp (+39...)"
+                      placeholder="Numero WhatsApp (+39...) *"
                       className="bg-slate-800 border-slate-700 text-white h-14 text-lg rounded-xl focus:border-orange focus:ring-orange"
                     />
                   </motion.div>
-                  <motion.div variants={cardVariants}>
-                    <Input
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => handleInputChange('email', e.target.value)}
-                      placeholder="Email"
-                      className="bg-slate-800 border-slate-700 text-white h-14 text-lg rounded-xl focus:border-orange focus:ring-orange"
-                    />
+                  <motion.div variants={cardVariants} className="space-y-2">
+                    <div className="relative">
+                      <Input
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) => handleInputChange('email', e.target.value)}
+                        placeholder="Email Aziendale *"
+                        className={`bg-slate-800 text-white h-14 text-lg rounded-xl pr-12 border-2 transition-colors ${
+                          emailValidation.status === 'valid' 
+                            ? 'border-green-500 focus:border-green-500 focus:ring-green-500' 
+                            : emailValidation.status === 'invalid'
+                            ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
+                            : emailValidation.status === 'warning'
+                            ? 'border-yellow-500 focus:border-yellow-500 focus:ring-yellow-500'
+                            : 'border-slate-700 focus:border-orange focus:ring-orange'
+                        }`}
+                      />
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                        {emailValidation.status === 'valid' && (
+                          <motion.div
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            transition={{ type: "spring", stiffness: 500, damping: 25 }}
+                          >
+                            <CheckCircle2 className="w-5 h-5 text-green-500" />
+                          </motion.div>
+                        )}
+                        {emailValidation.status === 'invalid' && (
+                          <motion.div
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            transition={{ type: "spring", stiffness: 500, damping: 25 }}
+                          >
+                            <XCircle className="w-5 h-5 text-red-500" />
+                          </motion.div>
+                        )}
+                        {emailValidation.status === 'warning' && (
+                          <motion.div
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            transition={{ type: "spring", stiffness: 500, damping: 25 }}
+                          >
+                            <AlertCircle className="w-5 h-5 text-yellow-500" />
+                          </motion.div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* Email validation feedback */}
+                    <AnimatePresence mode="wait">
+                      {emailValidation.message && (
+                        <motion.p
+                          initial={{ opacity: 0, y: -5 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -5 }}
+                          className={`text-sm ${
+                            emailValidation.status === 'invalid' ? 'text-red-400' : 'text-yellow-400'
+                          }`}
+                        >
+                          {emailValidation.message}
+                        </motion.p>
+                      )}
+                    </AnimatePresence>
+                    
+                    <p className="text-xs text-slate-500">
+                      Es: nome@tuaazienda.it - No Gmail, Yahoo, etc.
+                    </p>
                   </motion.div>
                   
                   <motion.div 
