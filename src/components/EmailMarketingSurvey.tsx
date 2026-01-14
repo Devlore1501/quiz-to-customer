@@ -6,6 +6,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/hooks/use-toast';
 import { calculateAdvancedReport, type AdvancedReport } from '@/lib/reportCalculations';
+import { generateAdminReport } from '@/lib/adminReportGenerator';
 import AdvancedReportComponent from '@/components/AdvancedReport';
 
 interface FormData {
@@ -211,12 +212,34 @@ const EmailMarketingSurvey = () => {
         formData.activeFlows
       );
       
-      // Invia i dati al webhook
+      // Genera il report admin dettagliato
+      const adminReport = generateAdminReport(formData, advancedReport);
+      
+      // Invia i dati completi al webhook (report admin per te)
       const dataToSend = {
-        ...formData,
+        type: 'admin_report',
         timestamp: new Date().toISOString(),
-        source: 'business-analysis-tool',
-        report: advancedReport
+        source: 'email-marketing-quiz',
+        
+        // Report semplificato per riferimento rapido
+        quickSummary: {
+          leadName: formData.fullName,
+          leadEmail: formData.email,
+          leadPhone: formData.phone,
+          website: formData.website,
+          sector: advancedReport.sectorBenchmark.label,
+          monthlyRevenue: advancedReport.monthlyRevenue,
+          emailHealthScore: advancedReport.emailHealthScore,
+          yearlyPotential: advancedReport.yearlyPotential,
+          leadQuality: adminReport.consultingNotes.leadQuality,
+          priorityLevel: adminReport.consultingNotes.priorityLevel
+        },
+        
+        // Report completo admin
+        adminReport,
+        
+        // Report base (per compatibilità)
+        clientReport: advancedReport
       };
 
       await fetch('https://hook.eu1.make.com/hi1xrv57zvt5kilh1fye9130gb132vx3', {
@@ -276,6 +299,9 @@ const EmailMarketingSurvey = () => {
       <AdvancedReportComponent 
         report={report} 
         phone={formData.phone}
+        userName={formData.fullName}
+        userEmail={formData.email}
+        website={formData.website}
         onRestart={handleRestart}
       />
     );

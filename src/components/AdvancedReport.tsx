@@ -1,11 +1,16 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
+import { Download, Loader2 } from 'lucide-react';
 import type { AdvancedReport } from '@/lib/reportCalculations';
+import { generatePdfReport } from '@/lib/pdfGenerator';
 
 interface AdvancedReportProps {
   report: AdvancedReport;
   phone: string;
+  userName: string;
+  userEmail: string;
+  website: string;
   onRestart: () => void;
 }
 
@@ -29,9 +34,25 @@ const getScoreColor = (score: number) => {
 
 export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({ 
   report, 
-  phone, 
+  phone,
+  userName,
+  userEmail,
+  website,
   onRestart 
 }) => {
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const handleDownloadPdf = async () => {
+    setIsDownloading(true);
+    try {
+      await generatePdfReport(report, userName, userEmail, website);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-900 py-8 px-4">
       <div className="w-full max-w-5xl mx-auto space-y-8">
@@ -289,6 +310,37 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
             <p className="text-white/80 text-lg mb-2">💰 Potenziale Economico Annuo Recuperabile</p>
             <p className="text-4xl md:text-5xl font-bold text-white">{formatCurrency(report.yearlyPotential)}</p>
             <p className="text-white/70 mt-2">Implementando tutte le strategie suggerite</p>
+          </div>
+        </div>
+
+        {/* Download PDF */}
+        <div className="bg-gradient-to-br from-slate-800 to-slate-700 p-6 rounded-xl border border-slate-600 animate-fade-in" style={{ animationDelay: '850ms' }}>
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div>
+              <h3 className="text-lg font-bold text-white mb-1">
+                📥 Scarica il tuo Report PDF
+              </h3>
+              <p className="text-slate-400 text-sm">
+                Salva questo report per consultarlo quando vuoi
+              </p>
+            </div>
+            <Button 
+              onClick={handleDownloadPdf}
+              disabled={isDownloading}
+              className="bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-white px-6"
+            >
+              {isDownloading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Generazione...
+                </>
+              ) : (
+                <>
+                  <Download className="w-4 h-4 mr-2" />
+                  Scarica PDF
+                </>
+              )}
+            </Button>
           </div>
         </div>
 
