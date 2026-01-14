@@ -14,7 +14,81 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      survey_submissions: {
+        Row: {
+          active_flows: string[] | null
+          benchmark_email_revenue: number | null
+          company_name: string
+          created_at: string
+          current_email_revenue: number | null
+          custom_sector: string | null
+          email: string
+          email_health_score: number | null
+          email_revenue_percentage: string
+          full_name: string
+          ghl_synced: boolean | null
+          id: string
+          lead_quality: string | null
+          list_size: string
+          make_synced: boolean | null
+          monthly_revenue: string
+          phone: string | null
+          report_data: Json | null
+          revenue_gap: number | null
+          sector: string
+          website: string | null
+          yearly_potential: number | null
+        }
+        Insert: {
+          active_flows?: string[] | null
+          benchmark_email_revenue?: number | null
+          company_name: string
+          created_at?: string
+          current_email_revenue?: number | null
+          custom_sector?: string | null
+          email: string
+          email_health_score?: number | null
+          email_revenue_percentage: string
+          full_name: string
+          ghl_synced?: boolean | null
+          id?: string
+          lead_quality?: string | null
+          list_size: string
+          make_synced?: boolean | null
+          monthly_revenue: string
+          phone?: string | null
+          report_data?: Json | null
+          revenue_gap?: number | null
+          sector: string
+          website?: string | null
+          yearly_potential?: number | null
+        }
+        Update: {
+          active_flows?: string[] | null
+          benchmark_email_revenue?: number | null
+          company_name?: string
+          created_at?: string
+          current_email_revenue?: number | null
+          custom_sector?: string | null
+          email?: string
+          email_health_score?: number | null
+          email_revenue_percentage?: string
+          full_name?: string
+          ghl_synced?: boolean | null
+          id?: string
+          lead_quality?: string | null
+          list_size?: string
+          make_synced?: boolean | null
+          monthly_revenue?: string
+          phone?: string | null
+          report_data?: Json | null
+          revenue_gap?: number | null
+          sector?: string
+          website?: string | null
+          yearly_potential?: number | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

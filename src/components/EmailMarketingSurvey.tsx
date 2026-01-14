@@ -786,7 +786,40 @@ const EmailMarketingSurvey = () => {
         clientReport: advancedReport
       };
 
-      // Send data in background
+      // 1. Save to database first
+      const submissionData = {
+        company_name: formData.companyName,
+        full_name: formData.fullName,
+        email: formData.email,
+        phone: formData.phone || null,
+        website: formData.website || null,
+        sector: formData.sector,
+        custom_sector: formData.sector === 'other' ? formData.customSector : null,
+        monthly_revenue: formData.monthlyRevenue,
+        email_revenue_percentage: formData.emailRevenuePercentage,
+        list_size: formData.listSize,
+        active_flows: formData.activeFlows,
+        email_health_score: advancedReport.emailHealthScore,
+        yearly_potential: advancedReport.yearlyPotential,
+        current_email_revenue: advancedReport.currentEmailRevenue,
+        benchmark_email_revenue: advancedReport.benchmarkEmailRevenue,
+        revenue_gap: advancedReport.revenueGap,
+        lead_quality: adminReport.consultingNotes.leadQuality,
+        make_synced: true,
+        ghl_synced: false,
+        report_data: dataToSend
+      };
+
+      const { error: dbError } = await supabase
+        .from('survey_submissions')
+        .insert(submissionData as never);
+
+      if (dbError) {
+        console.error('Database save error:', dbError);
+        // Continue anyway - don't block user experience
+      }
+
+      // 2. Send to Make.com webhook
       fetch('https://hook.eu1.make.com/hi1xrv57zvt5kilh1fye9130gb132vx3', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -799,6 +832,7 @@ const EmailMarketingSurvey = () => {
       setPhase('analyzing');
       
     } catch (error) {
+      console.error('Submit error:', error);
       toast({
         title: "Errore",
         description: "Si è verificato un errore. Riprova più tardi.",
