@@ -161,16 +161,26 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
             📈 Situazione Attuale vs Benchmark
           </h2>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div className="bg-slate-700/50 p-4 rounded-lg">
-              <p className="text-slate-400 text-sm mb-1">Fatturato Email Attuale</p>
-              <p className="text-2xl font-bold text-white">{formatCurrency(report.currentEmailRevenue)}<span className="text-sm text-slate-400">/mese</span></p>
-              <p className="text-slate-400 text-sm">{report.currentEmailPercent}% del fatturato</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            {/* Fatturato Totale */}
+            <div className="bg-slate-700/50 p-4 rounded-lg border-l-4 border-slate-500">
+              <p className="text-slate-400 text-sm mb-1">Fatturato Mensile Totale</p>
+              <p className="text-2xl font-bold text-white">{formatCurrency(report.monthlyRevenue)}<span className="text-sm text-slate-400">/mese</span></p>
+              <p className="text-slate-400 text-sm">{formatCurrency(report.monthlyRevenue * 12)}/anno</p>
             </div>
-            <div className="bg-slate-700/50 p-4 rounded-lg">
-              <p className="text-slate-400 text-sm mb-1">Benchmark Settore</p>
+            {/* Fatturato Email Attuale */}
+            <div className="bg-slate-700/50 p-4 rounded-lg border-l-4 border-orange/50">
+              <p className="text-slate-400 text-sm mb-1">Fatturato da Email</p>
+              <p className="text-2xl font-bold text-white">{formatCurrency(report.currentEmailRevenue)}<span className="text-sm text-slate-400">/mese</span></p>
+              <p className="text-slate-400 text-sm">{report.currentEmailPercent}% del fatturato totale</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div className="bg-gradient-to-br from-orange/20 to-orange/5 p-4 rounded-lg border border-orange/30">
+              <p className="text-orange text-sm mb-1">Benchmark Settore</p>
               <p className="text-2xl font-bold text-orange">{formatCurrency(report.benchmarkEmailRevenue)}<span className="text-sm text-orange/70">/mese</span></p>
-              <p className="text-orange/70 text-sm">{report.sectorBenchmark.emailShare}% del fatturato</p>
+              <p className="text-orange/70 text-sm">35% del fatturato (standard di mercato)</p>
             </div>
             <div className="bg-gradient-to-br from-red-600/30 to-red-500/10 p-4 rounded-lg border border-red-500/30">
               <p className="text-red-300 text-sm mb-1">Gap Economico</p>
