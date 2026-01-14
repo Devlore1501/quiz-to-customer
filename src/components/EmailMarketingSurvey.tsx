@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -7,8 +7,8 @@ import { toast } from '@/hooks/use-toast';
 import { calculateAdvancedReport, type AdvancedReport } from '@/lib/reportCalculations';
 import { generateAdminReport } from '@/lib/adminReportGenerator';
 import AdvancedReportComponent from '@/components/AdvancedReport';
-import { ChevronLeft, Check, Loader2, CheckCircle2, Circle, BarChart3, Users, TrendingUp, FileText, Sparkles } from 'lucide-react';
-
+import { ChevronLeft, Check, Loader2, CheckCircle2, Circle, BarChart3, Users, TrendingUp, FileText, Sparkles, XCircle, Globe, AlertCircle } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 interface FormData {
   sector: string;
   monthlyRevenue: string;
@@ -307,6 +307,63 @@ const AnalysisScreen = ({
   );
 };
 
+// Website verification state interface
+interface WebsiteVerification {
+  status: 'idle' | 'checking' | 'valid' | 'invalid';
+  message?: string;
+  checks?: {
+    isReachable: boolean;
+    isEcommerce: boolean;
+    sectorMatch: boolean;
+    isBlacklisted: boolean;
+  };
+  confidence?: number;
+}
+
+// Debounce utility
+function debounce<T extends (...args: unknown[]) => unknown>(
+  func: T,
+  wait: number
+): (...args: Parameters<T>) => void {
+  let timeout: NodeJS.Timeout | null = null;
+  return (...args: Parameters<T>) => {
+    if (timeout) clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  };
+}
+
+// URL validation utility
+function isValidUrlFormat(url: string): { isValid: boolean; normalized: string; error?: string } {
+  let normalized = url.trim().toLowerCase();
+  
+  if (!normalized) {
+    return { isValid: false, normalized, error: 'Inserisci il tuo sito web' };
+  }
+  
+  // Add https:// if missing protocol
+  if (!normalized.startsWith('http://') && !normalized.startsWith('https://')) {
+    normalized = 'https://' + normalized.replace(/^www\./, '');
+  }
+  
+  // Basic URL pattern validation
+  const urlPattern = /^https?:\/\/([\w-]+\.)+[\w-]+(\/[\w-./?%&=]*)?$/;
+  
+  if (!urlPattern.test(normalized)) {
+    return { isValid: false, normalized, error: 'Formato URL non valido' };
+  }
+  
+  // Check for valid TLD
+  const validTlds = ['com', 'it', 'eu', 'net', 'org', 'io', 'co', 'shop', 'store', 'online', 'info', 'biz', 'me', 'app', 'dev', 'tech'];
+  const domain = normalized.replace(/^https?:\/\//, '').split('/')[0];
+  const tld = domain.split('.').pop();
+  
+  if (!tld || (!validTlds.includes(tld) && tld.length < 2)) {
+    return { isValid: false, normalized, error: 'Dominio non riconosciuto' };
+  }
+  
+  return { isValid: true, normalized };
+}
+
 const EmailMarketingSurvey = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const [direction, setDirection] = useState(1);
@@ -314,6 +371,7 @@ const EmailMarketingSurvey = () => {
   const [report, setReport] = useState<AdvancedReport | null>(null);
   const [phase, setPhase] = useState<'quiz' | 'analyzing' | 'report'>('quiz');
   const [selectedValue, setSelectedValue] = useState<string | null>(null);
+  const [websiteVerification, setWebsiteVerification] = useState<WebsiteVerification>({ status: 'idle' });
   const [formData, setFormData] = useState<FormData>({
     sector: '',
     monthlyRevenue: '',
@@ -483,6 +541,94 @@ const EmailMarketingSurvey = () => {
 
   const handleInputChange = (field: keyof FormData, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+    
+    // Reset website verification when website changes
+    if (field === 'website') {
+      setWebsiteVerification({ status: 'idle' });
+    }
+  };
+
+  // Verify website with Edge Function
+  const verifyWebsite = useCallback(async (url: string, sector: string) => {
+    // First check format locally
+    const formatCheck = isValidUrlFormat(url);
+    if (!formatCheck.isValid) {
+      setWebsiteVerification({
+        status: 'invalid',
+        message: formatCheck.error
+      });
+      return false;
+    }
+    
+    setWebsiteVerification({ status: 'checking' });
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('verify-website', {
+        body: { url: formatCheck.normalized, sector }
+      });
+      
+      if (error) {
+        console.error('Website verification error:', error);
+        setWebsiteVerification({
+          status: 'invalid',
+          message: 'Errore durante la verifica. Riprova.'
+        });
+        return false;
+      }
+      
+      if (data.isValid) {
+        setWebsiteVerification({
+          status: 'valid',
+          checks: data.checks,
+          confidence: data.confidence
+        });
+        // Update form with normalized URL
+        if (data.details?.normalizedUrl) {
+          setFormData(prev => ({ ...prev, website: data.details.normalizedUrl }));
+        }
+        return true;
+      } else {
+        setWebsiteVerification({
+          status: 'invalid',
+          message: data.error || 'Sito non valido',
+          checks: data.checks
+        });
+        return false;
+      }
+    } catch (err) {
+      console.error('Website verification failed:', err);
+      setWebsiteVerification({
+        status: 'invalid',
+        message: 'Errore di connessione. Riprova.'
+      });
+      return false;
+    }
+  }, []);
+
+  // Debounced verification for real-time feedback
+  const debouncedVerify = useMemo(
+    () => debounce((url: string, sector: string) => {
+      if (url.length > 3) {
+        verifyWebsite(url, sector);
+      }
+    }, 800),
+    [verifyWebsite]
+  );
+
+  // Handle website verification on Continue button click
+  const handleWebsiteContinue = async () => {
+    if (!formData.website) {
+      setWebsiteVerification({
+        status: 'invalid',
+        message: 'Inserisci il tuo sito web'
+      });
+      return;
+    }
+    
+    const isValid = await verifyWebsite(formData.website, formData.sector);
+    if (isValid) {
+      goToNextStep();
+    }
   };
 
   const getSectorLabel = () => {
@@ -585,7 +731,6 @@ const EmailMarketingSurvey = () => {
   };
 
   const currentStepData = steps[currentStep];
-  const showContinueButton = currentStepData?.type === 'checkbox' || currentStepData?.type === 'input';
 
   // Analysis screen
   if (phase === 'analyzing') {
@@ -777,12 +922,135 @@ const EmailMarketingSurvey = () => {
                   className="space-y-4"
                   variants={cardVariants}
                 >
-                  <Input
-                    value={formData.website}
-                    onChange={(e) => handleInputChange('website', e.target.value)}
-                    placeholder="www.tuosito.com"
-                    className="bg-slate-800 border-slate-700 text-white h-14 text-lg rounded-xl focus:border-orange focus:ring-orange"
-                  />
+                  <div className="relative">
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2">
+                      <Globe className={`w-5 h-5 ${
+                        websiteVerification.status === 'valid' ? 'text-green-500' :
+                        websiteVerification.status === 'invalid' ? 'text-red-500' :
+                        'text-slate-500'
+                      }`} />
+                    </div>
+                    <Input
+                      value={formData.website}
+                      onChange={(e) => {
+                        handleInputChange('website', e.target.value);
+                        debouncedVerify(e.target.value, formData.sector);
+                      }}
+                      onBlur={() => {
+                        if (formData.website && websiteVerification.status === 'idle') {
+                          verifyWebsite(formData.website, formData.sector);
+                        }
+                      }}
+                      placeholder="www.tuosito.com"
+                      className={`bg-slate-800 text-white h-14 text-lg rounded-xl pl-12 pr-12 border-2 transition-colors ${
+                        websiteVerification.status === 'valid' 
+                          ? 'border-green-500 focus:border-green-500 focus:ring-green-500' 
+                          : websiteVerification.status === 'invalid'
+                          ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
+                          : websiteVerification.status === 'checking'
+                          ? 'border-orange focus:border-orange focus:ring-orange'
+                          : 'border-slate-700 focus:border-orange focus:ring-orange'
+                      }`}
+                    />
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                      {websiteVerification.status === 'checking' && (
+                        <Loader2 className="w-5 h-5 text-orange animate-spin" />
+                      )}
+                      {websiteVerification.status === 'valid' && (
+                        <motion.div
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{ type: "spring", stiffness: 500, damping: 25 }}
+                        >
+                          <CheckCircle2 className="w-5 h-5 text-green-500" />
+                        </motion.div>
+                      )}
+                      {websiteVerification.status === 'invalid' && (
+                        <motion.div
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{ type: "spring", stiffness: 500, damping: 25 }}
+                        >
+                          <XCircle className="w-5 h-5 text-red-500" />
+                        </motion.div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Status message */}
+                  <AnimatePresence mode="wait">
+                    {websiteVerification.status === 'checking' && (
+                      <motion.p
+                        key="checking"
+                        initial={{ opacity: 0, y: -5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -5 }}
+                        className="text-sm text-orange flex items-center gap-2"
+                      >
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Verifica in corso...
+                      </motion.p>
+                    )}
+                    {websiteVerification.status === 'valid' && (
+                      <motion.div
+                        key="valid"
+                        initial={{ opacity: 0, y: -5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -5 }}
+                        className="space-y-2"
+                      >
+                        <p className="text-sm text-green-400 flex items-center gap-2">
+                          <CheckCircle2 className="w-4 h-4" />
+                          Sito verificato con successo!
+                        </p>
+                        {websiteVerification.checks && (
+                          <div className="flex flex-wrap gap-2 text-xs">
+                            {websiteVerification.checks.isReachable && (
+                              <span className="px-2 py-1 bg-green-500/20 text-green-400 rounded-full">
+                                ✓ Online
+                              </span>
+                            )}
+                            {websiteVerification.checks.isEcommerce && (
+                              <span className="px-2 py-1 bg-green-500/20 text-green-400 rounded-full">
+                                ✓ E-commerce
+                              </span>
+                            )}
+                            {websiteVerification.checks.sectorMatch && (
+                              <span className="px-2 py-1 bg-green-500/20 text-green-400 rounded-full">
+                                ✓ Settore corretto
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </motion.div>
+                    )}
+                    {websiteVerification.status === 'invalid' && websiteVerification.message && (
+                      <motion.div
+                        key="invalid"
+                        initial={{ opacity: 0, y: -5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -5 }}
+                        className="space-y-2"
+                      >
+                        <p className="text-sm text-red-400 flex items-center gap-2">
+                          <AlertCircle className="w-4 h-4" />
+                          {websiteVerification.message}
+                        </p>
+                        {websiteVerification.checks?.isBlacklisted && (
+                          <p className="text-xs text-slate-400">
+                            Inserisci l'URL del tuo negozio online, non di brand famosi.
+                          </p>
+                        )}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                  
+                  {/* Hint when idle */}
+                  {websiteVerification.status === 'idle' && (
+                    <p className="text-xs text-slate-500">
+                      Es: miosito.it, www.mionegozio.com
+                    </p>
+                  )}
                 </motion.div>
               )}
 
@@ -866,8 +1134,8 @@ const EmailMarketingSurvey = () => {
               )}
             </motion.div>
 
-            {/* Continue button for checkbox/input steps */}
-            {showContinueButton && (
+            {/* Continue button for checkbox steps */}
+            {currentStepData?.type === 'checkbox' && (
               <motion.button
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -878,6 +1146,40 @@ const EmailMarketingSurvey = () => {
                 className="w-full mt-6 py-4 rounded-xl bg-orange text-white font-semibold text-lg hover:bg-orange/90 transition-colors duration-200"
               >
                 Continua
+              </motion.button>
+            )}
+            
+            {/* Continue button for website input step with verification */}
+            {currentStepData?.type === 'input' && (
+              <motion.button
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                onClick={handleWebsiteContinue}
+                disabled={websiteVerification.status === 'checking'}
+                whileHover={websiteVerification.status !== 'checking' ? { scale: 1.02 } : {}}
+                whileTap={websiteVerification.status !== 'checking' ? { scale: 0.98 } : {}}
+                className={`w-full mt-6 py-4 rounded-xl font-semibold text-lg transition-colors duration-200 flex items-center justify-center gap-2 ${
+                  websiteVerification.status === 'checking'
+                    ? 'bg-slate-700 text-slate-400 cursor-wait'
+                    : websiteVerification.status === 'valid'
+                    ? 'bg-green-600 text-white hover:bg-green-700'
+                    : 'bg-orange text-white hover:bg-orange/90'
+                }`}
+              >
+                {websiteVerification.status === 'checking' ? (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    Verifica in corso...
+                  </>
+                ) : websiteVerification.status === 'valid' ? (
+                  <>
+                    <CheckCircle2 className="h-5 w-5" />
+                    Continua
+                  </>
+                ) : (
+                  'Verifica e Continua'
+                )}
               </motion.button>
             )}
           </motion.div>
