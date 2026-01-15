@@ -1606,10 +1606,10 @@ const EmailMarketingSurvey = () => {
                     <input type="text" id="company_website_url" name="company_website_url" value={formData._hp_field} onChange={e => handleInputChange('_hp_field', e.target.value)} tabIndex={-1} autoComplete="off" />
                   </div>
 
-                  <motion.div className="flex items-start gap-3 bg-slate-800/50 rounded-xl p-4 border border-slate-700" variants={cardVariants}>
-                    <Checkbox id="terms" checked={formData.acceptTerms} onCheckedChange={checked => handleInputChange('acceptTerms', checked as boolean)} className="border-slate-500 data-[state=checked]:bg-orange data-[state=checked]:border-orange mt-1" />
-                    <Label htmlFor="terms" className="text-slate-300 text-sm cursor-pointer leading-relaxed">
-                      Accetto i termini e condizioni. Fornendo il mio numero, accetto di ricevere messaggi per il report personalizzato.
+                  <motion.div className="flex items-start gap-3 bg-slate-100 rounded-xl p-4 border border-slate-300" variants={cardVariants}>
+                    <Checkbox id="terms" checked={formData.acceptTerms} onCheckedChange={checked => handleInputChange('acceptTerms', checked as boolean)} className="border-slate-400 data-[state=checked]:bg-orange data-[state=checked]:border-orange mt-1" />
+                    <Label htmlFor="terms" className="text-slate-700 text-sm cursor-pointer leading-relaxed">
+                      Accetto i <a href="/privacy" target="_blank" className="text-orange underline">termini e condizioni</a> e la <a href="/privacy" target="_blank" className="text-orange underline">privacy policy</a>. Fornendo il mio numero, accetto di ricevere messaggi per il report personalizzato.
                     </Label>
                   </motion.div>
 
