@@ -10,14 +10,18 @@ interface FormData {
   activeFlows: string[];
   website: string;
   fullName: string;
+  companyName: string;
   phone: string;
   email: string;
+  motivation: string;
+  emailSatisfaction: string;
 }
 
 export interface AdminReport {
   // === DATI LEAD ===
   lead: {
     fullName: string;
+    companyName: string;
     email: string;
     phone: string;
     website: string;
@@ -39,6 +43,10 @@ export interface AdminReport {
     listSizeEstimated: number;
     activeFlows: string[];
     activeFlowsLabels: string[];
+    motivation: string;
+    motivationLabel: string;
+    emailSatisfaction: string;
+    emailSatisfactionLabel: string;
   };
   
   // === ANALISI FINANZIARIA DETTAGLIATA ===
@@ -193,6 +201,22 @@ const flowLabelsMap: Record<string, string> = {
   sunset: 'Sunset Flow'
 };
 
+const motivationLabelsMap: Record<string, string> = {
+  'increase_sales': 'Voglio aumentare le vendite dalle email',
+  'poor_results': 'Non sto ottenendo risultati dalle mie campagne',
+  'automation': 'Voglio automatizzare il mio email marketing',
+  'dont_know': 'Non so da dove iniziare',
+  'change_agency': 'Sto valutando di cambiare agenzia/consulente',
+};
+
+const satisfactionLabelsMap: Record<string, string> = {
+  'very_unsatisfied': 'Per niente soddisfatto',
+  'unsatisfied': 'Poco soddisfatto',
+  'neutral': 'Abbastanza soddisfatto',
+  'satisfied': 'Soddisfatto',
+  'very_satisfied': 'Molto soddisfatto',
+};
+
 const getRatingDescription = (rating: 'A' | 'B' | 'C' | 'D'): string => {
   switch (rating) {
     case 'A': return 'Eccellente - automazioni ben strutturate, focus su ottimizzazione';
@@ -337,6 +361,7 @@ export const generateAdminReport = (
   return {
     lead: {
       fullName: formData.fullName,
+      companyName: formData.companyName,
       email: formData.email,
       phone: formData.phone,
       website: formData.website,
@@ -356,7 +381,11 @@ export const generateAdminReport = (
       listSize: formData.listSize,
       listSizeEstimated: report.listSize,
       activeFlows: formData.activeFlows,
-      activeFlowsLabels: formData.activeFlows.map(f => flowLabelsMap[f] || f)
+      activeFlowsLabels: formData.activeFlows.map(f => flowLabelsMap[f] || f),
+      motivation: formData.motivation,
+      motivationLabel: motivationLabelsMap[formData.motivation] || formData.motivation,
+      emailSatisfaction: formData.emailSatisfaction,
+      emailSatisfactionLabel: satisfactionLabelsMap[formData.emailSatisfaction] || formData.emailSatisfaction
     },
     
     financialAnalysis: {

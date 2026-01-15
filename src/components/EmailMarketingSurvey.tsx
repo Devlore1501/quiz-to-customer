@@ -1167,14 +1167,21 @@ const EmailMarketingSurvey = () => {
           leadName: formData.fullName,
           leadEmail: formData.email,
           leadPhone: formData.phone,
+          companyName: formData.companyName,
           website: formData.website,
           sector: advancedReport.sectorBenchmark.label,
           monthlyRevenue: advancedReport.monthlyRevenue,
+          adsInvestment: formData.adsInvestment,
           emailHealthScore: advancedReport.emailHealthScore,
           yearlyPotential: advancedReport.yearlyPotential,
           leadQuality: adminReport.consultingNotes.leadQuality,
           priorityLevel: adminReport.consultingNotes.priorityLevel,
-          reportUrl // Also in quickSummary for easy access
+          motivation: formData.motivation,
+          motivationLabel: adminReport.quizResponses.motivationLabel,
+          emailSatisfaction: formData.emailSatisfaction,
+          emailSatisfactionLabel: adminReport.quizResponses.emailSatisfactionLabel,
+          acceptedTerms: true,
+          reportUrl
         },
         adminReport,
         clientReport: advancedReport
