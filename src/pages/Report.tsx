@@ -6,14 +6,9 @@ import type { AdvancedReport } from '@/lib/reportCalculations';
 import { Loader2, AlertCircle, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
+// The RPC function only returns clientReport now (no PII)
 interface ReportData {
   clientReport: AdvancedReport;
-  quickSummary: {
-    leadName: string;
-    leadEmail: string;
-    leadPhone: string;
-    website: string;
-  };
 }
 
 const ReportPage = () => {
@@ -21,12 +16,6 @@ const ReportPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reportData, setReportData] = useState<ReportData | null>(null);
-  const [submissionData, setSubmissionData] = useState<{
-    full_name: string;
-    email: string;
-    phone: string;
-    website: string;
-  } | null>(null);
 
   useEffect(() => {
     const fetchReport = async () => {
@@ -71,13 +60,6 @@ const ReportPage = () => {
         }
 
         setReportData(parsedReport);
-        // Use data from report's quickSummary instead of direct DB fields
-        setSubmissionData({
-          full_name: parsedReport.quickSummary?.leadName || '',
-          email: parsedReport.quickSummary?.leadEmail || '',
-          phone: parsedReport.quickSummary?.leadPhone || '',
-          website: parsedReport.quickSummary?.website || ''
-        });
         setLoading(false);
       } catch (err) {
         console.error('Error fetching report:', err);
@@ -120,17 +102,13 @@ const ReportPage = () => {
     );
   }
 
-  if (!reportData || !submissionData) {
+  if (!reportData) {
     return null;
   }
 
   return (
     <AdvancedReportComponent
       report={reportData.clientReport}
-      phone={submissionData.phone}
-      userName={submissionData.full_name}
-      userEmail={submissionData.email}
-      website={submissionData.website}
       onRestart={() => window.location.href = '/'}
     />
   );
