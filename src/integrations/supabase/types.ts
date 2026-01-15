@@ -22,20 +22,23 @@ export type Database = {
           created_at: string
           current_email_revenue: number | null
           custom_sector: string | null
+          disqualification_reason: string | null
           email: string
           email_health_score: number | null
-          email_revenue_percentage: string
+          email_revenue_percentage: string | null
           full_name: string
           ghl_synced: boolean | null
           id: string
           lead_quality: string | null
-          list_size: string
+          list_size: string | null
           make_synced: boolean | null
-          monthly_revenue: string
+          monthly_revenue: string | null
           phone: string | null
+          qualified: boolean | null
           report_data: Json | null
           revenue_gap: number | null
-          sector: string
+          sector: string | null
+          status: string | null
           website: string | null
           yearly_potential: number | null
         }
@@ -46,20 +49,23 @@ export type Database = {
           created_at?: string
           current_email_revenue?: number | null
           custom_sector?: string | null
+          disqualification_reason?: string | null
           email: string
           email_health_score?: number | null
-          email_revenue_percentage: string
+          email_revenue_percentage?: string | null
           full_name: string
           ghl_synced?: boolean | null
           id?: string
           lead_quality?: string | null
-          list_size: string
+          list_size?: string | null
           make_synced?: boolean | null
-          monthly_revenue: string
+          monthly_revenue?: string | null
           phone?: string | null
+          qualified?: boolean | null
           report_data?: Json | null
           revenue_gap?: number | null
-          sector: string
+          sector?: string | null
+          status?: string | null
           website?: string | null
           yearly_potential?: number | null
         }
@@ -70,20 +76,23 @@ export type Database = {
           created_at?: string
           current_email_revenue?: number | null
           custom_sector?: string | null
+          disqualification_reason?: string | null
           email?: string
           email_health_score?: number | null
-          email_revenue_percentage?: string
+          email_revenue_percentage?: string | null
           full_name?: string
           ghl_synced?: boolean | null
           id?: string
           lead_quality?: string | null
-          list_size?: string
+          list_size?: string | null
           make_synced?: boolean | null
-          monthly_revenue?: string
+          monthly_revenue?: string | null
           phone?: string | null
+          qualified?: boolean | null
           report_data?: Json | null
           revenue_gap?: number | null
-          sector?: string
+          sector?: string | null
+          status?: string | null
           website?: string | null
           yearly_potential?: number | null
         }
