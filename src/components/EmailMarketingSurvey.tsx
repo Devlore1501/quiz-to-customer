@@ -951,10 +951,16 @@ const EmailMarketingSurvey = () => {
       
       const adminReport = generateAdminReport(formData, advancedReport);
       
+      // Generate shareable report URL
+      const reportUrl = leadId 
+        ? `${window.location.origin}/report/${leadId}`
+        : null;
+
       const dataToSend = {
         type: 'admin_report',
         timestamp: new Date().toISOString(),
         source: 'email-marketing-quiz',
+        reportUrl, // Include shareable URL in webhook
         quickSummary: {
           leadName: formData.fullName,
           leadEmail: formData.email,
@@ -965,7 +971,8 @@ const EmailMarketingSurvey = () => {
           emailHealthScore: advancedReport.emailHealthScore,
           yearlyPotential: advancedReport.yearlyPotential,
           leadQuality: adminReport.consultingNotes.leadQuality,
-          priorityLevel: adminReport.consultingNotes.priorityLevel
+          priorityLevel: adminReport.consultingNotes.priorityLevel,
+          reportUrl // Also in quickSummary for easy access
         },
         adminReport,
         clientReport: advancedReport
