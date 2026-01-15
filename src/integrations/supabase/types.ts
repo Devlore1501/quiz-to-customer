@@ -26,6 +26,7 @@ export type Database = {
           email: string
           email_health_score: number | null
           email_revenue_percentage: string | null
+          email_satisfaction: string | null
           full_name: string
           ghl_synced: boolean | null
           id: string
@@ -33,6 +34,7 @@ export type Database = {
           list_size: string | null
           make_synced: boolean | null
           monthly_revenue: string | null
+          motivation: string | null
           phone: string | null
           qualified: boolean | null
           report_data: Json | null
@@ -53,6 +55,7 @@ export type Database = {
           email: string
           email_health_score?: number | null
           email_revenue_percentage?: string | null
+          email_satisfaction?: string | null
           full_name: string
           ghl_synced?: boolean | null
           id?: string
@@ -60,6 +63,7 @@ export type Database = {
           list_size?: string | null
           make_synced?: boolean | null
           monthly_revenue?: string | null
+          motivation?: string | null
           phone?: string | null
           qualified?: boolean | null
           report_data?: Json | null
@@ -80,6 +84,7 @@ export type Database = {
           email?: string
           email_health_score?: number | null
           email_revenue_percentage?: string | null
+          email_satisfaction?: string | null
           full_name?: string
           ghl_synced?: boolean | null
           id?: string
@@ -87,6 +92,7 @@ export type Database = {
           list_size?: string | null
           make_synced?: boolean | null
           monthly_revenue?: string | null
+          motivation?: string | null
           phone?: string | null
           qualified?: boolean | null
           report_data?: Json | null
