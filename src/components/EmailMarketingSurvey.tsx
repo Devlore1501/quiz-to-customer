@@ -24,6 +24,7 @@ interface FormData {
   phone: string;
   email: string;
   acceptTerms: boolean;
+  _hp_field: string; // Honeypot field - should always be empty
 }
 
 // Email validation state interface
@@ -529,7 +530,8 @@ const EmailMarketingSurvey = () => {
     fullName: '',
     phone: '',
     email: '',
-    acceptTerms: false
+    acceptTerms: false,
+    _hp_field: '' // Honeypot - bots will fill this
   });
 
   const sectors = [
@@ -825,6 +827,12 @@ const EmailMarketingSurvey = () => {
 
   // Save lead immediately after contact info is provided
   const saveLeadToDatabase = async () => {
+    // Honeypot check - reject if filled (bot detected)
+    if (formData._hp_field) {
+      console.warn('Bot detected - honeypot field filled');
+      return; // Silently reject to not alert the bot
+    }
+
     try {
       const submissionData = {
         company_name: formData.companyName,
@@ -915,6 +923,20 @@ const EmailMarketingSurvey = () => {
 
   // Final submit - update existing lead with complete data
   const handleSubmit = async () => {
+    // Honeypot check - reject if filled (bot detected)
+    if (formData._hp_field) {
+      console.warn('Bot submission detected via honeypot');
+      // Pretend to succeed to not alert sophisticated bots
+      setPhase('analyzing');
+      setTimeout(() => {
+        toast({
+          title: "Grazie!",
+          description: "Il tuo report sarà pronto a breve.",
+        });
+      }, 3000);
+      return;
+    }
+
     setIsSubmitting(true);
     
     try {
@@ -1057,7 +1079,8 @@ const EmailMarketingSurvey = () => {
       fullName: '',
       phone: '',
       email: '',
-      acceptTerms: false
+      acceptTerms: false,
+      _hp_field: ''
     });
   };
 
@@ -1536,6 +1559,30 @@ const EmailMarketingSurvey = () => {
                     </p>
                   </motion.div>
                   
+                  {/* Honeypot field - hidden from users, visible to bots */}
+                  <div 
+                    style={{ 
+                      position: 'absolute', 
+                      left: '-9999px', 
+                      opacity: 0, 
+                      height: 0, 
+                      overflow: 'hidden',
+                      pointerEvents: 'none'
+                    }}
+                    aria-hidden="true"
+                  >
+                    <label htmlFor="company_website_url">Company Website URL</label>
+                    <input
+                      type="text"
+                      id="company_website_url"
+                      name="company_website_url"
+                      value={formData._hp_field}
+                      onChange={(e) => handleInputChange('_hp_field', e.target.value)}
+                      tabIndex={-1}
+                      autoComplete="off"
+                    />
+                  </div>
+
                   <motion.div 
                     className="flex items-start gap-3 pt-4"
                     variants={cardVariants}
