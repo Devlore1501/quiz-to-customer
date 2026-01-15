@@ -51,6 +51,7 @@ function isInternalUrl(urlString: string): boolean {
 const ALLOWED_ORIGINS = [
   'https://quiz-to-customer.lovable.app',
   'https://id-preview--f5d761d0-cabe-4d00-a441-f6abbada657c.lovable.app',
+  'https://f5d761d0-cabe-4d00-a441-f6abbada657c.lovableproject.com',
   'http://localhost:5173',
   'http://localhost:8080',
 ];
