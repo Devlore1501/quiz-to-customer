@@ -997,13 +997,20 @@ const EmailMarketingSurvey = () => {
         }
       }
 
-      // Send to Make.com webhook
-      fetch('https://hook.eu1.make.com/hi1xrv57zvt5kilh1fye9130gb132vx3', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        mode: 'no-cors',
-        body: JSON.stringify(dataToSend)
-      });
+      // Send to webhook via secure edge function
+      try {
+        const webhookResponse = await supabase.functions.invoke('submit-webhook', {
+          body: { submissionData: dataToSend }
+        });
+        
+        if (webhookResponse.error) {
+          console.warn('Webhook delivery warning:', webhookResponse.error);
+        } else {
+          console.log('Webhook sent successfully:', webhookResponse.data);
+        }
+      } catch (webhookError) {
+        console.warn('Webhook delivery failed, but data was saved:', webhookError);
+      }
 
       // Store report and show analysis screen
       setReport(advancedReport);
