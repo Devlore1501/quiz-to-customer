@@ -1,6 +1,52 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
+// SSRF Protection: Block internal/private network addresses
+const BLOCKED_PATTERNS = [
+  /^localhost$/i,
+  /^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/,
+  /^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/,
+  /^172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3}$/,
+  /^192\.168\.\d{1,3}\.\d{1,3}$/,
+  /^169\.254\.\d{1,3}\.\d{1,3}$/,  // AWS metadata
+  /^0\.0\.0\.0$/,
+  /^\[?::1\]?$/,  // IPv6 loopback
+  /^\[?fe80:/i,   // IPv6 link-local
+  /^\[?fc00:/i,   // IPv6 private
+  /^\[?fd00:/i,   // IPv6 private
+];
+
+// Check if URL points to internal/private network
+function isInternalUrl(urlString: string): boolean {
+  try {
+    const url = new URL(urlString);
+    const hostname = url.hostname.toLowerCase();
+    
+    // Check against blocked patterns
+    for (const pattern of BLOCKED_PATTERNS) {
+      if (pattern.test(hostname)) {
+        return true;
+      }
+    }
+    
+    // Block metadata endpoints
+    if (hostname.includes('metadata.google') || 
+        hostname.includes('metadata.aws') ||
+        hostname.includes('169.254')) {
+      return true;
+    }
+    
+    // Only allow http and https protocols
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+      return true;
+    }
+    
+    return false;
+  } catch {
+    return true; // Invalid URL = blocked
+  }
+}
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -246,6 +292,20 @@ serve(async (req) => {
     let html = '';
     let isReachable = false;
     
+    // SSRF Check: Validate URL before fetching
+    if (isInternalUrl(normalizedUrl)) {
+      console.log(`Blocked internal URL: ${normalizedUrl}`);
+      return new Response(
+        JSON.stringify({
+          isValid: false,
+          error: 'URL non valido. Inserisci un URL pubblico.',
+          checks: { isReachable: false, isEcommerce: false, sectorMatch: false, isBlacklisted: false },
+          confidence: 0
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 sec timeout
@@ -277,18 +337,25 @@ serve(async (req) => {
       if (normalizedUrl.startsWith('https://')) {
         try {
           const httpUrl = normalizedUrl.replace('https://', 'http://');
-          const response = await fetch(httpUrl, {
-            method: 'GET',
-            headers: {
-              'User-Agent': 'Mozilla/5.0 (compatible; WebsiteVerifier/1.0)',
-              'Accept': 'text/html'
-            },
-            redirect: 'follow'
-          });
           
-          if (response.ok) {
-            isReachable = true;
-            html = await response.text();
+          // SSRF Check for fallback URL
+          if (isInternalUrl(httpUrl)) {
+            console.log(`Blocked internal fallback URL: ${httpUrl}`);
+            // Don't try fallback for internal URLs
+          } else {
+            const response = await fetch(httpUrl, {
+              method: 'GET',
+              headers: {
+                'User-Agent': 'Mozilla/5.0 (compatible; WebsiteVerifier/1.0)',
+                'Accept': 'text/html'
+              },
+              redirect: 'follow'
+            });
+            
+            if (response.ok) {
+              isReachable = true;
+              html = await response.text();
+            }
           }
         } catch {
           // Ignora errore del fallback

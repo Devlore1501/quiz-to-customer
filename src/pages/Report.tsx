@@ -36,12 +36,18 @@ const ReportPage = () => {
         return;
       }
 
+      // Validate UUID format to prevent injection
+      const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!UUID_REGEX.test(id)) {
+        setError('ID report non valido');
+        setLoading(false);
+        return;
+      }
+
       try {
+        // Use secure RPC function that only returns report_data (not PII)
         const { data, error: fetchError } = await supabase
-          .from('survey_submissions')
-          .select('report_data, full_name, email, phone, website')
-          .eq('id', id)
-          .single();
+          .rpc('get_report_by_id', { report_id: id });
 
         if (fetchError) {
           console.error('Fetch error:', fetchError);
@@ -50,13 +56,13 @@ const ReportPage = () => {
           return;
         }
 
-        if (!data || !data.report_data) {
+        if (!data) {
           setError('Report non disponibile');
           setLoading(false);
           return;
         }
 
-        const parsedReport = data.report_data as unknown as ReportData;
+        const parsedReport = data as unknown as ReportData;
         
         if (!parsedReport.clientReport) {
           setError('Dati report non validi');
@@ -65,11 +71,12 @@ const ReportPage = () => {
         }
 
         setReportData(parsedReport);
+        // Use data from report's quickSummary instead of direct DB fields
         setSubmissionData({
-          full_name: data.full_name,
-          email: data.email,
-          phone: data.phone || '',
-          website: data.website || ''
+          full_name: parsedReport.quickSummary?.leadName || '',
+          email: parsedReport.quickSummary?.leadEmail || '',
+          phone: parsedReport.quickSummary?.leadPhone || '',
+          website: parsedReport.quickSummary?.website || ''
         });
         setLoading(false);
       } catch (err) {
