@@ -24,6 +24,8 @@ interface FormData {
   phone: string;
   email: string;
   acceptTerms: boolean;
+  motivation: string;
+  emailSatisfaction: string;
   _hp_field: string; // Honeypot field - should always be empty
 }
 
@@ -519,7 +521,7 @@ const DisqualifiedScreen = () => {
       }} transition={{
         delay: 0.3
       }}>
-          I nostri servizi sono ottimizzati per e-commerce con fatturato superiore a 20.000€/mese e investimento attivo in advertising.
+          I nostri servizi sono ottimizzati per e-commerce con fatturato superiore a 10.000€/mese e investimento in advertising superiore a 3.000€/mese.
         </motion.p>
         
         <motion.div className="bg-slate-800/50 rounded-2xl p-6 border border-slate-700" initial={{
@@ -588,6 +590,8 @@ const EmailMarketingSurvey = () => {
     phone: '',
     email: '',
     acceptTerms: false,
+    motivation: '',
+    emailSatisfaction: '',
     _hp_field: '' // Honeypot - bots will fill this
   });
   const sectors = [{
@@ -632,30 +636,38 @@ const EmailMarketingSurvey = () => {
     value: 'other'
   }];
   const revenueRanges = [{
+    id: 'rev0',
+    label: 'Meno di 10.000€',
+    value: 'under-10k'
+  }, {
     id: 'rev1',
-    label: '10K€ - 20K€',
+    label: '10.000€ - 20.000€',
     value: '10-20k'
   }, {
     id: 'rev2',
-    label: '20K€ - 50K€',
+    label: '20.000€ - 50.000€',
     value: '20-50k'
   }, {
     id: 'rev3',
-    label: '50K€ - 100K€',
+    label: '50.000€ - 100.000€',
     value: '50-100k'
   }, {
     id: 'rev4',
-    label: '100K€ - 200K€',
+    label: '100.000€ - 200.000€',
     value: '100-200k'
   }, {
     id: 'rev5',
-    label: '200K€+',
+    label: '200.000€+',
     value: '200k+'
   }];
   const adsInvestmentRanges = [{
+    id: 'ads0',
+    label: 'Meno di 3.000€',
+    value: 'under-3k'
+  }, {
     id: 'ads1',
-    label: '0 - 5.000€',
-    value: '0-5k'
+    label: '3.000€ - 5.000€',
+    value: '3-5k'
   }, {
     id: 'ads2',
     label: '5.000€ - 15.000€',
@@ -668,6 +680,48 @@ const EmailMarketingSurvey = () => {
     id: 'ads4',
     label: '30.000€ - 50.000€',
     value: '30-50k'
+  }];
+  const motivationOptions = [{
+    id: 'mot1',
+    label: 'Voglio aumentare le vendite dalle email',
+    value: 'increase_sales'
+  }, {
+    id: 'mot2',
+    label: 'Non sto ottenendo risultati dalle mie campagne',
+    value: 'poor_results'
+  }, {
+    id: 'mot3',
+    label: 'Voglio automatizzare il mio email marketing',
+    value: 'automation'
+  }, {
+    id: 'mot4',
+    label: 'Non so da dove iniziare',
+    value: 'dont_know'
+  }, {
+    id: 'mot5',
+    label: 'Sto valutando di cambiare agenzia/consulente',
+    value: 'change_agency'
+  }];
+  const satisfactionOptions = [{
+    id: 'sat1',
+    label: 'Per niente soddisfatto',
+    value: 'very_unsatisfied'
+  }, {
+    id: 'sat2',
+    label: 'Poco soddisfatto',
+    value: 'unsatisfied'
+  }, {
+    id: 'sat3',
+    label: 'Abbastanza soddisfatto',
+    value: 'neutral'
+  }, {
+    id: 'sat4',
+    label: 'Soddisfatto',
+    value: 'satisfied'
+  }, {
+    id: 'sat5',
+    label: 'Molto soddisfatto',
+    value: 'very_satisfied'
   }];
   const emailRevenueRanges = [{
     id: 'email1',
@@ -775,6 +829,7 @@ const EmailMarketingSurvey = () => {
   }];
 
   // REORDERED: Contact info FIRST to capture leads immediately - ONE AT A TIME
+  // Terms moved after email, then new motivation/satisfaction questions before business questions
   const steps = [{
     title: "Come ti chiami?",
     subtitle: "Inserisci il tuo nome completo",
@@ -799,6 +854,11 @@ const EmailMarketingSurvey = () => {
     field: "email" as keyof FormData,
     placeholder: "nome@tuaazienda.it"
   }, {
+    title: "Ultimo passaggio per le info di contatto",
+    subtitle: "Accetta i termini per continuare",
+    type: "terms" as const,
+    field: "acceptTerms" as keyof FormData
+  }, {
     title: "Qual è il tuo sito web?",
     type: "input" as const,
     field: "website" as keyof FormData
@@ -807,6 +867,17 @@ const EmailMarketingSurvey = () => {
     type: "radio" as const,
     field: "sector" as keyof FormData,
     options: sectors
+  }, {
+    title: "Perché vuoi fare un'analisi del tuo email marketing?",
+    subtitle: "Seleziona la motivazione principale",
+    type: "radio" as const,
+    field: "motivation" as keyof FormData,
+    options: motivationOptions
+  }, {
+    title: "Quanto sei soddisfatto del tuo sistema email attuale?",
+    type: "radio" as const,
+    field: "emailSatisfaction" as keyof FormData,
+    options: satisfactionOptions
   }, {
     title: "Qual è il tuo fatturato mensile?",
     type: "radio" as const,
@@ -838,11 +909,6 @@ const EmailMarketingSurvey = () => {
     type: "checkbox" as const,
     field: "activeFlows" as keyof FormData,
     options: automationFlows
-  }, {
-    title: "Ultimo passaggio!",
-    subtitle: "Accetta i termini per ricevere il tuo report gratuito",
-    type: "terms" as const,
-    field: "acceptTerms" as keyof FormData
   }];
   const goToNextStep = () => {
     if (currentStep < steps.length - 1) {
@@ -869,31 +935,44 @@ const EmailMarketingSurvey = () => {
       return;
     }
 
-    // Check for disqualification after adsInvestment selection
-    if (field === 'adsInvestment') {
-      // Get the latest monthlyRevenue from formData
-      const currentMonthlyRevenue = formData.monthlyRevenue;
-
-      // Disqualify if: revenue 10-20k AND ads 0-5k
-      if (currentMonthlyRevenue === '10-20k' && value === '0-5k') {
-        // Update lead status to disqualified if we have a lead ID
-        if (leadId) {
-          try {
-            await supabase.from('survey_submissions').update({
-              status: 'disqualified',
-              qualified: false,
-              disqualification_reason: 'Fatturato < 20k e spesa ads < 5k'
-            } as never).eq('id', leadId);
-          } catch (err) {
-            console.error('Error updating disqualified lead:', err);
-          }
+    // Check for disqualification on monthlyRevenue - under 10k = immediate disqualification
+    if (field === 'monthlyRevenue' && value === 'under-10k') {
+      if (leadId) {
+        try {
+          await supabase.from('survey_submissions').update({
+            status: 'disqualified',
+            qualified: false,
+            disqualification_reason: 'Fatturato mensile inferiore a 10.000€'
+          } as never).eq('id', leadId);
+        } catch (err) {
+          console.error('Error updating disqualified lead:', err);
         }
-        setTimeout(() => {
-          setSelectedValue(null);
-          setPhase('disqualified');
-        }, 400);
-        return;
       }
+      setTimeout(() => {
+        setSelectedValue(null);
+        setPhase('disqualified');
+      }, 400);
+      return;
+    }
+
+    // Check for disqualification on adsInvestment - under 3k = immediate disqualification
+    if (field === 'adsInvestment' && value === 'under-3k') {
+      if (leadId) {
+        try {
+          await supabase.from('survey_submissions').update({
+            status: 'disqualified',
+            qualified: false,
+            disqualification_reason: 'Spesa ads mensile inferiore a 3.000€'
+          } as never).eq('id', leadId);
+        } catch (err) {
+          console.error('Error updating disqualified lead:', err);
+        }
+      }
+      setTimeout(() => {
+        setSelectedValue(null);
+        setPhase('disqualified');
+      }, 400);
+      return;
     }
 
     // Auto-advance with animation delay
@@ -1109,6 +1188,8 @@ const EmailMarketingSurvey = () => {
         email_revenue_percentage: formData.emailRevenuePercentage,
         list_size: formData.listSize,
         active_flows: formData.activeFlows,
+        motivation: formData.motivation,
+        email_satisfaction: formData.emailSatisfaction,
         email_health_score: advancedReport.emailHealthScore,
         yearly_potential: advancedReport.yearlyPotential,
         current_email_revenue: advancedReport.currentEmailRevenue,
@@ -1208,6 +1289,8 @@ const EmailMarketingSurvey = () => {
       phone: '',
       email: '',
       acceptTerms: false,
+      motivation: '',
+      emailSatisfaction: '',
       _hp_field: ''
     });
   };
@@ -1598,7 +1681,7 @@ const EmailMarketingSurvey = () => {
                   </motion.button>
                 </motion.div>}
 
-              {/* Terms step */}
+              {/* Terms step - now intermediate, just advances to next step */}
               {currentStepData.type === "terms" && <motion.div className="space-y-4" variants={containerVariants}>
                   {/* Honeypot field - hidden from users, visible to bots */}
                   <div style={{ position: 'absolute', left: '-9999px', opacity: 0, height: 0, overflow: 'hidden', pointerEvents: 'none' }} aria-hidden="true">
@@ -1615,24 +1698,19 @@ const EmailMarketingSurvey = () => {
 
                   <motion.button 
                     variants={cardVariants} 
-                    onClick={handleSubmit} 
-                    disabled={!formData.acceptTerms || isSubmitting} 
-                    whileHover={formData.acceptTerms && !isSubmitting ? { scale: 1.02 } : {}} 
-                    whileTap={formData.acceptTerms && !isSubmitting ? { scale: 0.98 } : {}} 
-                    className={`w-full py-4 rounded-xl font-semibold text-lg transition-colors duration-200 flex items-center justify-center gap-2 ${formData.acceptTerms && !isSubmitting ? 'bg-orange text-white hover:bg-orange/90' : 'bg-slate-700 text-slate-400 cursor-not-allowed'}`}
+                    onClick={goToNextStep} 
+                    disabled={!formData.acceptTerms} 
+                    whileHover={formData.acceptTerms ? { scale: 1.02 } : {}} 
+                    whileTap={formData.acceptTerms ? { scale: 0.98 } : {}} 
+                    className={`w-full py-4 rounded-xl font-semibold text-lg transition-colors duration-200 flex items-center justify-center gap-2 ${formData.acceptTerms ? 'bg-orange text-white hover:bg-orange/90' : 'bg-slate-700 text-slate-400 cursor-not-allowed'}`}
                   >
-                    {isSubmitting ? <>
-                        <Loader2 className="h-5 w-5 animate-spin" />
-                        Generazione report...
-                      </> : <>
-                        <Check className="h-5 w-5" />
-                        Genera il mio Report Gratuito
-                      </>}
+                    <Check className="h-5 w-5" />
+                    Continua
                   </motion.button>
                 </motion.div>}
             </motion.div>
 
-            {/* Continue button for checkbox steps */}
+            {/* Submit button for checkbox steps (final step) */}
             {currentStepData?.type === 'checkbox' && <motion.button initial={{
             opacity: 0,
             y: 20
@@ -1641,12 +1719,18 @@ const EmailMarketingSurvey = () => {
             y: 0
           }} transition={{
             delay: 0.3
-          }} onClick={goToNextStep} disabled={formData.activeFlows.length === 0} whileHover={formData.activeFlows.length > 0 ? {
+          }} onClick={handleSubmit} disabled={formData.activeFlows.length === 0 || isSubmitting} whileHover={formData.activeFlows.length > 0 && !isSubmitting ? {
             scale: 1.02
-          } : {}} whileTap={formData.activeFlows.length > 0 ? {
+          } : {}} whileTap={formData.activeFlows.length > 0 && !isSubmitting ? {
             scale: 0.98
-          } : {}} className={`w-full mt-6 py-4 rounded-xl font-semibold text-lg transition-colors duration-200 flex items-center justify-center gap-2 ${formData.activeFlows.length > 0 ? 'bg-orange text-white hover:bg-orange/90' : 'bg-slate-700 text-slate-400 cursor-not-allowed'}`}>
-                Continua ({formData.activeFlows.length} selezionati)
+          } : {}} className={`w-full mt-6 py-4 rounded-xl font-semibold text-lg transition-colors duration-200 flex items-center justify-center gap-2 ${formData.activeFlows.length > 0 && !isSubmitting ? 'bg-orange text-white hover:bg-orange/90' : 'bg-slate-700 text-slate-400 cursor-not-allowed'}`}>
+                {isSubmitting ? <>
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    Generazione report...
+                  </> : <>
+                    <Check className="h-5 w-5" />
+                    Genera il mio Report Gratuito ({formData.activeFlows.length} selezionati)
+                  </>}
               </motion.button>}
             
             {/* Continue button for website input step with verification */}
