@@ -4,7 +4,6 @@ import { Progress } from '@/components/ui/progress';
 import { Download, Loader2 } from 'lucide-react';
 import type { AdvancedReport } from '@/lib/reportCalculations';
 import { generatePdfReport } from '@/lib/pdfGenerator';
-
 interface AdvancedReportProps {
   report: AdvancedReport;
   phone?: string;
@@ -13,35 +12,34 @@ interface AdvancedReportProps {
   website?: string;
   onRestart: () => void;
 }
-
 const formatCurrency = (value: number) => `€${Math.round(value).toLocaleString('it-IT')}`;
-
 const getRatingColor = (rating: 'A' | 'B' | 'C' | 'D') => {
   switch (rating) {
-    case 'A': return 'text-green-400 bg-green-400/20';
-    case 'B': return 'text-yellow-400 bg-yellow-400/20';
-    case 'C': return 'text-orange bg-orange/20';
-    case 'D': return 'text-red-400 bg-red-400/20';
+    case 'A':
+      return 'text-green-400 bg-green-400/20';
+    case 'B':
+      return 'text-yellow-400 bg-yellow-400/20';
+    case 'C':
+      return 'text-orange bg-orange/20';
+    case 'D':
+      return 'text-red-400 bg-red-400/20';
   }
 };
-
 const getScoreColor = (score: number) => {
   if (score >= 80) return 'bg-green-500';
   if (score >= 60) return 'bg-yellow-500';
   if (score >= 40) return 'bg-orange';
   return 'bg-red-500';
 };
-
-export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({ 
-  report, 
+export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
+  report,
   phone = '',
   userName = '',
   userEmail = '',
   website = '',
-  onRestart 
+  onRestart
 }) => {
   const [isDownloading, setIsDownloading] = useState(false);
-
   const handleDownloadPdf = async () => {
     setIsDownloading(true);
     try {
@@ -52,9 +50,7 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
       setIsDownloading(false);
     }
   };
-
-  return (
-    <div className="min-h-screen bg-white py-8 px-4">
+  return <div className="min-h-screen bg-slate-900 py-8 px-4">
       <div className="w-full max-w-5xl mx-auto space-y-8">
         
         {/* Header */}
@@ -62,36 +58,20 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
           <h1 className="text-3xl md:text-4xl font-bold text-orange mb-3">
             📊 Il Tuo Report Email Marketing
           </h1>
-          <p className="text-slate-300 text-lg">
+          <p className="text-lg text-[#1d283a]">
             Analisi personalizzata per il settore <span className="text-orange font-semibold">{report.sectorBenchmark.label}</span>
           </p>
         </div>
 
         {/* Email Health Score */}
-        <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 animate-fade-in" style={{ animationDelay: '100ms' }}>
+        <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 animate-fade-in" style={{
+        animationDelay: '100ms'
+      }}>
           <div className="flex flex-col md:flex-row items-center gap-6">
             <div className="relative w-32 h-32 flex-shrink-0">
               <svg className="w-full h-full transform -rotate-90">
-                <circle
-                  cx="64"
-                  cy="64"
-                  r="56"
-                  stroke="currentColor"
-                  strokeWidth="12"
-                  fill="none"
-                  className="text-slate-700"
-                />
-                <circle
-                  cx="64"
-                  cy="64"
-                  r="56"
-                  stroke="currentColor"
-                  strokeWidth="12"
-                  fill="none"
-                  strokeDasharray={`${report.emailHealthScore * 3.52} 352`}
-                  className={getScoreColor(report.emailHealthScore)}
-                  strokeLinecap="round"
-                />
+                <circle cx="64" cy="64" r="56" stroke="currentColor" strokeWidth="12" fill="none" className="text-slate-700" />
+                <circle cx="64" cy="64" r="56" stroke="currentColor" strokeWidth="12" fill="none" strokeDasharray={`${report.emailHealthScore * 3.52} 352`} className={getScoreColor(report.emailHealthScore)} strokeLinecap="round" />
               </svg>
               <div className="absolute inset-0 flex items-center justify-center">
                 <span className="text-3xl font-bold text-white">{report.emailHealthScore}</span>
@@ -110,8 +90,9 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
         </div>
 
         {/* Sezione: Analisi Strategica */}
-        {report.strategicAnalysis && (
-          <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 animate-fade-in" style={{ animationDelay: '150ms' }}>
+        {report.strategicAnalysis && <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 animate-fade-in" style={{
+        animationDelay: '150ms'
+      }}>
             <h2 className="text-xl font-bold text-orange mb-6 flex items-center gap-2">
               📋 Analisi Strategica
             </h2>
@@ -143,20 +124,19 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
                   <span className="text-red-400">⚠️</span> Potenziali Impedimenti
                 </h3>
                 <ul className="space-y-2">
-                  {report.strategicAnalysis.potentialObstacles.map((obstacle, i) => (
-                    <li key={i} className="text-slate-300 text-sm flex items-start gap-2">
+                  {report.strategicAnalysis.potentialObstacles.map((obstacle, i) => <li key={i} className="text-slate-300 text-sm flex items-start gap-2">
                       <span className="text-red-400 mt-0.5">•</span>
                       {obstacle}
-                    </li>
-                  ))}
+                    </li>)}
                 </ul>
               </div>
             </div>
-          </div>
-        )}
+          </div>}
 
         {/* Sezione 1: Situazione Attuale vs Benchmark */}
-        <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 animate-fade-in" style={{ animationDelay: '200ms' }}>
+        <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 animate-fade-in" style={{
+        animationDelay: '200ms'
+      }}>
           <h2 className="text-xl font-bold text-orange mb-6 flex items-center gap-2">
             📈 Situazione Attuale vs Benchmark
           </h2>
@@ -196,14 +176,13 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
               <span className="text-slate-400">Benchmark {report.sectorBenchmark.label}</span>
             </div>
             <div className="relative h-4 bg-slate-700 rounded-full overflow-hidden">
-              <div 
-                className="absolute h-full bg-orange rounded-full transition-all duration-1000"
-                style={{ width: `${Math.min(100, (report.currentEmailPercent / report.sectorBenchmark.emailShare) * 100)}%` }}
-              />
-              <div 
-                className="absolute h-full w-1 bg-white top-0"
-                style={{ left: '100%', transform: 'translateX(-100%)' }}
-              />
+              <div className="absolute h-full bg-orange rounded-full transition-all duration-1000" style={{
+              width: `${Math.min(100, report.currentEmailPercent / report.sectorBenchmark.emailShare * 100)}%`
+            }} />
+              <div className="absolute h-full w-1 bg-white top-0" style={{
+              left: '100%',
+              transform: 'translateX(-100%)'
+            }} />
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-white font-medium">{report.currentEmailPercent}%</span>
@@ -213,7 +192,9 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
         </div>
 
         {/* Sezione 2: Automation Analysis */}
-        <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 animate-fade-in" style={{ animationDelay: '300ms' }}>
+        <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 animate-fade-in" style={{
+        animationDelay: '300ms'
+      }}>
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-bold text-orange flex items-center gap-2">
               ⚙️ Analisi Automazioni
@@ -232,11 +213,7 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
               </div>
               <Progress value={report.automationCoverage} className="h-3" />
               <p className="text-slate-400 text-sm">
-                {report.automationCoverage < 50 
-                  ? "⚠️ Stai perdendo vendite automatiche significative"
-                  : report.automationCoverage < 80
-                  ? "📈 Buon punto di partenza, ma c'è ancora margine"
-                  : "✅ Ottima copertura delle automazioni!"}
+                {report.automationCoverage < 50 ? "⚠️ Stai perdendo vendite automatiche significative" : report.automationCoverage < 80 ? "📈 Buon punto di partenza, ma c'è ancora margine" : "✅ Ottima copertura delle automazioni!"}
               </p>
             </div>
 
@@ -249,22 +226,14 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
           </div>
 
           {/* Lista flussi mancanti */}
-          {report.missingFlows.length > 0 && (
-            <div className="mt-6">
+          {report.missingFlows.length > 0 && <div className="mt-6">
               <h3 className="text-white font-semibold mb-3">Flussi Mancanti (ordinati per impatto):</h3>
               <div className="space-y-2">
-                {report.missingFlows.slice(0, 4).map((flow, index) => (
-                  <div 
-                    key={flow.key}
-                    className="flex items-center justify-between bg-slate-700/50 p-3 rounded-lg animate-fade-in"
-                    style={{ animationDelay: `${400 + index * 100}ms` }}
-                  >
+                {report.missingFlows.slice(0, 4).map((flow, index) => <div key={flow.key} className="flex items-center justify-between bg-slate-700/50 p-3 rounded-lg animate-fade-in" style={{
+              animationDelay: `${400 + index * 100}ms`
+            }}>
                     <div className="flex items-center gap-3">
-                      <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                        flow.priority === 1 ? 'bg-red-500/30 text-red-300' :
-                        flow.priority === 2 ? 'bg-yellow-500/30 text-yellow-300' :
-                        'bg-slate-600 text-slate-300'
-                      }`}>
+                      <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${flow.priority === 1 ? 'bg-red-500/30 text-red-300' : flow.priority === 2 ? 'bg-yellow-500/30 text-yellow-300' : 'bg-slate-600 text-slate-300'}`}>
                         P{flow.priority}
                       </span>
                       <div>
@@ -276,15 +245,15 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
                       <p className="text-orange font-bold">+{formatCurrency(flow.impactValue)}</p>
                       <p className="text-slate-400 text-xs">{flow.implementationTime}</p>
                     </div>
-                  </div>
-                ))}
+                  </div>)}
               </div>
-            </div>
-          )}
+            </div>}
         </div>
 
         {/* Sezione 3: I 3 Scenari di Crescita */}
-        <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 animate-fade-in" style={{ animationDelay: '500ms' }}>
+        <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 animate-fade-in" style={{
+        animationDelay: '500ms'
+      }}>
           <h2 className="text-xl font-bold text-orange mb-6 flex items-center gap-2">
             🚀 Scenari di Crescita
           </h2>
@@ -329,18 +298,17 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
         </div>
 
         {/* Sezione 4: Top 3 Azioni Prioritarie */}
-        <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 animate-fade-in" style={{ animationDelay: '600ms' }}>
+        <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 animate-fade-in" style={{
+        animationDelay: '600ms'
+      }}>
           <h2 className="text-xl font-bold text-orange mb-6 flex items-center gap-2">
             🎯 Roadmap: Le 3 Azioni Prioritarie
           </h2>
           
           <div className="space-y-4">
-            {report.topActions.map((action, index) => (
-              <div 
-                key={index}
-                className="flex flex-col md:flex-row md:items-center gap-4 bg-slate-700/50 p-4 rounded-lg animate-fade-in"
-                style={{ animationDelay: `${700 + index * 100}ms` }}
-              >
+            {report.topActions.map((action, index) => <div key={index} className="flex flex-col md:flex-row md:items-center gap-4 bg-slate-700/50 p-4 rounded-lg animate-fade-in" style={{
+            animationDelay: `${700 + index * 100}ms`
+          }}>
                 <div className="flex items-center gap-4 flex-1">
                   <div className="w-10 h-10 rounded-full bg-orange flex items-center justify-center text-white font-bold text-lg">
                     {index + 1}
@@ -355,13 +323,14 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
                     <p className="text-green-400 font-bold text-lg">{action.roi}</p>
                   </div>
                 </div>
-              </div>
-            ))}
+              </div>)}
           </div>
         </div>
 
         {/* Potenziale Annuo Totale */}
-        <div className="bg-gradient-to-r from-orange to-orange/80 p-6 rounded-xl animate-fade-in" style={{ animationDelay: '800ms' }}>
+        <div className="bg-gradient-to-r from-orange to-orange/80 p-6 rounded-xl animate-fade-in" style={{
+        animationDelay: '800ms'
+      }}>
           <div className="text-center">
             <p className="text-white/80 text-lg mb-2">💰 Potenziale Economico Annuo Recuperabile</p>
             <p className="text-4xl md:text-5xl font-bold text-white">{formatCurrency(report.yearlyPotential)}</p>
@@ -370,7 +339,9 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
         </div>
 
         {/* Download PDF */}
-        <div className="bg-gradient-to-br from-slate-800 to-slate-700 p-6 rounded-xl border border-slate-600 animate-fade-in" style={{ animationDelay: '850ms' }}>
+        <div className="bg-gradient-to-br from-slate-800 to-slate-700 p-6 rounded-xl border border-slate-600 animate-fade-in" style={{
+        animationDelay: '850ms'
+      }}>
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div>
               <h3 className="text-lg font-bold text-white mb-1">
@@ -380,28 +351,22 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
                 Salva questo report per consultarlo quando vuoi
               </p>
             </div>
-            <Button 
-              onClick={handleDownloadPdf}
-              disabled={isDownloading}
-              className="bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-white px-6"
-            >
-              {isDownloading ? (
-                <>
+            <Button onClick={handleDownloadPdf} disabled={isDownloading} className="bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-white px-6">
+              {isDownloading ? <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   Generazione...
-                </>
-              ) : (
-                <>
+                </> : <>
                   <Download className="w-4 h-4 mr-2" />
                   Scarica PDF
-                </>
-              )}
+                </>}
             </Button>
           </div>
         </div>
 
         {/* CTA Finale */}
-        <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 text-center animate-fade-in" style={{ animationDelay: '900ms' }}>
+        <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 text-center animate-fade-in" style={{
+        animationDelay: '900ms'
+      }}>
           <h3 className="text-xl font-bold text-white mb-3">
             📱 Report completo in arrivo su WhatsApp
           </h3>
@@ -409,25 +374,16 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
             Riceverai strategie dettagliate e personalizzate al numero: <span className="text-orange font-semibold">{phone}</span>
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button 
-              onClick={onRestart}
-              variant="outline"
-              className="border-orange text-orange hover:bg-orange hover:text-white"
-            >
+            <Button onClick={onRestart} variant="outline" className="border-orange text-orange hover:bg-orange hover:text-white">
               Fai un'altra analisi
             </Button>
-            <Button 
-              className="bg-orange hover:bg-orange/90 text-white"
-              onClick={() => window.open('https://wa.me/+39XXXXXXXXXX', '_blank')}
-            >
+            <Button className="bg-orange hover:bg-orange/90 text-white" onClick={() => window.open('https://wa.me/+39XXXXXXXXXX', '_blank')}>
               Contattaci per una consulenza gratuita
             </Button>
           </div>
         </div>
 
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default AdvancedReportComponent;
