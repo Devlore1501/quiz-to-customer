@@ -1,7 +1,7 @@
-import ConversationalSurvey from "@/components/ConversationalSurvey";
+import EmailMarketingSurvey from "@/components/EmailMarketingSurvey";
 
 const Index = () => {
-  return <ConversationalSurvey />;
+  return <EmailMarketingSurvey />;
 };
 
 export default Index;
