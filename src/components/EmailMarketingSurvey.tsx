@@ -1096,11 +1096,11 @@ const EmailMarketingSurvey = () => {
   };
 
   // Save lead immediately after contact info is provided
-  const saveLeadToDatabase = async () => {
+  const saveLeadToDatabase = async (): Promise<string | null> => {
     // Honeypot check - reject if filled (bot detected)
     if (formData._hp_field) {
       console.warn('Bot detected - honeypot field filled');
-      return; // Silently reject to not alert the bot
+      return null; // Silently reject to not alert the bot
     }
     try {
       const submissionData = {
@@ -1118,12 +1118,16 @@ const EmailMarketingSurvey = () => {
       } = await supabase.from('survey_submissions').insert(submissionData as never).select('id').single();
       if (error) {
         console.error('Lead save error:', error);
+        return null;
       } else if (data) {
         setLeadId(data.id);
         console.log('Lead saved with ID:', data.id);
+        return data.id;
       }
+      return null;
     } catch (err) {
       console.error('Error saving lead:', err);
+      return null;
     }
   };
   const getSectorLabel = () => {
@@ -1136,7 +1140,7 @@ const EmailMarketingSurvey = () => {
 
 
   // Final submit - update existing lead with complete data
-  const handleSubmit = async () => {
+  const handleSubmit = async (currentLeadId: string | null = leadId) => {
     // Honeypot check - reject if filled (bot detected)
     if (formData._hp_field) {
       console.warn('Bot submission detected via honeypot');
@@ -1155,8 +1159,8 @@ const EmailMarketingSurvey = () => {
       const advancedReport = calculateAdvancedReport(formData.sector, formData.monthlyRevenue, formData.emailRevenuePercentage, formData.listSize, formData.activeFlows, formData.sector === 'other' ? formData.customSector : undefined);
       const adminReport = generateAdminReport(formData, advancedReport);
 
-      // Generate shareable report URL
-      const reportUrl = leadId ? `${window.location.origin}/report/${leadId}` : null;
+      // Generate shareable report URL - use passed currentLeadId to avoid race condition
+      const reportUrl = currentLeadId ? `${window.location.origin}/report/${currentLeadId}` : null;
       const dataToSend = {
         type: 'admin_report',
         timestamp: new Date().toISOString(),
@@ -1209,15 +1213,15 @@ const EmailMarketingSurvey = () => {
         ghl_synced: false,
         report_data: dataToSend
       };
-      if (leadId) {
+      if (currentLeadId) {
         const {
           error: dbError
-        } = await supabase.from('survey_submissions').update(updateData as never).eq('id', leadId);
+        } = await supabase.from('survey_submissions').update(updateData as never).eq('id', currentLeadId);
         if (dbError) {
           console.error('Database update error:', dbError);
         }
       } else {
-        // Fallback: create new record if somehow leadId is missing
+        // Fallback: create new record if somehow currentLeadId is missing
         const {
           error: dbError
         } = await supabase.from('survey_submissions').insert({
@@ -1726,7 +1730,7 @@ const EmailMarketingSurvey = () => {
             y: 0
           }} transition={{
             delay: 0.3
-          }} onClick={handleSubmit} disabled={formData.activeFlows.length === 0 || isSubmitting} whileHover={formData.activeFlows.length > 0 && !isSubmitting ? {
+          }} onClick={() => handleSubmit()} disabled={formData.activeFlows.length === 0 || isSubmitting} whileHover={formData.activeFlows.length > 0 && !isSubmitting ? {
             scale: 1.02
           } : {}} whileTap={formData.activeFlows.length > 0 && !isSubmitting ? {
             scale: 0.98
