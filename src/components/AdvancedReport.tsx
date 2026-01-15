@@ -7,10 +7,10 @@ import { generatePdfReport } from '@/lib/pdfGenerator';
 
 interface AdvancedReportProps {
   report: AdvancedReport;
-  phone: string;
-  userName: string;
-  userEmail: string;
-  website: string;
+  phone?: string;
+  userName?: string;
+  userEmail?: string;
+  website?: string;
   onRestart: () => void;
 }
 
@@ -34,10 +34,10 @@ const getScoreColor = (score: number) => {
 
 export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({ 
   report, 
-  phone,
-  userName,
-  userEmail,
-  website,
+  phone = '',
+  userName = '',
+  userEmail = '',
+  website = '',
   onRestart 
 }) => {
   const [isDownloading, setIsDownloading] = useState(false);
