@@ -54,7 +54,7 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 py-8 px-4">
+    <div className="min-h-screen bg-white py-8 px-4">
       <div className="w-full max-w-5xl mx-auto space-y-8">
         
         {/* Header */}
