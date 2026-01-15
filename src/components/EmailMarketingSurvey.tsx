@@ -538,7 +538,7 @@ const DisqualifiedScreen = () => {
           <p className="text-slate-300 text-sm mb-4">
             Nel frattempo, scarica la nostra guida gratuita per far crescere il tuo e-commerce con l'email marketing.
           </p>
-          <motion.a href="https://mailift.com/risorse" target="_blank" rel="noopener noreferrer" whileHover={{
+          <motion.a href="https://gamma.app/docs/Email-Marketing-Secret-2025-mwanhid9h9buczz" target="_blank" rel="noopener noreferrer" whileHover={{
           scale: 1.02
         }} whileTap={{
           scale: 0.98
