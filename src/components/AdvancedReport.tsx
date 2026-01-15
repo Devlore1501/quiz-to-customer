@@ -50,7 +50,7 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
       setIsDownloading(false);
     }
   };
-  return <div className="min-h-screen bg-slate-900 py-8 px-4">
+  return <div className="min-h-screen bg-slate-50 py-8 px-4">
       <div className="w-full max-w-5xl mx-auto space-y-8">
         
         {/* Header */}
