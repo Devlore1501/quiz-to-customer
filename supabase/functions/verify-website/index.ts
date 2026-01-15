@@ -47,10 +47,25 @@ function isInternalUrl(urlString: string): boolean {
   }
 }
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+// Allowed origins for CORS - prevents phishing/unauthorized embedding
+const ALLOWED_ORIGINS = [
+  'https://quiz-to-customer.lovable.app',
+  'https://id-preview--f5d761d0-cabe-4d00-a441-f6abbada657c.lovable.app',
+  'http://localhost:5173',
+  'http://localhost:8080',
+];
+
+function getCorsHeaders(origin: string | null): Record<string, string> {
+  // Check if origin is in allowed list
+  const allowedOrigin = origin && ALLOWED_ORIGINS.includes(origin) 
+    ? origin 
+    : ALLOWED_ORIGINS[0]; // Default to primary domain
+  
+  return {
+    'Access-Control-Allow-Origin': allowedOrigin,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  };
+}
 
 // Blacklist di brand famosi che non possono essere registrati
 const BLACKLISTED_DOMAINS = [
@@ -246,6 +261,10 @@ function mapSector(surveyAnswer: string): string {
 }
 
 serve(async (req) => {
+  // Get origin for CORS
+  const origin = req.headers.get('origin');
+  const corsHeaders = getCorsHeaders(origin);
+
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
