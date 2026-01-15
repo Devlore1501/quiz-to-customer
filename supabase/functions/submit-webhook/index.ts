@@ -10,10 +10,14 @@ const ALLOWED_ORIGINS = [
 ];
 
 function getCorsHeaders(origin: string | null): Record<string, string> {
-  // Check if origin is in allowed list
-  const allowedOrigin = origin && ALLOWED_ORIGINS.includes(origin) 
-    ? origin 
-    : ALLOWED_ORIGINS[0]; // Default to primary domain
+  // Check if origin matches allowed list or Lovable domains
+  const isAllowed = origin && (
+    ALLOWED_ORIGINS.includes(origin) ||
+    origin.endsWith('.lovable.app') ||
+    origin.endsWith('.lovableproject.com')
+  );
+  
+  const allowedOrigin = isAllowed ? origin : ALLOWED_ORIGINS[0];
   
   return {
     'Access-Control-Allow-Origin': allowedOrigin,
@@ -44,24 +48,44 @@ function checkRateLimit(identifier: string): boolean {
 }
 
 // Validate submission data structure
-function validateSubmissionData(data: unknown): { valid: boolean; error?: string } {
+function validateSubmissionData(data: unknown): { valid: boolean; error?: string; email?: string } {
   if (!data || typeof data !== 'object') {
     return { valid: false, error: 'Invalid submission data structure' };
   }
   
   const submission = data as Record<string, unknown>;
+  let email: string | undefined;
   
-  // Check for required fields
-  const requiredFields = ['email', 'full_name', 'company_name'];
-  for (const field of requiredFields) {
-    if (!submission[field] || typeof submission[field] !== 'string') {
-      return { valid: false, error: `Missing or invalid field: ${field}` };
+  // Check if this is an admin_report structure
+  if (submission.type === 'admin_report') {
+    const quickSummary = submission.quickSummary as Record<string, unknown> | undefined;
+    if (!quickSummary) {
+      return { valid: false, error: 'Missing quickSummary in admin report' };
     }
+    
+    if (!quickSummary.leadEmail || typeof quickSummary.leadEmail !== 'string') {
+      return { valid: false, error: 'Missing or invalid leadEmail in admin report' };
+    }
+    
+    if (!quickSummary.leadName || typeof quickSummary.leadName !== 'string') {
+      return { valid: false, error: 'Missing or invalid leadName in admin report' };
+    }
+    
+    email = quickSummary.leadEmail as string;
+  } else {
+    // Legacy flat structure
+    const requiredFields = ['email', 'full_name', 'company_name'];
+    for (const field of requiredFields) {
+      if (!submission[field] || typeof submission[field] !== 'string') {
+        return { valid: false, error: `Missing or invalid field: ${field}` };
+      }
+    }
+    email = submission.email as string;
   }
   
   // Validate email format
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(submission.email as string)) {
+  if (!emailRegex.test(email)) {
     return { valid: false, error: 'Invalid email format' };
   }
   
@@ -71,7 +95,7 @@ function validateSubmissionData(data: unknown): { valid: boolean; error?: string
     return { valid: false, error: 'Payload too large' };
   }
   
-  return { valid: true };
+  return { valid: true, email };
 }
 
 serve(async (req) => {
@@ -155,9 +179,13 @@ serve(async (req) => {
       );
     }
 
+    // Extract email from validation result
+    const submissionEmail = validation.email;
+    console.log('Validated submission email:', submissionEmail);
+
     // If submissionId is provided, verify it exists in the database
     // This ensures the webhook is only called for legitimate submissions
-    if (submissionId) {
+    if (submissionId && submissionEmail) {
       const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
       const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
       const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -185,15 +213,16 @@ serve(async (req) => {
         );
       }
 
-      // Verify the email matches (additional validation)
-      const submissionEmail = (submissionData as Record<string, unknown>).email;
+      // Verify the email matches (using extracted email from validation)
       if (existingSubmission.email !== submissionEmail) {
-        console.warn('Email mismatch for submission:', submissionId);
+        console.warn('Email mismatch for submission:', submissionId, 'expected:', existingSubmission.email, 'got:', submissionEmail);
         return new Response(
           JSON.stringify({ success: false, error: 'Data validation failed' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
+      
+      console.log('Submission verified successfully:', submissionId);
     }
 
     // Send to Make.com webhook with proper error handling
