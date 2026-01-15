@@ -430,12 +430,88 @@ function isValidUrlFormat(url: string): { isValid: boolean; normalized: string; 
   return { isValid: true, normalized };
 }
 
+// Disqualified screen component
+const DisqualifiedScreen = () => {
+  return (
+    <motion.div 
+      className="min-h-screen bg-slate-900 flex flex-col items-center justify-center px-4"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+    >
+      <div className="w-full max-w-md text-center">
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ type: "spring", stiffness: 300, damping: 20 }}
+          className="text-6xl mb-6"
+        >
+          😔
+        </motion.div>
+        
+        <motion.h1 
+          className="text-2xl md:text-3xl font-bold text-white mb-4"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          Al momento non siamo il partner giusto per te
+        </motion.h1>
+        
+        <motion.p 
+          className="text-slate-400 mb-8"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+        >
+          I nostri servizi sono ottimizzati per e-commerce con fatturato superiore a 20.000€/mese e investimento attivo in advertising.
+        </motion.p>
+        
+        <motion.div 
+          className="bg-slate-800/50 rounded-2xl p-6 border border-slate-700"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+        >
+          <div className="flex items-center justify-center gap-2 text-orange font-medium mb-3">
+            <Sparkles className="w-5 h-5" />
+            <span>Risorse gratuite per te</span>
+          </div>
+          <p className="text-slate-300 text-sm mb-4">
+            Nel frattempo, scarica la nostra guida gratuita per far crescere il tuo e-commerce con l'email marketing.
+          </p>
+          <motion.a
+            href="https://mailift.com/risorse"
+            target="_blank"
+            rel="noopener noreferrer"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            className="inline-block w-full py-3 px-6 bg-orange text-white rounded-xl font-semibold hover:bg-orange/90 transition-colors"
+          >
+            Scarica Guida Gratuita
+          </motion.a>
+        </motion.div>
+        
+        <motion.p 
+          className="text-slate-500 text-sm mt-6"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5 }}
+        >
+          Quando il tuo business crescerà, saremo qui ad aspettarti! 🚀
+        </motion.p>
+      </div>
+    </motion.div>
+  );
+};
+
 const EmailMarketingSurvey = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const [direction, setDirection] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [report, setReport] = useState<AdvancedReport | null>(null);
-  const [phase, setPhase] = useState<'quiz' | 'analyzing' | 'report'>('quiz');
+  const [phase, setPhase] = useState<'quiz' | 'analyzing' | 'report' | 'disqualified'>('quiz');
+  const [leadId, setLeadId] = useState<string | null>(null);
   const [selectedValue, setSelectedValue] = useState<string | null>(null);
   const [websiteVerification, setWebsiteVerification] = useState<WebsiteVerification>({ status: 'idle' });
   const [emailValidation, setEmailValidation] = useState<EmailValidation>({ status: 'idle' });
@@ -519,7 +595,18 @@ const EmailMarketingSurvey = () => {
     { id: 'none', label: 'Nessun flusso attivo', value: 'none' }
   ];
 
+  // REORDERED: Contact info FIRST to capture leads immediately
   const steps = [
+    {
+      title: "Parliamo di te",
+      subtitle: "Inserisci i tuoi dati per iniziare l'analisi personalizzata",
+      type: "contact" as const
+    },
+    {
+      title: "Qual è il tuo sito web?",
+      type: "input" as const,
+      field: "website" as keyof FormData
+    },
     {
       title: "In quale settore operi?",
       type: "radio" as const,
@@ -562,16 +649,6 @@ const EmailMarketingSurvey = () => {
       type: "checkbox" as const,
       field: "activeFlows" as keyof FormData,
       options: automationFlows
-    },
-    {
-      title: "Qual è il tuo sito web?",
-      type: "input" as const,
-      field: "website" as keyof FormData
-    },
-    {
-      title: "Dove ti inviamo il report?",
-      subtitle: "Inserisci i dati della tua azienda per ricevere il report personalizzato",
-      type: "contact" as const
     }
   ];
 
@@ -589,7 +666,7 @@ const EmailMarketingSurvey = () => {
     }
   };
 
-  const handleRadioSelect = (field: keyof FormData, value: string) => {
+  const handleRadioSelect = async (field: keyof FormData, value: string) => {
     setSelectedValue(value);
     setFormData(prev => ({ ...prev, [field]: value }));
     
@@ -597,6 +674,37 @@ const EmailMarketingSurvey = () => {
     if (field === 'sector' && value === 'other') {
       setTimeout(() => setSelectedValue(null), 400);
       return;
+    }
+    
+    // Check for disqualification after adsInvestment selection
+    if (field === 'adsInvestment') {
+      // Get the latest monthlyRevenue from formData
+      const currentMonthlyRevenue = formData.monthlyRevenue;
+      
+      // Disqualify if: revenue 10-20k AND ads 0-5k
+      if (currentMonthlyRevenue === '10-20k' && value === '0-5k') {
+        // Update lead status to disqualified if we have a lead ID
+        if (leadId) {
+          try {
+            await supabase
+              .from('survey_submissions')
+              .update({
+                status: 'disqualified',
+                qualified: false,
+                disqualification_reason: 'Fatturato < 20k e spesa ads < 5k'
+              } as never)
+              .eq('id', leadId);
+          } catch (err) {
+            console.error('Error updating disqualified lead:', err);
+          }
+        }
+        
+        setTimeout(() => {
+          setSelectedValue(null);
+          setPhase('disqualified');
+        }, 400);
+        return;
+      }
     }
     
     // Auto-advance with animation delay
@@ -709,7 +817,39 @@ const EmailMarketingSurvey = () => {
     
     const isValid = await verifyWebsite(formData.website, formData.sector);
     if (isValid) {
+      // Save lead immediately after contact + website steps are complete
+      await saveLeadToDatabase();
       goToNextStep();
+    }
+  };
+
+  // Save lead immediately after contact info is provided
+  const saveLeadToDatabase = async () => {
+    try {
+      const submissionData = {
+        company_name: formData.companyName,
+        full_name: formData.fullName,
+        email: formData.email,
+        phone: formData.phone || null,
+        website: formData.website || null,
+        status: 'in_progress',
+        qualified: null // TBD based on qualification questions
+      };
+
+      const { data, error } = await supabase
+        .from('survey_submissions')
+        .insert(submissionData as never)
+        .select('id')
+        .single();
+
+      if (error) {
+        console.error('Lead save error:', error);
+      } else if (data) {
+        setLeadId(data.id);
+        console.log('Lead saved with ID:', data.id);
+      }
+    } catch (err) {
+      console.error('Error saving lead:', err);
     }
   };
 
@@ -721,12 +861,30 @@ const EmailMarketingSurvey = () => {
     return sector?.label || 'E-commerce';
   };
 
-  const handleSubmit = async () => {
-    // Validate company name
+  // Check if contact form can continue
+  const canContinueFromContact = 
+    formData.companyName.trim() !== '' &&
+    formData.fullName.trim() !== '' &&
+    formData.email.trim() !== '' &&
+    formData.acceptTerms &&
+    emailValidation.status !== 'invalid';
+
+  // Handle contact form continue
+  const handleContactContinue = () => {
+    // Validate required fields
     if (!formData.companyName.trim()) {
       toast({
         title: "Errore",
         description: "Inserisci il nome della tua azienda",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!formData.fullName.trim()) {
+      toast({
+        title: "Errore",
+        description: "Inserisci il tuo nome e cognome",
         variant: "destructive"
       });
       return;
@@ -752,6 +910,11 @@ const EmailMarketingSurvey = () => {
       return;
     }
 
+    goToNextStep();
+  };
+
+  // Final submit - update existing lead with complete data
+  const handleSubmit = async () => {
     setIsSubmitting(true);
     
     try {
@@ -786,13 +949,8 @@ const EmailMarketingSurvey = () => {
         clientReport: advancedReport
       };
 
-      // 1. Save to database first
-      const submissionData = {
-        company_name: formData.companyName,
-        full_name: formData.fullName,
-        email: formData.email,
-        phone: formData.phone || null,
-        website: formData.website || null,
+      // Update existing lead with complete data
+      const updateData = {
         sector: formData.sector,
         custom_sector: formData.sector === 'other' ? formData.customSector : null,
         monthly_revenue: formData.monthlyRevenue,
@@ -805,21 +963,41 @@ const EmailMarketingSurvey = () => {
         benchmark_email_revenue: advancedReport.benchmarkEmailRevenue,
         revenue_gap: advancedReport.revenueGap,
         lead_quality: adminReport.consultingNotes.leadQuality,
+        status: 'completed',
+        qualified: true,
         make_synced: true,
         ghl_synced: false,
         report_data: dataToSend
       };
 
-      const { error: dbError } = await supabase
-        .from('survey_submissions')
-        .insert(submissionData as never);
+      if (leadId) {
+        const { error: dbError } = await supabase
+          .from('survey_submissions')
+          .update(updateData as never)
+          .eq('id', leadId);
 
-      if (dbError) {
-        console.error('Database save error:', dbError);
-        // Continue anyway - don't block user experience
+        if (dbError) {
+          console.error('Database update error:', dbError);
+        }
+      } else {
+        // Fallback: create new record if somehow leadId is missing
+        const { error: dbError } = await supabase
+          .from('survey_submissions')
+          .insert({
+            company_name: formData.companyName,
+            full_name: formData.fullName,
+            email: formData.email,
+            phone: formData.phone || null,
+            website: formData.website || null,
+            ...updateData
+          } as never);
+
+        if (dbError) {
+          console.error('Database save error:', dbError);
+        }
       }
 
-      // 2. Send to Make.com webhook
+      // Send to Make.com webhook
       fetch('https://hook.eu1.make.com/hi1xrv57zvt5kilh1fye9130gb132vx3', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -855,7 +1033,9 @@ const EmailMarketingSurvey = () => {
     setReport(null);
     setPhase('quiz');
     setIsSubmitting(false);
+    setLeadId(null);
     setEmailValidation({ status: 'idle' });
+    setWebsiteVerification({ status: 'idle' });
     setFormData({
       sector: '',
       customSector: '',
@@ -904,6 +1084,11 @@ const EmailMarketingSurvey = () => {
         />
       </motion.div>
     );
+  }
+
+  // Disqualified screen
+  if (phase === 'disqualified') {
+    return <DisqualifiedScreen />;
   }
 
   return (
@@ -1364,47 +1549,52 @@ const EmailMarketingSurvey = () => {
 
                   <motion.button
                     variants={cardVariants}
-                    onClick={handleSubmit}
-                    disabled={!formData.acceptTerms || isSubmitting}
-                    whileHover={formData.acceptTerms && !isSubmitting ? { scale: 1.02 } : {}}
-                    whileTap={formData.acceptTerms && !isSubmitting ? { scale: 0.98 } : {}}
+                    onClick={handleContactContinue}
+                    disabled={!canContinueFromContact}
+                    whileHover={canContinueFromContact ? { scale: 1.02 } : {}}
+                    whileTap={canContinueFromContact ? { scale: 0.98 } : {}}
                     className={`
                       w-full py-4 rounded-xl font-semibold text-lg transition-colors duration-200
                       flex items-center justify-center gap-2
-                      ${formData.acceptTerms && !isSubmitting
+                      ${canContinueFromContact
                         ? 'bg-orange text-white hover:bg-orange/90'
                         : 'bg-slate-700 text-slate-400 cursor-not-allowed'
                       }
                     `}
                   >
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="h-5 w-5 animate-spin" />
-                        Invio in corso...
-                      </>
-                    ) : (
-                      <>
-                        <Check className="h-5 w-5" />
-                        Ricevi il Report
-                      </>
-                    )}
+                    Continua
                   </motion.button>
                 </motion.div>
               )}
             </motion.div>
 
-            {/* Continue button for checkbox steps */}
+            {/* Submit button for checkbox steps (final step) */}
             {currentStepData?.type === 'checkbox' && (
               <motion.button
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
-                onClick={goToNextStep}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className="w-full mt-6 py-4 rounded-xl bg-orange text-white font-semibold text-lg hover:bg-orange/90 transition-colors duration-200"
+                onClick={handleSubmit}
+                disabled={isSubmitting}
+                whileHover={!isSubmitting ? { scale: 1.02 } : {}}
+                whileTap={!isSubmitting ? { scale: 0.98 } : {}}
+                className={`w-full mt-6 py-4 rounded-xl font-semibold text-lg transition-colors duration-200 flex items-center justify-center gap-2 ${
+                  isSubmitting
+                    ? 'bg-slate-700 text-slate-400 cursor-wait'
+                    : 'bg-orange text-white hover:bg-orange/90'
+                }`}
               >
-                Continua
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    Generazione report...
+                  </>
+                ) : (
+                  <>
+                    <Check className="h-5 w-5" />
+                    Genera il mio Report
+                  </>
+                )}
               </motion.button>
             )}
             
