@@ -24,6 +24,8 @@ interface FormData {
   fullName: string;
   phone: string;
   email: string;
+  motivation: string;
+  emailSatisfaction: string;
   acceptTerms: boolean;
   _hp_field: string;
 }
@@ -360,6 +362,8 @@ const ConversationalSurvey = () => {
     fullName: '',
     phone: '',
     email: '',
+    motivation: '',
+    emailSatisfaction: '',
     acceptTerms: false,
     _hp_field: ''
   });
@@ -734,13 +738,20 @@ const ConversationalSurvey = () => {
           leadName: formData.fullName,
           leadEmail: formData.email,
           leadPhone: formData.phone,
+          companyName: formData.companyName,
           website: formData.website,
           sector: advancedReport.sectorBenchmark.label,
           monthlyRevenue: advancedReport.monthlyRevenue,
+          adsInvestment: formData.adsInvestment,
           emailHealthScore: advancedReport.emailHealthScore,
           yearlyPotential: advancedReport.yearlyPotential,
           leadQuality: adminReport.consultingNotes.leadQuality,
           priorityLevel: adminReport.consultingNotes.priorityLevel,
+          motivation: formData.motivation,
+          motivationLabel: adminReport.quizResponses.motivationLabel,
+          emailSatisfaction: formData.emailSatisfaction,
+          emailSatisfactionLabel: adminReport.quizResponses.emailSatisfactionLabel,
+          acceptedTerms: true,
           reportUrl
         },
         adminReport,
@@ -809,7 +820,9 @@ const ConversationalSurvey = () => {
     setFormData({
       sector: '', customSector: '', monthlyRevenue: '', adsInvestment: '',
       emailRevenuePercentage: '', emailFrequency: '', listSize: '', activeFlows: [],
-      website: '', companyName: '', fullName: '', phone: '', email: '', acceptTerms: false, _hp_field: ''
+      website: '', companyName: '', fullName: '', phone: '', email: '', 
+      motivation: '', emailSatisfaction: '',
+      acceptTerms: false, _hp_field: ''
     });
   };
 
