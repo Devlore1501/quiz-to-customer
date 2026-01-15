@@ -774,11 +774,30 @@ const EmailMarketingSurvey = () => {
     value: 'none'
   }];
 
-  // REORDERED: Contact info FIRST to capture leads immediately
+  // REORDERED: Contact info FIRST to capture leads immediately - ONE AT A TIME
   const steps = [{
-    title: "Parliamo di te",
-    subtitle: "Inserisci i tuoi dati per iniziare l'analisi personalizzata",
-    type: "contact" as const
+    title: "Come ti chiami?",
+    subtitle: "Inserisci il tuo nome completo",
+    type: "single-input" as const,
+    field: "fullName" as keyof FormData,
+    placeholder: "Nome e Cognome"
+  }, {
+    title: "Come si chiama la tua azienda?",
+    type: "single-input" as const,
+    field: "companyName" as keyof FormData,
+    placeholder: "Nome Azienda"
+  }, {
+    title: "Qual è il tuo numero WhatsApp?",
+    subtitle: "Lo useremo solo per inviarti il report",
+    type: "single-input" as const,
+    field: "phone" as keyof FormData,
+    placeholder: "+39 xxx xxx xxxx"
+  }, {
+    title: "Qual è la tua email aziendale?",
+    subtitle: "No Gmail, Yahoo, Outlook - solo email aziendali",
+    type: "email-input" as const,
+    field: "email" as keyof FormData,
+    placeholder: "nome@tuaazienda.it"
   }, {
     title: "Qual è il tuo sito web?",
     type: "input" as const,
@@ -819,6 +838,11 @@ const EmailMarketingSurvey = () => {
     type: "checkbox" as const,
     field: "activeFlows" as keyof FormData,
     options: automationFlows
+  }, {
+    title: "Ultimo passaggio!",
+    subtitle: "Accetta i termini per ricevere il tuo report gratuito",
+    type: "terms" as const,
+    field: "acceptTerms" as keyof FormData
   }];
   const goToNextStep = () => {
     if (currentStep < steps.length - 1) {
@@ -1031,49 +1055,6 @@ const EmailMarketingSurvey = () => {
     return sector?.label || 'E-commerce';
   };
 
-  // Check if contact form can continue
-  const canContinueFromContact = formData.companyName.trim() !== '' && formData.fullName.trim() !== '' && formData.email.trim() !== '' && formData.acceptTerms && emailValidation.status !== 'invalid';
-
-  // Handle contact form continue
-  const handleContactContinue = () => {
-    // Validate required fields
-    if (!formData.companyName.trim()) {
-      toast({
-        title: "Errore",
-        description: "Inserisci il nome della tua azienda",
-        variant: "destructive"
-      });
-      return;
-    }
-    if (!formData.fullName.trim()) {
-      toast({
-        title: "Errore",
-        description: "Inserisci il tuo nome e cognome",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    // Validate business email
-    const emailCheck = validateBusinessEmail(formData.email, formData.website);
-    if (emailCheck.status === 'invalid') {
-      toast({
-        title: "Email non valida",
-        description: emailCheck.message || "Inserisci un'email aziendale valida",
-        variant: "destructive"
-      });
-      return;
-    }
-    if (!formData.acceptTerms) {
-      toast({
-        title: "Errore",
-        description: "Devi accettare i termini e condizioni per continuare",
-        variant: "destructive"
-      });
-      return;
-    }
-    goToNextStep();
-  };
 
   // Final submit - update existing lead with complete data
   const handleSubmit = async () => {
@@ -1532,112 +1513,126 @@ const EmailMarketingSurvey = () => {
                     </p>}
                 </motion.div>}
 
-              {currentStepData.type === "contact" && <motion.div className="space-y-4" variants={containerVariants}>
-                  <motion.div variants={cardVariants}>
-                    <Input value={formData.companyName} onChange={e => handleInputChange('companyName', e.target.value)} placeholder="Nome Azienda *" className="bg-slate-800 border-slate-700 text-white h-14 text-lg rounded-xl focus:border-orange focus:ring-orange" />
-                  </motion.div>
-                  <motion.div variants={cardVariants}>
-                    <Input value={formData.fullName} onChange={e => handleInputChange('fullName', e.target.value)} placeholder="Nome e Cognome *" className="bg-slate-800 border-slate-700 text-white h-14 text-lg rounded-xl focus:border-orange focus:ring-orange" />
-                  </motion.div>
-                  <motion.div variants={cardVariants}>
-                    <Input value={formData.phone} onChange={e => handleInputChange('phone', e.target.value)} placeholder="Numero WhatsApp (+39...) *" className="bg-slate-800 border-slate-700 text-white h-14 text-lg rounded-xl focus:border-orange focus:ring-orange" />
-                  </motion.div>
-                  <motion.div variants={cardVariants} className="space-y-2">
-                    <div className="relative">
-                      <Input type="email" value={formData.email} onChange={e => handleInputChange('email', e.target.value)} placeholder="Email Aziendale *" className={`bg-slate-800 text-white h-14 text-lg rounded-xl pr-12 border-2 transition-colors ${emailValidation.status === 'valid' ? 'border-green-500 focus:border-green-500 focus:ring-green-500' : emailValidation.status === 'invalid' ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : emailValidation.status === 'warning' ? 'border-yellow-500 focus:border-yellow-500 focus:ring-yellow-500' : 'border-slate-700 focus:border-orange focus:ring-orange'}`} />
-                      <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                        {emailValidation.status === 'valid' && <motion.div initial={{
-                      scale: 0
-                    }} animate={{
-                      scale: 1
-                    }} transition={{
-                      type: "spring",
-                      stiffness: 500,
-                      damping: 25
-                    }}>
-                            <CheckCircle2 className="w-5 h-5 text-green-500" />
-                          </motion.div>}
-                        {emailValidation.status === 'invalid' && <motion.div initial={{
-                      scale: 0
-                    }} animate={{
-                      scale: 1
-                    }} transition={{
-                      type: "spring",
-                      stiffness: 500,
-                      damping: 25
-                    }}>
-                            <XCircle className="w-5 h-5 text-red-500" />
-                          </motion.div>}
-                        {emailValidation.status === 'warning' && <motion.div initial={{
-                      scale: 0
-                    }} animate={{
-                      scale: 1
-                    }} transition={{
-                      type: "spring",
-                      stiffness: 500,
-                      damping: 25
-                    }}>
-                            <AlertCircle className="w-5 h-5 text-yellow-500" />
-                          </motion.div>}
-                      </div>
+              {/* Single text input step */}
+              {currentStepData.type === "single-input" && <motion.div className="space-y-4" variants={cardVariants}>
+                  <Input 
+                    value={formData[currentStepData.field] as string} 
+                    onChange={e => handleInputChange(currentStepData.field, e.target.value)} 
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' && (formData[currentStepData.field] as string).trim()) {
+                        goToNextStep();
+                      }
+                    }}
+                    placeholder={currentStepData.placeholder || ''} 
+                    className="bg-slate-800 border-slate-700 text-white h-14 text-lg rounded-xl focus:border-orange focus:ring-orange" 
+                    autoFocus
+                  />
+                  <motion.button 
+                    onClick={() => {
+                      if ((formData[currentStepData.field] as string).trim()) {
+                        goToNextStep();
+                      } else {
+                        toast({ title: "Errore", description: "Questo campo è obbligatorio", variant: "destructive" });
+                      }
+                    }} 
+                    disabled={!(formData[currentStepData.field] as string).trim()}
+                    whileHover={(formData[currentStepData.field] as string).trim() ? { scale: 1.02 } : {}} 
+                    whileTap={(formData[currentStepData.field] as string).trim() ? { scale: 0.98 } : {}} 
+                    className={`w-full py-4 rounded-xl font-semibold text-lg transition-colors duration-200 ${(formData[currentStepData.field] as string).trim() ? 'bg-orange text-white hover:bg-orange/90' : 'bg-slate-700 text-slate-400 cursor-not-allowed'}`}
+                  >
+                    Continua
+                  </motion.button>
+                </motion.div>}
+
+              {/* Email input step */}
+              {currentStepData.type === "email-input" && <motion.div className="space-y-4" variants={cardVariants}>
+                  <div className="relative">
+                    <Input 
+                      type="email" 
+                      value={formData.email} 
+                      onChange={e => handleInputChange('email', e.target.value)} 
+                      onKeyDown={e => {
+                        if (e.key === 'Enter' && formData.email.trim() && emailValidation.status !== 'invalid') {
+                          goToNextStep();
+                        }
+                      }}
+                      placeholder={currentStepData.placeholder || 'Email Aziendale'} 
+                      className={`bg-slate-800 text-white h-14 text-lg rounded-xl pr-12 border-2 transition-colors ${emailValidation.status === 'valid' ? 'border-green-500 focus:border-green-500 focus:ring-green-500' : emailValidation.status === 'invalid' ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : emailValidation.status === 'warning' ? 'border-yellow-500 focus:border-yellow-500 focus:ring-yellow-500' : 'border-slate-700 focus:border-orange focus:ring-orange'}`} 
+                      autoFocus
+                    />
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                      {emailValidation.status === 'valid' && <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 500, damping: 25 }}>
+                          <CheckCircle2 className="w-5 h-5 text-green-500" />
+                        </motion.div>}
+                      {emailValidation.status === 'invalid' && <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 500, damping: 25 }}>
+                          <XCircle className="w-5 h-5 text-red-500" />
+                        </motion.div>}
+                      {emailValidation.status === 'warning' && <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 500, damping: 25 }}>
+                          <AlertCircle className="w-5 h-5 text-yellow-500" />
+                        </motion.div>}
                     </div>
-                    
-                    {/* Email validation feedback */}
-                    <AnimatePresence mode="wait">
-                      {emailValidation.message && <motion.p initial={{
-                    opacity: 0,
-                    y: -5
-                  }} animate={{
-                    opacity: 1,
-                    y: 0
-                  }} exit={{
-                    opacity: 0,
-                    y: -5
-                  }} className={`text-sm ${emailValidation.status === 'invalid' ? 'text-red-400' : 'text-yellow-400'}`}>
-                          {emailValidation.message}
-                        </motion.p>}
-                    </AnimatePresence>
-                    
-                    <p className="text-xs text-slate-500">
-                      Es: nome@tuaazienda.it - No Gmail, Yahoo, etc.
-                    </p>
-                  </motion.div>
-                  
+                  </div>
+                  <AnimatePresence mode="wait">
+                    {emailValidation.message && <motion.p initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} className={`text-sm ${emailValidation.status === 'invalid' ? 'text-red-400' : 'text-yellow-400'}`}>
+                        {emailValidation.message}
+                      </motion.p>}
+                  </AnimatePresence>
+                  <motion.button 
+                    onClick={() => {
+                      if (!formData.email.trim()) {
+                        toast({ title: "Errore", description: "Inserisci la tua email", variant: "destructive" });
+                        return;
+                      }
+                      if (emailValidation.status === 'invalid') {
+                        toast({ title: "Email non valida", description: emailValidation.message, variant: "destructive" });
+                        return;
+                      }
+                      goToNextStep();
+                    }} 
+                    disabled={!formData.email.trim() || emailValidation.status === 'invalid'}
+                    whileHover={formData.email.trim() && emailValidation.status !== 'invalid' ? { scale: 1.02 } : {}} 
+                    whileTap={formData.email.trim() && emailValidation.status !== 'invalid' ? { scale: 0.98 } : {}} 
+                    className={`w-full py-4 rounded-xl font-semibold text-lg transition-colors duration-200 ${formData.email.trim() && emailValidation.status !== 'invalid' ? 'bg-orange text-white hover:bg-orange/90' : 'bg-slate-700 text-slate-400 cursor-not-allowed'}`}
+                  >
+                    Continua
+                  </motion.button>
+                </motion.div>}
+
+              {/* Terms step */}
+              {currentStepData.type === "terms" && <motion.div className="space-y-4" variants={containerVariants}>
                   {/* Honeypot field - hidden from users, visible to bots */}
-                  <div style={{
-                position: 'absolute',
-                left: '-9999px',
-                opacity: 0,
-                height: 0,
-                overflow: 'hidden',
-                pointerEvents: 'none'
-              }} aria-hidden="true">
+                  <div style={{ position: 'absolute', left: '-9999px', opacity: 0, height: 0, overflow: 'hidden', pointerEvents: 'none' }} aria-hidden="true">
                     <label htmlFor="company_website_url">Company Website URL</label>
                     <input type="text" id="company_website_url" name="company_website_url" value={formData._hp_field} onChange={e => handleInputChange('_hp_field', e.target.value)} tabIndex={-1} autoComplete="off" />
                   </div>
 
-                  <motion.div className="flex items-start gap-3 pt-4" variants={cardVariants}>
+                  <motion.div className="flex items-start gap-3 bg-slate-800/50 rounded-xl p-4 border border-slate-700" variants={cardVariants}>
                     <Checkbox id="terms" checked={formData.acceptTerms} onCheckedChange={checked => handleInputChange('acceptTerms', checked as boolean)} className="border-slate-500 data-[state=checked]:bg-orange data-[state=checked]:border-orange mt-1" />
-                    <Label htmlFor="terms" className="text-slate-400 text-sm cursor-pointer leading-relaxed">
+                    <Label htmlFor="terms" className="text-slate-300 text-sm cursor-pointer leading-relaxed">
                       Accetto i termini e condizioni. Fornendo il mio numero, accetto di ricevere messaggi per il report personalizzato.
                     </Label>
                   </motion.div>
 
-                  <motion.button variants={cardVariants} onClick={handleContactContinue} disabled={!canContinueFromContact} whileHover={canContinueFromContact ? {
-                scale: 1.02
-              } : {}} whileTap={canContinueFromContact ? {
-                scale: 0.98
-              } : {}} className={`
-                      w-full py-4 rounded-xl font-semibold text-lg transition-colors duration-200
-                      flex items-center justify-center gap-2
-                      ${canContinueFromContact ? 'bg-orange text-white hover:bg-orange/90' : 'bg-slate-700 text-slate-400 cursor-not-allowed'}
-                    `}>
-                    Continua
+                  <motion.button 
+                    variants={cardVariants} 
+                    onClick={handleSubmit} 
+                    disabled={!formData.acceptTerms || isSubmitting} 
+                    whileHover={formData.acceptTerms && !isSubmitting ? { scale: 1.02 } : {}} 
+                    whileTap={formData.acceptTerms && !isSubmitting ? { scale: 0.98 } : {}} 
+                    className={`w-full py-4 rounded-xl font-semibold text-lg transition-colors duration-200 flex items-center justify-center gap-2 ${formData.acceptTerms && !isSubmitting ? 'bg-orange text-white hover:bg-orange/90' : 'bg-slate-700 text-slate-400 cursor-not-allowed'}`}
+                  >
+                    {isSubmitting ? <>
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                        Generazione report...
+                      </> : <>
+                        <Check className="h-5 w-5" />
+                        Genera il mio Report Gratuito
+                      </>}
                   </motion.button>
                 </motion.div>}
             </motion.div>
 
-            {/* Submit button for checkbox steps (final step) */}
+            {/* Continue button for checkbox steps */}
             {currentStepData?.type === 'checkbox' && <motion.button initial={{
             opacity: 0,
             y: 20
@@ -1646,18 +1641,12 @@ const EmailMarketingSurvey = () => {
             y: 0
           }} transition={{
             delay: 0.3
-          }} onClick={handleSubmit} disabled={isSubmitting} whileHover={!isSubmitting ? {
+          }} onClick={goToNextStep} disabled={formData.activeFlows.length === 0} whileHover={formData.activeFlows.length > 0 ? {
             scale: 1.02
-          } : {}} whileTap={!isSubmitting ? {
+          } : {}} whileTap={formData.activeFlows.length > 0 ? {
             scale: 0.98
-          } : {}} className={`w-full mt-6 py-4 rounded-xl font-semibold text-lg transition-colors duration-200 flex items-center justify-center gap-2 ${isSubmitting ? 'bg-slate-700 text-slate-400 cursor-wait' : 'bg-orange text-white hover:bg-orange/90'}`}>
-                {isSubmitting ? <>
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                    Generazione report...
-                  </> : <>
-                    <Check className="h-5 w-5" />
-                    Genera il mio Report
-                  </>}
+          } : {}} className={`w-full mt-6 py-4 rounded-xl font-semibold text-lg transition-colors duration-200 flex items-center justify-center gap-2 ${formData.activeFlows.length > 0 ? 'bg-orange text-white hover:bg-orange/90' : 'bg-slate-700 text-slate-400 cursor-not-allowed'}`}>
+                Continua ({formData.activeFlows.length} selezionati)
               </motion.button>}
             
             {/* Continue button for website input step with verification */}
