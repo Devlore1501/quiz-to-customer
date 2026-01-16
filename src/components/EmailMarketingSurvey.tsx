@@ -9,7 +9,7 @@ import { generateAdminReport } from '@/lib/adminReportGenerator';
 import AdvancedReportComponent from '@/components/AdvancedReport';
 import { ChevronLeft, Check, Loader2, CheckCircle2, Circle, BarChart3, Users, TrendingUp, FileText, Sparkles, XCircle, Globe, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { trackQuizCompleted } from '@/lib/facebookPixel';
+import { trackQuizCompleted, trackCompleteRegistration } from '@/lib/facebookPixel';
 interface FormData {
   sector: string;
   customSector: string;
@@ -1237,6 +1237,13 @@ const EmailMarketingSurvey = () => {
           console.error('Database save error:', dbError);
         }
       }
+
+      // Track Facebook CompleteRegistration immediately after form submission
+      trackCompleteRegistration({
+        sector: advancedReport.sectorBenchmark.label,
+        email: formData.email,
+        companyName: formData.companyName,
+      });
 
       // Send to webhook via secure edge function
       try {
