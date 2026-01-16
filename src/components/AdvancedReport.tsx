@@ -363,22 +363,32 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
           </div>
         </div>
 
-        {/* CTA Finale */}
-        <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 text-center animate-fade-in" style={{
+        {/* Prenota Consulenza - Calendario GHL Embeddato */}
+        <div className="bg-gradient-to-br from-slate-800 to-slate-700 p-6 sm:p-8 rounded-xl border border-orange/30 animate-fade-in" style={{
         animationDelay: '900ms'
       }}>
-          <h3 className="text-xl font-bold text-white mb-3">
-            📱 Report completo in arrivo su WhatsApp
-          </h3>
-          <p className="text-slate-300 mb-6">
-            Riceverai strategie dettagliate e personalizzate al numero: <span className="text-orange font-semibold">{phone}</span>
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button onClick={onRestart} variant="outline" className="border-orange text-orange hover:bg-orange hover:text-white">
+          <div className="text-center mb-6">
+            <h3 className="text-2xl font-bold text-white mb-3">
+              📅 Prenota la tua Consulenza Gratuita
+            </h3>
+            <p className="text-slate-300 max-w-2xl mx-auto">
+              Hai visto il potenziale del tuo business. Scopri come sbloccare questi risultati con una consulenza personalizzata di 30 minuti con i nostri esperti.
+            </p>
+          </div>
+          
+          {/* GHL Calendar Embed */}
+          <div className="bg-white rounded-xl overflow-hidden mb-6">
+            <iframe
+              src="https://go.mailift.com/widget/booking/3IIFrrczXhMvLYQAL4md"
+              style={{ width: '100%', height: '700px', border: 'none' }}
+              title="Prenota Consulenza Gratuita"
+              loading="lazy"
+            />
+          </div>
+
+          <div className="text-center">
+            <Button onClick={onRestart} variant="outline" className="border-slate-600 text-slate-300 hover:bg-slate-700 hover:text-white">
               Fai un'altra analisi
-            </Button>
-            <Button className="bg-orange hover:bg-orange/90 text-white" onClick={() => window.open('https://wa.me/+39XXXXXXXXXX', '_blank')}>
-              Contattaci per una consulenza gratuita
             </Button>
           </div>
         </div>
