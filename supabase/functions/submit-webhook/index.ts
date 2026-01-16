@@ -98,6 +98,12 @@ function validateSubmissionData(data: unknown): { valid: boolean; error?: string
   return { valid: true, email };
 }
 
+interface WebhookResult {
+  name: string;
+  success: boolean;
+  error?: string;
+}
+
 serve(async (req) => {
   // Get origin for CORS
   const origin = req.headers.get('origin');
@@ -117,12 +123,13 @@ serve(async (req) => {
       );
     }
 
-    const webhookUrl = Deno.env.get('MAKE_WEBHOOK_URL');
+    const makeWebhookUrl = Deno.env.get('MAKE_WEBHOOK_URL');
+    const ghlWebhookUrl = Deno.env.get('GHL_WEBHOOK_URL');
     
-    if (!webhookUrl) {
-      console.error('MAKE_WEBHOOK_URL not configured');
+    if (!makeWebhookUrl && !ghlWebhookUrl) {
+      console.error('No webhook URLs configured');
       return new Response(
-        JSON.stringify({ success: false, error: 'Webhook not configured' }),
+        JSON.stringify({ success: false, error: 'Webhooks not configured' }),
         { 
           status: 500, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -225,30 +232,76 @@ serve(async (req) => {
       console.log('Submission verified successfully:', submissionId);
     }
 
-    // Send to Make.com webhook with proper error handling
-    const webhookResponse = await fetch(webhookUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(submissionData)
-    });
+    // Send to both webhooks in parallel
+    const webhookPromises: Promise<WebhookResult>[] = [];
 
-    if (!webhookResponse.ok) {
-      console.error('Webhook failed with status:', webhookResponse.status);
-      // Still return success since we don't want to fail the user flow
-      // The data is already saved in the database
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          webhookSent: false,
-          warning: 'Webhook delivery failed but data was saved'
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    if (makeWebhookUrl) {
+      console.log('Sending to Make.com webhook...');
+      webhookPromises.push(
+        fetch(makeWebhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(submissionData)
+        })
+          .then(async (response) => {
+            if (!response.ok) {
+              console.error('Make webhook failed with status:', response.status);
+              return { name: 'make', success: false, error: `HTTP ${response.status}` };
+            }
+            console.log('Make webhook sent successfully');
+            return { name: 'make', success: true };
+          })
+          .catch((error) => {
+            console.error('Make webhook error:', error);
+            return { name: 'make', success: false, error: error.message };
+          })
       );
     }
 
-    console.log('Webhook sent successfully');
+    if (ghlWebhookUrl) {
+      console.log('Sending to GHL webhook...');
+      webhookPromises.push(
+        fetch(ghlWebhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(submissionData)
+        })
+          .then(async (response) => {
+            if (!response.ok) {
+              console.error('GHL webhook failed with status:', response.status);
+              return { name: 'ghl', success: false, error: `HTTP ${response.status}` };
+            }
+            console.log('GHL webhook sent successfully');
+            return { name: 'ghl', success: true };
+          })
+          .catch((error) => {
+            console.error('GHL webhook error:', error);
+            return { name: 'ghl', success: false, error: error.message };
+          })
+      );
+    }
+
+    // Wait for all webhooks to complete
+    const results = await Promise.all(webhookPromises);
+    
+    const makeResult = results.find(r => r.name === 'make');
+    const ghlResult = results.find(r => r.name === 'ghl');
+    
+    const anySuccess = results.some(r => r.success);
+    const allSuccess = results.every(r => r.success);
+
+    console.log('Webhook results:', { makeResult, ghlResult });
+
     return new Response(
-      JSON.stringify({ success: true, webhookSent: true }),
+      JSON.stringify({ 
+        success: true, 
+        webhookSent: anySuccess,
+        webhooks: {
+          make: makeResult || { success: false, error: 'Not configured' },
+          ghl: ghlResult || { success: false, error: 'Not configured' }
+        },
+        allWebhooksSucceeded: allSuccess
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 

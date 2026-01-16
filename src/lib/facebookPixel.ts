@@ -22,7 +22,24 @@ export const trackFacebookEvent = (
 };
 
 /**
+ * Track form completion as CompleteRegistration event
+ * This fires immediately when the form is submitted
+ */
+export const trackCompleteRegistration = (data: {
+  sector: string;
+  email: string;
+  companyName: string;
+}): void => {
+  trackFacebookEvent('CompleteRegistration', {
+    content_name: 'Email Marketing Quiz',
+    content_category: data.sector,
+    status: 'complete',
+  });
+};
+
+/**
  * Track quiz completion as a Lead event
+ * This fires after successful webhook delivery for CAPI matching
  */
 export const trackQuizCompleted = (data: {
   sector: string;
