@@ -54,6 +54,8 @@ const ALLOWED_ORIGINS = [
   'https://f5d761d0-cabe-4d00-a441-f6abbada657c.lovableproject.com',
   'http://localhost:5173',
   'http://localhost:8080',
+  // Dominio per embedding iframe
+  'https://report.mailift.com',
 ];
 
 function getCorsHeaders(origin: string | null): Record<string, string> {
