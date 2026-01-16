@@ -1210,7 +1210,7 @@ const EmailMarketingSurvey = () => {
         lead_quality: adminReport.consultingNotes.leadQuality,
         status: 'completed',
         qualified: true,
-        make_synced: true,
+        make_synced: false, // Set to false initially, will update after webhook success
         ghl_synced: false,
         report_data: dataToSend
       };
@@ -1240,15 +1240,31 @@ const EmailMarketingSurvey = () => {
 
       // Send to webhook via secure edge function
       try {
+        console.log('Sending webhook with leadId:', currentLeadId);
         const webhookResponse = await supabase.functions.invoke('submit-webhook', {
           body: {
             submissionData: dataToSend
           }
         });
+        
         if (webhookResponse.error) {
           console.warn('Webhook delivery warning:', webhookResponse.error);
         } else {
           console.log('Webhook sent successfully:', webhookResponse.data);
+          
+          // Update make_synced only after successful webhook
+          if (webhookResponse.data?.webhookSent && currentLeadId) {
+            const { error: syncError } = await supabase
+              .from('survey_submissions')
+              .update({ make_synced: true } as never)
+              .eq('id', currentLeadId);
+            
+            if (syncError) {
+              console.error('Failed to update make_synced:', syncError);
+            } else {
+              console.log('make_synced updated to true for:', currentLeadId);
+            }
+          }
           
           // Track Facebook Lead event after successful webhook
           trackQuizCompleted({
@@ -1260,7 +1276,7 @@ const EmailMarketingSurvey = () => {
           });
         }
       } catch (webhookError) {
-        console.warn('Webhook delivery failed, but data was saved:', webhookError);
+        console.error('Webhook delivery failed:', webhookError);
       }
 
       // Store report and show analysis screen
