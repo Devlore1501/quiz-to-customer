@@ -9,6 +9,7 @@ import { generateAdminReport } from '@/lib/adminReportGenerator';
 import AdvancedReportComponent from '@/components/AdvancedReport';
 import { ChevronLeft, Check, Loader2, CheckCircle2, Circle, BarChart3, Users, TrendingUp, FileText, Sparkles, XCircle, Globe, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { trackQuizCompleted } from '@/lib/facebookPixel';
 interface FormData {
   sector: string;
   customSector: string;
@@ -1248,6 +1249,15 @@ const EmailMarketingSurvey = () => {
           console.warn('Webhook delivery warning:', webhookResponse.error);
         } else {
           console.log('Webhook sent successfully:', webhookResponse.data);
+          
+          // Track Facebook Lead event after successful webhook
+          trackQuizCompleted({
+            sector: advancedReport.sectorBenchmark.label,
+            yearlyPotential: advancedReport.yearlyPotential,
+            emailHealthScore: advancedReport.emailHealthScore,
+            leadQuality: adminReport.consultingNotes.leadQuality,
+            monthlyRevenue: advancedReport.monthlyRevenue,
+          });
         }
       } catch (webhookError) {
         console.warn('Webhook delivery failed, but data was saved:', webhookError);
