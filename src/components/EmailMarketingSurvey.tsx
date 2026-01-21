@@ -38,6 +38,19 @@ interface EmailValidation {
 
 // Business email validation
 const personalDomains = ['gmail.com', 'googlemail.com', 'yahoo.com', 'yahoo.it', 'ymail.com', 'hotmail.com', 'hotmail.it', 'outlook.com', 'live.com', 'live.it', 'msn.com', 'icloud.com', 'me.com', 'mac.com', 'libero.it', 'virgilio.it', 'alice.it', 'tin.it', 'tiscali.it', 'aruba.it', 'fastwebnet.it', 'pec.it', 'protonmail.com', 'proton.me', 'aol.com', 'mail.com', 'email.com', 'inbox.com'];
+
+// Normalize website URL to always include https://
+function normalizeWebsiteUrl(url: string): string {
+  if (!url) return '';
+  let normalized = url.trim().toLowerCase();
+  // Remove any existing protocol
+  normalized = normalized.replace(/^https?:\/\//, '');
+  // Remove trailing slashes
+  normalized = normalized.replace(/\/+$/, '');
+  // Always add https://
+  return `https://${normalized}`;
+}
+
 function extractDomainFromUrl(url: string): string {
   try {
     let normalized = url.toLowerCase().trim();
@@ -1109,7 +1122,7 @@ const EmailMarketingSurvey = () => {
         full_name: formData.fullName,
         email: formData.email,
         phone: formData.phone || null,
-        website: formData.website || null,
+        website: formData.website ? normalizeWebsiteUrl(formData.website) : null,
         status: 'in_progress',
         qualified: null // TBD based on qualification questions
       };
@@ -1162,6 +1175,8 @@ const EmailMarketingSurvey = () => {
 
       // Generate shareable report URL - use passed currentLeadId to avoid race condition
       const reportUrl = currentLeadId ? `${window.location.origin}/report/${currentLeadId}` : null;
+      const normalizedWebsite = formData.website ? normalizeWebsiteUrl(formData.website) : null;
+      
       const dataToSend = {
         type: 'admin_report',
         timestamp: new Date().toISOString(),
@@ -1173,7 +1188,7 @@ const EmailMarketingSurvey = () => {
           leadEmail: formData.email,
           leadPhone: formData.phone,
           companyName: formData.companyName,
-          website: formData.website,
+          website: normalizedWebsite,
           sector: advancedReport.sectorBenchmark.label,
           monthlyRevenue: advancedReport.monthlyRevenue,
           adsInvestment: formData.adsInvestment,
@@ -1230,7 +1245,7 @@ const EmailMarketingSurvey = () => {
           full_name: formData.fullName,
           email: formData.email,
           phone: formData.phone || null,
-          website: formData.website || null,
+          website: normalizedWebsite,
           ...updateData
         } as never);
         if (dbError) {
