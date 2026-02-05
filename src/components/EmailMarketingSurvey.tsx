@@ -495,7 +495,7 @@ const DisqualifiedScreen = () => {
       }} transition={{
         delay: 0.3
       }}>
-          I nostri servizi sono ottimizzati per e-commerce con fatturato superiore a 10.000€/mese e investimento in advertising superiore a 3.000€/mese.
+          I nostri servizi sono ottimizzati per e-commerce con fatturato superiore a 15.000€/mese e investimento in advertising superiore a 3.000€/mese.
         </motion.p>
         
         <motion.div className="bg-slate-800/50 rounded-2xl p-6 border border-slate-700" initial={{
@@ -611,16 +611,16 @@ const EmailMarketingSurvey = () => {
   }];
   const revenueRanges = [{
     id: 'rev0',
-    label: 'Meno di 10.000€',
-    value: 'under-10k'
+    label: 'Meno di 15.000€',
+    value: 'under-15k'
   }, {
     id: 'rev1',
-    label: '10.000€ - 20.000€',
-    value: '10-20k'
+    label: '15.000€ - 25.000€',
+    value: '15-25k'
   }, {
     id: 'rev2',
-    label: '20.000€ - 50.000€',
-    value: '20-50k'
+    label: '25.000€ - 50.000€',
+    value: '25-50k'
   }, {
     id: 'rev3',
     label: '50.000€ - 100.000€',
@@ -848,7 +848,7 @@ const EmailMarketingSurvey = () => {
     field: "emailSatisfaction" as keyof FormData,
     options: satisfactionOptions
   }, {
-    title: "Qual è il tuo fatturato mensile?",
+    title: "Qual è il fatturato mensile del tuo ecommerce?",
     type: "radio" as const,
     field: "monthlyRevenue" as keyof FormData,
     options: revenueRanges
@@ -904,14 +904,14 @@ const EmailMarketingSurvey = () => {
       return;
     }
 
-    // Check for disqualification on monthlyRevenue - under 10k = immediate disqualification
-    if (field === 'monthlyRevenue' && value === 'under-10k') {
+    // Check for disqualification on monthlyRevenue - under 15k = immediate disqualification
+    if (field === 'monthlyRevenue' && value === 'under-15k') {
       if (leadId) {
         try {
           await supabase.from('survey_submissions').update({
             status: 'disqualified',
             qualified: false,
-            disqualification_reason: 'Fatturato mensile inferiore a 10.000€'
+            disqualification_reason: 'Fatturato mensile inferiore a 15.000€'
           } as never).eq('id', leadId);
         } catch (err) {
           console.error('Error updating disqualified lead:', err);

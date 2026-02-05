@@ -282,7 +282,7 @@ const DisqualifiedScreen = ({ userName }: { userName: string }) => {
           {userName.split(' ')[0]}, al momento non siamo il partner giusto per te
         </motion.h1>
         <motion.p className="text-slate-400 mb-8" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-          I nostri servizi sono ottimizzati per e-commerce con fatturato superiore a 20.000€/mese e investimento attivo in advertising.
+          I nostri servizi sono ottimizzati per e-commerce con fatturato superiore a 15.000€/mese e investimento attivo in advertising.
         </motion.p>
         <motion.div className="bg-slate-800/50 rounded-2xl p-6 border border-slate-700" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
           <div className="flex items-center justify-center gap-2 text-orange font-medium mb-3">
@@ -358,8 +358,8 @@ const ConversationalSurvey = () => {
   ];
 
   const revenueRanges = [
-    { id: 'rev1', label: '10K€ - 20K€', value: '10-20k' },
-    { id: 'rev2', label: '20K€ - 50K€', value: '20-50k' },
+    { id: 'rev1', label: '15K€ - 25K€', value: '15-25k' },
+    { id: 'rev2', label: '25K€ - 50K€', value: '25-50k' },
     { id: 'rev3', label: '50K€ - 100K€', value: '50-100k' },
     { id: 'rev4', label: '100K€ - 200K€', value: '100-200k' },
     { id: 'rev5', label: '200K€+', value: '200k+' }
@@ -455,7 +455,7 @@ const ConversationalSurvey = () => {
     },
     {
       id: 'revenue',
-      getMessage: (data) => `Bene! Per calcolare il tuo potenziale, qual è il vostro fatturato mensile attuale?`,
+      getMessage: (data) => `Bene! Per calcolare il tuo potenziale, qual è il fatturato mensile del tuo ecommerce?`,
       type: 'radio',
       field: 'monthlyRevenue',
       options: revenueRanges
@@ -591,13 +591,13 @@ const ConversationalSurvey = () => {
     
     // Check for disqualification
     if (currentStepData?.field === 'adsInvestment') {
-      if (formData.monthlyRevenue === '10-20k' && formData.adsInvestment === '0-5k') {
+      if (formData.monthlyRevenue === '15-25k' && formData.adsInvestment === '0-5k') {
         if (leadId) {
           try {
             await supabase.from('survey_submissions').update({
               status: 'disqualified',
               qualified: false,
-              disqualification_reason: 'Fatturato < 20k e spesa ads < 5k'
+              disqualification_reason: 'Fatturato < 25k e spesa ads < 5k'
             } as never).eq('id', leadId);
           } catch {}
         }
