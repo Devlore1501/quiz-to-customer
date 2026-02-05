@@ -1174,7 +1174,7 @@ const EmailMarketingSurvey = () => {
       const adminReport = generateAdminReport(formData, advancedReport);
 
       // Generate shareable report URL - use passed currentLeadId to avoid race condition
-      const reportUrl = currentLeadId ? `${window.location.origin}/report/${currentLeadId}` : null;
+      const reportUrl = currentLeadId ? `https://quiz-to-customer.lovable.app/report/${currentLeadId}` : null;
       const normalizedWebsite = formData.website ? normalizeWebsiteUrl(formData.website) : null;
       
       const dataToSend = {
