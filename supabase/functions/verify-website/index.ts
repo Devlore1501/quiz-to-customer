@@ -266,11 +266,14 @@ function mapSector(surveyAnswer: string): string {
 serve(async (req) => {
   // Get origin for CORS
   const origin = req.headers.get('origin');
-  const corsHeaders = getCorsHeaders(origin);
+const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
+  };
 
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response('ok', { headers: corsHeaders });
   }
 
   try {
@@ -330,7 +333,7 @@ serve(async (req) => {
 
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 sec timeout
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 sec timeout
       
       const response = await fetch(normalizedUrl, {
         method: 'GET',
@@ -431,17 +434,11 @@ serve(async (req) => {
     // Cap a 100
     confidence = Math.min(confidence, 100);
 
-    // 6. Determina validità
-    // Valido se: raggiungibile E (è e-commerce O ha keywords settore)
-    const isValid = isReachable && (isEcommerce || sectorKeywordsFound >= 2);
+    // 6. Determina validità - pragmatico: raggiungibile e non in blacklist
+    const isValid = isReachable;
     
     let error: string | null = null;
-    if (!isEcommerce && sectorKeywordsFound < 2) {
-      error = 'Non sembra essere un e-commerce attivo. Verifica che sia il tuo negozio online.';
-    } else if (isEcommerce && !sectorMatch && mappedSector !== 'generic') {
-      // Warning ma non blocchiamo
-      error = null; // Permettiamo comunque
-    }
+    // Keywords sono solo indicatori di confidence, non bloccanti
 
     console.log(`Verification result: isValid=${isValid}, confidence=${confidence}`);
 
