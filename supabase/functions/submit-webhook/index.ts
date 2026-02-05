@@ -74,7 +74,7 @@ function validateSubmissionData(data: unknown): { valid: boolean; error?: string
     email = quickSummary.leadEmail as string;
   } else {
     // Legacy flat structure
-    const requiredFields = ['email', 'full_name', 'company_name'];
+    const requiredFields = ['email', 'full_name'];
     for (const field of requiredFields) {
       if (!submission[field] || typeof submission[field] !== 'string') {
         return { valid: false, error: `Missing or invalid field: ${field}` };
