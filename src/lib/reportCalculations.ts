@@ -78,13 +78,14 @@ export const flowImpact: Record<string, {
 // Parse dei valori dai range
 export const parseRevenueRange = (range: string): number => {
   const rangeMap: Record<string, number> = {
-    '10-20k': 15000,
-    '20-50k': 35000,
+    'under-15k': 10000,
+    '15-25k': 20000,
+    '25-50k': 37500,
     '50-100k': 75000,
     '100-200k': 150000,
     '200k+': 250000
   };
-  return rangeMap[range] || 35000;
+  return rangeMap[range] || 37500;
 };
 
 export const parseEmailPercentage = (range: string): number => {
