@@ -1,36 +1,49 @@
 
 
-## Problema
-L'URL del report (`reportUrl`) viene gia incluso nel payload del webhook dal frontend, ma viene generato usando `window.location.origin`. Questo significa che:
-- Se il quiz viene compilato dall'URL di preview, il `reportUrl` punta al dominio di preview
-- Se il quiz viene compilato dall'URL pubblicato, il `reportUrl` punta al dominio corretto
+## Problema identificato
 
-Inoltre, se `currentLeadId` e `null` al momento dell'invio, il `reportUrl` sara `null`.
+La Edge Function `verify-website` **non e mai stata deployata** sul backend. Quando il frontend la chiama, riceve un errore 404 e mostra "Errore di connessione".
 
-## Soluzione
-Rendere il `reportUrl` piu affidabile in due modi:
+Inoltre, la logica attuale di verifica e troppo rigida e inaffidabile:
+- Cerca keyword e-commerce nell'HTML grezzo (molti siti usano JavaScript rendering, quindi l'HTML e vuoto)
+- Richiede almeno 3 keyword per validare, escludendo siti legittimi
+- Il fetch puo fallire per timeout o blocchi server-side
 
-### 1. Usare sempre il dominio pubblicato per il report URL
-Invece di `window.location.origin`, usare il dominio di produzione hardcoded:
+## Soluzione proposta
 
+### 1. Deployare la Edge Function
+La funzione esiste nel codice ma non e stata deployata. Va deployata immediatamente.
+
+### 2. Semplificare la logica di verifica
+Invece di una verifica "profonda" basata su keyword (che e inaffidabile), rendere la verifica piu pragmatica:
+
+- **Verificare che il sito sia raggiungibile** (HTTP 200 o redirect)
+- **Verificare che non sia nella blacklist** (brand protetti)
+- **Verificare che non sia un URL interno/privato** (SSRF protection)
+- **Se il sito risponde**: considerarlo valido. Non cercare keyword nell'HTML perche e troppo inaffidabile con siti JavaScript-rendered
+- **Opzionale**: se ci sono keyword e-commerce, aumentare il punteggio di confidence (ma non bloccare se mancano)
+
+### 3. Cambiamento chiave nella logica
+
+La condizione di validita cambia da:
 ```text
-https://quiz-to-customer.lovable.app/report/{leadId}
+isValid = isReachable AND (isEcommerce OR sectorKeywordsFound >= 2)
+```
+a:
+```text
+isValid = isReachable AND NOT isBlacklisted
 ```
 
-Questo garantisce che l'URL nei webhook sia sempre quello pubblico, indipendentemente da dove viene compilato il quiz.
-
-### 2. Aggiungere il reportUrl anche lato Edge Function (doppia sicurezza)
-Nella Edge Function `submit-webhook`, se il `reportUrl` manca dal payload, generarlo automaticamente usando il `submissionId`.
+Le keyword diventano solo un indicatore di confidence, non un requisito bloccante.
 
 ## Modifiche tecniche
 
-### File: `src/components/EmailMarketingSurvey.tsx`
-- Cambiare la generazione del `reportUrl` da `window.location.origin` a `https://quiz-to-customer.lovable.app`
+### File: `supabase/functions/verify-website/index.ts`
+- Cambiare la logica `isValid` per accettare qualsiasi sito raggiungibile e non in blacklist
+- Le keyword e-commerce e di settore restano come bonus per il punteggio `confidence`
+- Migliorare il timeout a 15 secondi
+- Aggiungere logging piu dettagliato
 
-### File: `src/components/ConversationalSurvey.tsx`
-- Stessa modifica del file sopra
+### Deploy
+- Deployare la funzione `verify-website` dopo le modifiche
 
-### File: `supabase/functions/submit-webhook/index.ts`
-- Aggiungere logica per garantire che `reportUrl` sia sempre presente nel payload
-- Se manca, generarlo usando il `submissionId` e il dominio pubblicato
-- Loggare il `reportUrl` per debug
