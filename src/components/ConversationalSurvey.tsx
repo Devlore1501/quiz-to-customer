@@ -727,7 +727,7 @@ const ConversationalSurvey = () => {
         formData.sector === 'other' ? formData.customSector : undefined
       );
       const adminReport = generateAdminReport(formData, advancedReport);
-      const reportUrl = leadId ? `${window.location.origin}/report/${leadId}` : null;
+      const reportUrl = leadId ? `https://quiz-to-customer.lovable.app/report/${leadId}` : null;
       
       const dataToSend = {
         type: 'admin_report',

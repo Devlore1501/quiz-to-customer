@@ -232,6 +232,27 @@ serve(async (req) => {
       console.log('Submission verified successfully:', submissionId);
     }
 
+    // Ensure reportUrl is always present in the payload (double safety)
+    const PRODUCTION_DOMAIN = 'https://quiz-to-customer.lovable.app';
+    const submissionDataObj = submissionData as Record<string, unknown>;
+    
+    if (!submissionDataObj.reportUrl && submissionId) {
+      submissionDataObj.reportUrl = `${PRODUCTION_DOMAIN}/report/${submissionId}`;
+      console.log('reportUrl was missing, generated from submissionId:', submissionDataObj.reportUrl);
+    } else if (submissionDataObj.reportUrl) {
+      console.log('reportUrl already present in payload:', submissionDataObj.reportUrl);
+    } else {
+      console.warn('reportUrl missing and no submissionId available to generate it');
+    }
+
+    // Also inject into quickSummary if it's an admin_report
+    if (submissionDataObj.type === 'admin_report') {
+      const qs = submissionDataObj.quickSummary as Record<string, unknown> | undefined;
+      if (qs && !qs.reportUrl && submissionDataObj.reportUrl) {
+        qs.reportUrl = submissionDataObj.reportUrl;
+      }
+    }
+
     // Send to both webhooks in parallel
     const webhookPromises: Promise<WebhookResult>[] = [];
 
