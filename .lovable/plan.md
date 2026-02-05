@@ -1,49 +1,43 @@
 
 
-## Problema identificato
+## Modifiche richieste
 
-La Edge Function `verify-website` **non e mai stata deployata** sul backend. Quando il frontend la chiama, riceve un errore 404 e mostra "Errore di connessione".
+Rimuovere il campo "Nome Azienda" dal questionario e permettere qualsiasi email (non solo aziendale).
 
-Inoltre, la logica attuale di verifica e troppo rigida e inaffidabile:
-- Cerca keyword e-commerce nell'HTML grezzo (molti siti usano JavaScript rendering, quindi l'HTML e vuoto)
-- Richiede almeno 3 keyword per validare, escludendo siti legittimi
-- Il fetch puo fallire per timeout o blocchi server-side
+## Cosa cambia
 
-## Soluzione proposta
+### 1. Database: rendere `company_name` opzionale
+Il campo `company_name` nella tabella `survey_submissions` e attualmente `NOT NULL`. Va reso opzionale con una migrazione.
 
-### 1. Deployare la Edge Function
-La funzione esiste nel codice ma non e stata deployata. Va deployata immediatamente.
+### 2. Frontend: rimuovere lo step "Nome Azienda"
+In entrambi i componenti (`EmailMarketingSurvey.tsx` e `ConversationalSurvey.tsx`):
+- Rimuovere lo step/domanda "Come si chiama la tua azienda?"
+- Aggiornare i riferimenti a `companyName` nei messaggi successivi (es. "Qual e il sito web di {companyName}" diventa generico)
 
-### 2. Semplificare la logica di verifica
-Invece di una verifica "profonda" basata su keyword (che e inaffidabile), rendere la verifica piu pragmatica:
+### 3. Frontend: accettare qualsiasi email
+In entrambi i componenti:
+- Rimuovere la lista `personalDomains` e la logica di blocco email personali
+- La funzione `validateBusinessEmail` diventa una semplice validazione formato email
+- Cambiare il testo da "email aziendale" a "email"
+- Cambiare il placeholder da `nome@tuaazienda.it` a `nome@email.com`
 
-- **Verificare che il sito sia raggiungibile** (HTTP 200 o redirect)
-- **Verificare che non sia nella blacklist** (brand protetti)
-- **Verificare che non sia un URL interno/privato** (SSRF protection)
-- **Se il sito risponde**: considerarlo valido. Non cercare keyword nell'HTML perche e troppo inaffidabile con siti JavaScript-rendered
-- **Opzionale**: se ci sono keyword e-commerce, aumentare il punteggio di confidence (ma non bloccare se mancano)
+### 4. Edge Function: aggiornare validazione
+In `supabase/functions/submit-webhook/index.ts`:
+- Rimuovere `company_name` dai campi obbligatori nella validazione legacy
 
-### 3. Cambiamento chiave nella logica
+### 5. Riferimenti vari
+- Aggiornare i payload webhook e database insert dove `companyName` viene usato (passare stringa vuota o omettere)
+- Aggiornare i messaggi nel ConversationalSurvey che fanno riferimento al nome azienda
 
-La condizione di validita cambia da:
-```text
-isValid = isReachable AND (isEcommerce OR sectorKeywordsFound >= 2)
+## Dettagli tecnici
+
+### Migrazione SQL
+```sql
+ALTER TABLE survey_submissions ALTER COLUMN company_name DROP NOT NULL;
+ALTER TABLE survey_submissions ALTER COLUMN company_name SET DEFAULT '';
 ```
-a:
-```text
-isValid = isReachable AND NOT isBlacklisted
-```
 
-Le keyword diventano solo un indicatore di confidence, non un requisito bloccante.
-
-## Modifiche tecniche
-
-### File: `supabase/functions/verify-website/index.ts`
-- Cambiare la logica `isValid` per accettare qualsiasi sito raggiungibile e non in blacklist
-- Le keyword e-commerce e di settore restano come bonus per il punteggio `confidence`
-- Migliorare il timeout a 15 secondi
-- Aggiungere logging piu dettagliato
-
-### Deploy
-- Deployare la funzione `verify-website` dopo le modifiche
-
+### File modificati
+- `src/components/EmailMarketingSurvey.tsx` — rimuovere step companyName, semplificare validazione email
+- `src/components/ConversationalSurvey.tsx` — rimuovere step company, semplificare validazione email, aggiornare messaggi
+- `supabase/functions/submit-webhook/index.ts` — rimuovere company_name da requiredFields
