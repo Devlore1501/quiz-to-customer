@@ -37,8 +37,6 @@ interface EmailValidation {
 }
 
 // Business email validation
-const personalDomains = ['gmail.com', 'googlemail.com', 'yahoo.com', 'yahoo.it', 'ymail.com', 'hotmail.com', 'hotmail.it', 'outlook.com', 'live.com', 'live.it', 'msn.com', 'icloud.com', 'me.com', 'mac.com', 'libero.it', 'virgilio.it', 'alice.it', 'tin.it', 'tiscali.it', 'aruba.it', 'fastwebnet.it', 'pec.it', 'protonmail.com', 'proton.me', 'aol.com', 'mail.com', 'email.com', 'inbox.com'];
-
 // Normalize website URL to always include https://
 function normalizeWebsiteUrl(url: string): string {
   if (!url) return '';
@@ -51,53 +49,15 @@ function normalizeWebsiteUrl(url: string): string {
   return `https://${normalized}`;
 }
 
-function extractDomainFromUrl(url: string): string {
-  try {
-    let normalized = url.toLowerCase().trim();
-    if (!normalized.startsWith('http://') && !normalized.startsWith('https://')) {
-      normalized = 'https://' + normalized;
-    }
-    const urlObj = new URL(normalized);
-    return urlObj.hostname.replace(/^www\./, '');
-  } catch {
-    return '';
-  }
-}
-function validateBusinessEmail(email: string, website: string): EmailValidation {
+function validateEmail(email: string): EmailValidation {
   if (!email || !email.includes('@')) {
-    return {
-      status: 'idle'
-    };
+    return { status: 'idle' };
   }
-  const emailDomain = email.split('@')[1]?.toLowerCase();
-  if (!emailDomain) {
-    return {
-      status: 'invalid',
-      message: 'Email non valida'
-    };
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return { status: 'invalid', message: 'Email non valida' };
   }
-
-  // Check if personal email domain
-  if (personalDomains.includes(emailDomain)) {
-    return {
-      status: 'invalid',
-      message: 'Inserisci un\'email aziendale (non Gmail, Yahoo, Outlook, etc.)'
-    };
-  }
-
-  // Extract domain from website
-  const websiteDomain = extractDomainFromUrl(website);
-
-  // Check if email domain matches website domain
-  if (websiteDomain && emailDomain !== websiteDomain) {
-    return {
-      status: 'warning',
-      message: `L'email dovrebbe idealmente essere @${websiteDomain}`
-    };
-  }
-  return {
-    status: 'valid'
-  };
+  return { status: 'valid' };
 }
 
 // Animation variants
@@ -851,22 +811,17 @@ const EmailMarketingSurvey = () => {
     field: "fullName" as keyof FormData,
     placeholder: "Nome e Cognome"
   }, {
-    title: "Come si chiama la tua azienda?",
-    type: "single-input" as const,
-    field: "companyName" as keyof FormData,
-    placeholder: "Nome Azienda"
-  }, {
     title: "Qual è il tuo numero WhatsApp?",
     subtitle: "Lo useremo solo per inviarti il report",
     type: "single-input" as const,
     field: "phone" as keyof FormData,
     placeholder: "+39 xxx xxx xxxx"
   }, {
-    title: "Qual è la tua email aziendale?",
-    subtitle: "No Gmail, Yahoo, Outlook - solo email aziendali",
+    title: "Qual è la tua email?",
+    subtitle: "Ti invieremo il report personalizzato",
     type: "email-input" as const,
     field: "email" as keyof FormData,
-    placeholder: "nome@tuaazienda.it"
+    placeholder: "nome@email.com"
   }, {
     title: "Ultimo passaggio per le info di contatto",
     subtitle: "Accetta i termini per continuare",
@@ -1016,7 +971,7 @@ const EmailMarketingSurvey = () => {
 
     // Validate email in real-time
     if (field === 'email' && typeof value === 'string') {
-      const validation = validateBusinessEmail(value, formData.website);
+      const validation = validateEmail(value);
       setEmailValidation(validation);
     }
   };
@@ -1118,7 +1073,7 @@ const EmailMarketingSurvey = () => {
     }
     try {
       const submissionData = {
-        company_name: formData.companyName,
+        company_name: '',
         full_name: formData.fullName,
         email: formData.email,
         phone: formData.phone || null,
@@ -1187,7 +1142,7 @@ const EmailMarketingSurvey = () => {
           leadName: formData.fullName,
           leadEmail: formData.email,
           leadPhone: formData.phone,
-          companyName: formData.companyName,
+          companyName: '',
           website: normalizedWebsite,
           sector: advancedReport.sectorBenchmark.label,
           monthlyRevenue: advancedReport.monthlyRevenue,
@@ -1241,7 +1196,7 @@ const EmailMarketingSurvey = () => {
         const {
           error: dbError
         } = await supabase.from('survey_submissions').insert({
-          company_name: formData.companyName,
+          company_name: '',
           full_name: formData.fullName,
           email: formData.email,
           phone: formData.phone || null,
@@ -1257,7 +1212,7 @@ const EmailMarketingSurvey = () => {
       trackCompleteRegistration({
         sector: advancedReport.sectorBenchmark.label,
         email: formData.email,
-        companyName: formData.companyName,
+        companyName: '',
       });
 
       // Send to webhook via secure edge function
@@ -1698,7 +1653,7 @@ const EmailMarketingSurvey = () => {
                           goToNextStep();
                         }
                       }}
-                      placeholder={currentStepData.placeholder || 'Email Aziendale'} 
+                      placeholder={currentStepData.placeholder || 'Email'} 
                       className={`bg-slate-800 text-white h-14 text-lg rounded-xl pr-12 border-2 transition-colors ${emailValidation.status === 'valid' ? 'border-green-500 focus:border-green-500 focus:ring-green-500' : emailValidation.status === 'invalid' ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : emailValidation.status === 'warning' ? 'border-yellow-500 focus:border-yellow-500 focus:ring-yellow-500' : 'border-slate-700 focus:border-orange focus:ring-orange'}`} 
                       autoFocus
                     />

@@ -18,7 +18,7 @@ export type Database = {
         Row: {
           active_flows: string[] | null
           benchmark_email_revenue: number | null
-          company_name: string
+          company_name: string | null
           created_at: string
           current_email_revenue: number | null
           custom_sector: string | null
@@ -47,7 +47,7 @@ export type Database = {
         Insert: {
           active_flows?: string[] | null
           benchmark_email_revenue?: number | null
-          company_name: string
+          company_name?: string | null
           created_at?: string
           current_email_revenue?: number | null
           custom_sector?: string | null
@@ -76,7 +76,7 @@ export type Database = {
         Update: {
           active_flows?: string[] | null
           benchmark_email_revenue?: number | null
-          company_name?: string
+          company_name?: string | null
           created_at?: string
           current_email_revenue?: number | null
           custom_sector?: string | null

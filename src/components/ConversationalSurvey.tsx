@@ -47,36 +47,14 @@ interface WebsiteVerification {
   confidence?: number;
 }
 
-// Business email validation
-const personalDomains = ['gmail.com', 'googlemail.com', 'yahoo.com', 'yahoo.it', 'ymail.com', 'hotmail.com', 'hotmail.it', 'outlook.com', 'live.com', 'live.it', 'msn.com', 'icloud.com', 'me.com', 'mac.com', 'libero.it', 'virgilio.it', 'alice.it', 'tin.it', 'tiscali.it', 'aruba.it', 'fastwebnet.it', 'pec.it', 'protonmail.com', 'proton.me', 'aol.com', 'mail.com', 'email.com', 'inbox.com'];
-
-function extractDomainFromUrl(url: string): string {
-  try {
-    let normalized = url.toLowerCase().trim();
-    if (!normalized.startsWith('http://') && !normalized.startsWith('https://')) {
-      normalized = 'https://' + normalized;
-    }
-    const urlObj = new URL(normalized);
-    return urlObj.hostname.replace(/^www\./, '');
-  } catch {
-    return '';
-  }
-}
-
-function validateBusinessEmail(email: string, website: string): EmailValidation {
+// Simple email validation
+function validateEmail(email: string): EmailValidation {
   if (!email || !email.includes('@')) {
     return { status: 'idle' };
   }
-  const emailDomain = email.split('@')[1]?.toLowerCase();
-  if (!emailDomain) {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
     return { status: 'invalid', message: 'Email non valida' };
-  }
-  if (personalDomains.includes(emailDomain)) {
-    return { status: 'invalid', message: 'Inserisci un\'email aziendale (non Gmail, Yahoo, Outlook, etc.)' };
-  }
-  const websiteDomain = extractDomainFromUrl(website);
-  if (websiteDomain && emailDomain !== websiteDomain) {
-    return { status: 'warning', message: `L'email dovrebbe idealmente essere @${websiteDomain}` };
   }
   return { status: 'valid' };
 }
@@ -441,36 +419,29 @@ const ConversationalSurvey = () => {
       placeholder: 'Il tuo nome e cognome...'
     },
     {
-      id: 'company',
-      getMessage: (data) => `Piacere di conoscerti, ${data.fullName.split(' ')[0]}! 😊 Come si chiama la tua azienda?`,
-      type: 'text-input',
-      field: 'companyName',
-      placeholder: 'Nome della tua azienda...'
-    },
-    {
       id: 'phone',
-      getMessage: (data) => `Ottimo! ${data.companyName} sembra interessante. Qual è il tuo numero WhatsApp? Lo useremo solo per inviarti il report.`,
+      getMessage: (data) => `Piacere di conoscerti, ${data.fullName.split(' ')[0]}! 😊 Qual è il tuo numero WhatsApp? Lo useremo solo per inviarti il report.`,
       type: 'text-input',
       field: 'phone',
       placeholder: '+39 xxx xxx xxxx'
     },
     {
       id: 'email',
-      getMessage: (data) => `Perfetto ${data.fullName.split(' ')[0]}! Ora ho bisogno della tua email aziendale per inviarti l'analisi completa.`,
+      getMessage: (data) => `Perfetto ${data.fullName.split(' ')[0]}! Ora ho bisogno della tua email per inviarti l'analisi completa.`,
       type: 'email',
       field: 'email',
-      placeholder: 'nome@tuaazienda.it'
+      placeholder: 'nome@email.com'
     },
     {
       id: 'website',
-      getMessage: (data) => `Fantastico! Qual è il sito web di ${data.companyName}? Lo analizzerò per personalizzare il report.`,
+      getMessage: () => `Fantastico! Qual è il tuo sito web? Lo analizzerò per personalizzare il report.`,
       type: 'website',
       field: 'website',
       placeholder: 'www.tuosito.com'
     },
     {
       id: 'sector',
-      getMessage: (data) => `${data.fullName.split(' ')[0]}, in quale settore opera ${data.companyName}?`,
+      getMessage: (data) => `${data.fullName.split(' ')[0]}, in quale settore operi?`,
       type: 'radio',
       field: 'sector',
       options: sectors
@@ -484,7 +455,7 @@ const ConversationalSurvey = () => {
     },
     {
       id: 'revenue',
-      getMessage: (data) => `Bene! Per calcolare il potenziale di ${data.companyName}, qual è il vostro fatturato mensile attuale?`,
+      getMessage: (data) => `Bene! Per calcolare il tuo potenziale, qual è il vostro fatturato mensile attuale?`,
       type: 'radio',
       field: 'monthlyRevenue',
       options: revenueRanges
@@ -498,7 +469,7 @@ const ConversationalSurvey = () => {
     },
     {
       id: 'emailRevenue',
-      getMessage: (data) => `Ora la domanda chiave per ${data.companyName}: quanto del vostro fatturato proviene dalle email?`,
+      getMessage: (data) => `Ora la domanda chiave, ${data.fullName.split(' ')[0]}: quanto del vostro fatturato proviene dalle email?`,
       type: 'radio',
       field: 'emailRevenuePercentage',
       options: emailRevenueRanges
@@ -512,7 +483,7 @@ const ConversationalSurvey = () => {
     },
     {
       id: 'listSize',
-      getMessage: (data) => `Quasi finito! Quanti iscritti ha la lista email di ${data.companyName}?`,
+      getMessage: (data) => `Quasi finito! Quanti iscritti ha la tua lista email?`,
       type: 'radio',
       field: 'listSize',
       options: listSizes
@@ -526,7 +497,7 @@ const ConversationalSurvey = () => {
     },
     {
       id: 'terms',
-      getMessage: (data) => `Perfetto ${data.fullName.split(' ')[0]}! 🎉 Ho tutte le informazioni che mi servono per creare il report personalizzato per ${data.companyName}. Accetta i termini per ricevere la tua analisi gratuita.`,
+      getMessage: (data) => `Perfetto ${data.fullName.split(' ')[0]}! 🎉 Ho tutte le informazioni che mi servono per creare il tuo report personalizzato. Accetta i termini per ricevere la tua analisi gratuita.`,
       type: 'terms',
       field: 'acceptTerms'
     }
@@ -592,7 +563,7 @@ const ConversationalSurvey = () => {
     if (formData._hp_field) return;
     try {
       const submissionData = {
-        company_name: formData.companyName,
+        company_name: '',
         full_name: formData.fullName,
         email: formData.email,
         phone: formData.phone || null,
@@ -653,7 +624,7 @@ const ConversationalSurvey = () => {
       setWebsiteVerification({ status: 'idle' });
     }
     if (field === 'email' && typeof value === 'string') {
-      setEmailValidation(validateBusinessEmail(value, formData.website));
+      setEmailValidation(validateEmail(value));
     }
   };
 
@@ -689,7 +660,7 @@ const ConversationalSurvey = () => {
     }
 
     if (field === 'email') {
-      const validation = validateBusinessEmail(formData.email, formData.website);
+      const validation = validateEmail(formData.email);
       if (validation.status === 'invalid') {
         toast({ title: "Email non valida", description: validation.message, variant: "destructive" });
         return;
@@ -738,7 +709,7 @@ const ConversationalSurvey = () => {
           leadName: formData.fullName,
           leadEmail: formData.email,
           leadPhone: formData.phone,
-          companyName: formData.companyName,
+          companyName: '',
           website: formData.website,
           sector: advancedReport.sectorBenchmark.label,
           monthlyRevenue: advancedReport.monthlyRevenue,
@@ -782,7 +753,7 @@ const ConversationalSurvey = () => {
         await supabase.from('survey_submissions').update(updateData as never).eq('id', leadId);
       } else {
         await supabase.from('survey_submissions').insert({
-          company_name: formData.companyName,
+          company_name: '',
           full_name: formData.fullName,
           email: formData.email,
           phone: formData.phone || null,
