@@ -14,6 +14,59 @@ export type Database = {
   }
   public: {
     Tables: {
+      partial_submissions: {
+        Row: {
+          abandoned: boolean
+          completed: boolean
+          current_step: number
+          current_step_name: string | null
+          form_data: Json | null
+          id: string
+          session_id: string
+          started_at: string
+          submission_id: string | null
+          survey_type: string
+          total_steps: number
+          updated_at: string
+        }
+        Insert: {
+          abandoned?: boolean
+          completed?: boolean
+          current_step?: number
+          current_step_name?: string | null
+          form_data?: Json | null
+          id?: string
+          session_id: string
+          started_at?: string
+          submission_id?: string | null
+          survey_type: string
+          total_steps: number
+          updated_at?: string
+        }
+        Update: {
+          abandoned?: boolean
+          completed?: boolean
+          current_step?: number
+          current_step_name?: string | null
+          form_data?: Json | null
+          id?: string
+          session_id?: string
+          started_at?: string
+          submission_id?: string | null
+          survey_type?: string
+          total_steps?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partial_submissions_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "survey_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       survey_submissions: {
         Row: {
           active_flows: string[] | null

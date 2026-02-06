@@ -9,6 +9,7 @@ import { generateAdminReport } from '@/lib/adminReportGenerator';
 import AdvancedReportComponent from '@/components/AdvancedReport';
 import { ChevronLeft, Check, Loader2, CheckCircle2, Circle, BarChart3, Users, TrendingUp, FileText, Sparkles, XCircle, Globe, AlertCircle, Send } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { usePartialTracking } from '@/hooks/usePartialTracking';
 
 interface FormData {
   sector: string;
@@ -344,6 +345,17 @@ const ConversationalSurvey = () => {
     emailSatisfaction: '',
     acceptTerms: false,
     _hp_field: ''
+  });
+
+  // Partial tracking - defined before steps so it's always called
+  const currentStepId = currentStep >= 0 ? `step_${currentStep}` : 'init';
+  const { markCompleted } = usePartialTracking({
+    surveyType: 'conversational',
+    formData: formData as unknown as Record<string, unknown>,
+    currentStep,
+    stepName: currentStepId,
+    totalSteps: 13,
+    enabled: phase === 'quiz',
   });
 
   const sectors = [
@@ -761,6 +773,9 @@ const ConversationalSurvey = () => {
           ...updateData
         } as never);
       }
+
+      // Mark partial tracking as completed
+      await markCompleted(leadId || undefined);
 
       try {
         await supabase.functions.invoke('submit-webhook', { body: { submissionData: dataToSend } });

@@ -10,6 +10,7 @@ import AdvancedReportComponent from '@/components/AdvancedReport';
 import { ChevronLeft, Check, Loader2, CheckCircle2, Circle, BarChart3, Users, TrendingUp, FileText, Sparkles, XCircle, Globe, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { trackQuizCompleted, trackCompleteRegistration } from '@/lib/facebookPixel';
+import { usePartialTracking } from '@/hooks/usePartialTracking';
 interface FormData {
   sector: string;
   customSector: string;
@@ -568,6 +569,7 @@ const EmailMarketingSurvey = () => {
     emailSatisfaction: '',
     _hp_field: '' // Honeypot - bots will fill this
   });
+
   const sectors = [{
     id: 'beauty',
     label: 'Beauty & Personal Care',
@@ -879,6 +881,18 @@ const EmailMarketingSurvey = () => {
     field: "activeFlows" as keyof FormData,
     options: automationFlows
   }];
+
+  // Partial tracking
+  const currentStepName = steps[currentStep]?.field as string || 'unknown';
+  const { markCompleted } = usePartialTracking({
+    surveyType: 'email_marketing',
+    formData: formData as unknown as Record<string, unknown>,
+    currentStep,
+    stepName: currentStepName,
+    totalSteps: steps.length,
+    enabled: phase === 'quiz',
+  });
+
   const goToNextStep = () => {
     if (currentStep < steps.length - 1) {
       setDirection(1);
@@ -1255,6 +1269,9 @@ const EmailMarketingSurvey = () => {
       } catch (webhookError) {
         console.error('Webhook delivery failed:', webhookError);
       }
+
+      // Mark partial tracking as completed
+      await markCompleted(currentLeadId || undefined);
 
       // Store report and show analysis screen
       setReport(advancedReport);
