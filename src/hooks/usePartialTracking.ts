@@ -20,8 +20,13 @@ export function usePartialTracking({
 }: UsePartialTrackingOptions) {
   const sessionIdRef = useRef<string>(crypto.randomUUID());
   const recordCreatedRef = useRef(false);
-  const lastStepRef = useRef(-1);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const formDataRef = useRef(formData);
+
+  // Always keep formDataRef fresh
+  useEffect(() => {
+    formDataRef.current = formData;
+  }, [formData]);
 
   // Create initial record
   useEffect(() => {
@@ -43,11 +48,9 @@ export function usePartialTracking({
       });
   }, [enabled, surveyType]);
 
-  // Update on step change (debounced)
+  // Debounced update on step OR formData change
   useEffect(() => {
     if (!enabled || !recordCreatedRef.current) return;
-    if (currentStep === lastStepRef.current) return;
-    lastStepRef.current = currentStep;
 
     if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
     debounceTimerRef.current = setTimeout(() => {
@@ -67,11 +70,10 @@ export function usePartialTracking({
     }, 500);
   }, [currentStep, stepName, formData, enabled, totalSteps]);
 
-  // Mark abandoned on beforeunload
+  // Mark abandoned on beforeunload - use ref for fresh data
   useEffect(() => {
     if (!enabled) return;
     const handler = () => {
-      // Use fetch with keepalive for reliability on page unload
       const url = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/partial_submissions?session_id=eq.${sessionIdRef.current}`;
       fetch(url, {
         method: 'PATCH',
@@ -84,14 +86,14 @@ export function usePartialTracking({
         body: JSON.stringify({
           abandoned: true,
           updated_at: new Date().toISOString(),
-          form_data: formData,
+          form_data: formDataRef.current,
         }),
         keepalive: true,
       }).catch(() => {});
     };
     window.addEventListener('beforeunload', handler);
     return () => window.removeEventListener('beforeunload', handler);
-  }, [enabled, formData]);
+  }, [enabled]);
 
   // Mark completed
   const markCompleted = useCallback(
@@ -103,11 +105,11 @@ export function usePartialTracking({
           abandoned: false,
           submission_id: submissionId || null,
           updated_at: new Date().toISOString(),
-          form_data: formData,
+          form_data: formDataRef.current,
         } as never)
         .eq('session_id' as never, sessionIdRef.current as never);
     },
-    [formData]
+    []
   );
 
   return { markCompleted, sessionId: sessionIdRef.current };
