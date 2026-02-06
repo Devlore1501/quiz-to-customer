@@ -1,51 +1,64 @@
 
 
-## Modifiche ai range di fatturato e label "ecommerce"
+## Tracciamento utenti che abbandonano il quiz
 
-### 1. Nuovi range di fatturato
+### Problema attuale
+Il lead viene salvato nel database solo dopo lo step "sito web" (step 5 su 14 in EmailMarketingSurvey). Chi abbandona prima -- ad esempio dopo aver inserito nome o email -- viene perso completamente.
 
-I range attuali vengono sostituiti con:
+### Soluzione
 
-| Vecchio | Nuovo |
-|---------|-------|
-| Meno di 10.000 (solo EmailMarketingSurvey) | Meno di 15.000 |
-| 10.000 - 20.000 | 15.000 - 25.000 |
-| 20.000 - 50.000 | 25.000 - 50.000 |
-| 50.000 - 100.000 | 50.000 - 100.000 (invariato) |
-| 100.000 - 200.000 | 100.000 - 200.000 (invariato) |
-| 200.000+ | 200.000+ (invariato) |
+Creare una tabella `partial_submissions` separata che traccia ogni progresso nel quiz in tempo reale, indipendentemente dal completamento.
 
-I valori interni (`value`) cambieranno di conseguenza: `under-15k`, `15-25k`, `25-50k`, `50-100k`, `100-200k`, `200k+`.
-
-### 2. Specificare "ecommerce" nella domanda
-
-La domanda sul fatturato viene aggiornata per specificare che si tratta di fatturato e-commerce:
-- **EmailMarketingSurvey**: "Qual e il fatturato mensile del tuo ecommerce?"
-- **ConversationalSurvey**: "Qual e il fatturato mensile del tuo ecommerce?"
-
-### 3. Aggiornamento logica di disqualifica
-
-- **EmailMarketingSurvey**: la disqualifica scatta ora per `under-15k` (meno di 15k) invece di `under-10k`
-- **ConversationalSurvey**: la condizione di disqualifica attuale (`monthlyRevenue === '10-20k' && adsInvestment === '0-5k'`) viene aggiornata per usare `15-25k` al posto di `10-20k`
-
-### 4. Aggiornamento `parseRevenueRange` in `reportCalculations.ts`
-
-La funzione che converte i range in valori numerici viene aggiornata:
+### 1. Nuova tabella `partial_submissions`
 
 ```text
-Vecchio                    Nuovo
-'10-20k' -> 15000         '15-25k' -> 20000
-'20-50k' -> 35000         '25-50k' -> 37500
-'50-100k' -> 75000        '50-100k' -> 75000 (invariato)
-'100-200k' -> 150000      '100-200k' -> 150000 (invariato)
-'200k+' -> 250000         '200k+' -> 250000 (invariato)
+partial_submissions
+- id (uuid, PK)
+- session_id (text) -- identificatore univoco della sessione browser
+- survey_type (text) -- 'email_marketing' o 'conversational'
+- current_step (integer) -- ultimo step raggiunto
+- current_step_name (text) -- nome leggibile dello step (es. "fullName", "sector")
+- total_steps (integer) -- numero totale di step nel quiz
+- form_data (jsonb) -- dati parziali raccolti fino a quel punto
+- started_at (timestamp)
+- updated_at (timestamp)
+- completed (boolean, default false) -- se il quiz e stato completato
+- abandoned (boolean, default false) -- se l'utente ha abbandonato
+- submission_id (uuid, nullable) -- riferimento al record in survey_submissions se completato
 ```
 
-Si aggiunge anche il mapping per `under-15k` -> 10000 (usato in caso di disqualifica con salvataggio parziale).
+### 2. Logica frontend
 
-### File modificati
+In entrambi i componenti (EmailMarketingSurvey e ConversationalSurvey):
 
-- `src/components/EmailMarketingSurvey.tsx` -- range, label domanda, disqualifica
-- `src/components/ConversationalSurvey.tsx` -- range, label domanda, disqualifica
-- `src/lib/reportCalculations.ts` -- `parseRevenueRange` con nuovi valori
+- **All'avvio del quiz**: generare un `sessionId` univoco e creare un record in `partial_submissions`
+- **Ad ogni cambio di step**: aggiornare il record con lo step corrente e i dati del form raccolti fino a quel momento
+- **Al completamento**: segnare `completed = true` e collegare il `submission_id`
+- **All'abbandono** (beforeunload): segnare `abandoned = true`
+
+I dati sensibili (email, telefono) vengono salvati solo se l'utente li ha gia inseriti volontariamente nel form.
+
+### 3. RLS Policies
+
+La tabella avra policy permissive per INSERT e UPDATE pubblici (dato che gli utenti non sono autenticati), e SELECT limitato agli admin.
+
+### 4. File modificati
+
+- **Migrazione SQL**: creazione tabella `partial_submissions` con indici e RLS
+- `src/components/EmailMarketingSurvey.tsx`: aggiunta tracking sessione e aggiornamento ad ogni step
+- `src/components/ConversationalSurvey.tsx`: stessa logica di tracking
+- `src/hooks/usePartialTracking.ts` (nuovo): hook riutilizzabile per la logica di tracking
+
+### 5. Dettagli tecnici dell'hook
+
+```text
+usePartialTracking(surveyType, formData, currentStep, stepName, totalSteps)
+```
+
+L'hook:
+- Genera un sessionId al mount (usando crypto.randomUUID)
+- Crea il record iniziale in partial_submissions
+- Aggiorna il record ad ogni cambio di step (debounced per evitare troppe chiamate)
+- Ascolta l'evento `beforeunload` per segnare abandoned = true
+- Al completamento del quiz, espone una funzione `markCompleted(submissionId)` da chiamare
 
