@@ -552,7 +552,7 @@ const DisqualifiedScreen = () => {
       </div>
     </motion.div>;
 };
-const EmailMarketingSurvey = () => {
+const EmailMarketingSurvey: React.FC = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const [direction, setDirection] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
