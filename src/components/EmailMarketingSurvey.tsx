@@ -51,14 +51,30 @@ function normalizeWebsiteUrl(url: string): string {
 }
 
 function validateEmail(email: string): EmailValidation {
-  if (!email || !email.includes('@')) {
+  if (!email || !email.trim()) {
     return { status: 'idle' };
   }
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(email)) {
-    return { status: 'invalid', message: 'Email non valida' };
+    return { status: 'invalid', message: 'Email non valida. Inserisci un indirizzo email corretto (es. nome@email.com)' };
   }
   return { status: 'valid' };
+}
+
+function validatePhone(phone: string): { valid: boolean; message?: string } {
+  if (!phone || !phone.trim()) {
+    return { valid: false, message: 'Inserisci il tuo numero di telefono' };
+  }
+  // Allow only digits, spaces, + prefix
+  if (!/^[+\d\s]+$/.test(phone.trim())) {
+    return { valid: false, message: 'Il numero può contenere solo cifre, spazi e il prefisso +' };
+  }
+  // Count digits only
+  const digitCount = phone.replace(/\D/g, '').length;
+  if (digitCount < 8) {
+    return { valid: false, message: 'Il numero deve contenere almeno 8 cifre' };
+  }
+  return { valid: true };
 }
 
 // Animation variants
@@ -1633,26 +1649,59 @@ const EmailMarketingSurvey = () => {
                     value={formData[currentStepData.field] as string} 
                     onChange={e => handleInputChange(currentStepData.field, e.target.value)} 
                     onKeyDown={e => {
-                      if (e.key === 'Enter' && (formData[currentStepData.field] as string).trim()) {
-                        goToNextStep();
+                      if (e.key === 'Enter') {
+                        const val = (formData[currentStepData.field] as string).trim();
+                        if (currentStepData.field === 'phone') {
+                          const phoneCheck = validatePhone(val);
+                          if (phoneCheck.valid) goToNextStep();
+                        } else if (val) {
+                          goToNextStep();
+                        }
                       }
                     }}
                     placeholder={currentStepData.placeholder || ''} 
                     className="bg-slate-800 border-slate-700 text-white h-14 text-lg rounded-xl focus:border-orange focus:ring-orange" 
                     autoFocus
                   />
+                  {/* Phone validation message */}
+                  {currentStepData.field === 'phone' && (formData.phone as string).trim() && !validatePhone(formData.phone).valid && (
+                    <motion.p initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} className="text-sm text-red-400">
+                      {validatePhone(formData.phone).message}
+                    </motion.p>
+                  )}
                   <motion.button 
                     onClick={() => {
-                      if ((formData[currentStepData.field] as string).trim()) {
-                        goToNextStep();
-                      } else {
+                      const val = (formData[currentStepData.field] as string).trim();
+                      if (currentStepData.field === 'phone') {
+                        const phoneCheck = validatePhone(val);
+                        if (!phoneCheck.valid) {
+                          toast({ title: "Errore", description: phoneCheck.message || "Numero non valido", variant: "destructive" });
+                          return;
+                        }
+                      } else if (!val) {
                         toast({ title: "Errore", description: "Questo campo è obbligatorio", variant: "destructive" });
+                        return;
                       }
+                      goToNextStep();
                     }} 
-                    disabled={!(formData[currentStepData.field] as string).trim()}
-                    whileHover={(formData[currentStepData.field] as string).trim() ? { scale: 1.02 } : {}} 
-                    whileTap={(formData[currentStepData.field] as string).trim() ? { scale: 0.98 } : {}} 
-                    className={`w-full py-4 rounded-xl font-semibold text-lg transition-colors duration-200 ${(formData[currentStepData.field] as string).trim() ? 'bg-orange text-white hover:bg-orange/90' : 'bg-slate-700 text-slate-400 cursor-not-allowed'}`}
+                    disabled={
+                      currentStepData.field === 'phone' 
+                        ? !validatePhone(formData.phone).valid
+                        : !(formData[currentStepData.field] as string).trim()
+                    }
+                    whileHover={
+                      (currentStepData.field === 'phone' ? validatePhone(formData.phone).valid : !!(formData[currentStepData.field] as string).trim())
+                        ? { scale: 1.02 } : {}
+                    } 
+                    whileTap={
+                      (currentStepData.field === 'phone' ? validatePhone(formData.phone).valid : !!(formData[currentStepData.field] as string).trim())
+                        ? { scale: 0.98 } : {}
+                    } 
+                    className={`w-full py-4 rounded-xl font-semibold text-lg transition-colors duration-200 ${
+                      (currentStepData.field === 'phone' ? validatePhone(formData.phone).valid : !!(formData[currentStepData.field] as string).trim())
+                        ? 'bg-orange text-white hover:bg-orange/90' 
+                        : 'bg-slate-700 text-slate-400 cursor-not-allowed'
+                    }`}
                   >
                     Continua
                   </motion.button>
