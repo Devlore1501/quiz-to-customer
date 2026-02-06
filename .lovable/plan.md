@@ -1,64 +1,48 @@
 
 
-## Tracciamento utenti che abbandonano il quiz
+## Fix: Tracciamento parziale e validazione input
 
-### Problema attuale
-Il lead viene salvato nel database solo dopo lo step "sito web" (step 5 su 14 in EmailMarketingSurvey). Chi abbandona prima -- ad esempio dopo aver inserito nome o email -- viene perso completamente.
+### Problemi identificati
 
-### Soluzione
+**1. I dati parziali non vengono mai aggiornati nel database**
 
-Creare una tabella `partial_submissions` separata che traccia ogni progresso nel quiz in tempo reale, indipendentemente dal completamento.
+Il database mostra tutti i record bloccati a `current_step: 0` con `form_data: {}`. Il problema e che l'hook aggiorna solo quando `currentStep` cambia, ma il confronto `currentStep === lastStepRef.current` blocca il primo update perche `lastStepRef` viene inizializzato a `-1` e poi impostato al valore corrente prima che il debounce salvi i dati. Inoltre il `formData` non viene salvato se l'utente resta sullo stesso step.
 
-### 1. Nuova tabella `partial_submissions`
+**Soluzione**: Aggiungere un effetto separato che salva il `form_data` periodicamente (debounced) ogni volta che cambia, indipendentemente dal cambio di step. Questo assicura che i dati vengano catturati anche mentre l'utente compila un campo.
 
-```text
-partial_submissions
-- id (uuid, PK)
-- session_id (text) -- identificatore univoco della sessione browser
-- survey_type (text) -- 'email_marketing' o 'conversational'
-- current_step (integer) -- ultimo step raggiunto
-- current_step_name (text) -- nome leggibile dello step (es. "fullName", "sector")
-- total_steps (integer) -- numero totale di step nel quiz
-- form_data (jsonb) -- dati parziali raccolti fino a quel punto
-- started_at (timestamp)
-- updated_at (timestamp)
-- completed (boolean, default false) -- se il quiz e stato completato
-- abandoned (boolean, default false) -- se l'utente ha abbandonato
-- submission_id (uuid, nullable) -- riferimento al record in survey_submissions se completato
-```
+**2. L'abbandono non viene registrato**
 
-### 2. Logica frontend
+Il `beforeunload` usa `fetch` con `keepalive`, ma il `formData` nella closure potrebbe essere stale (non aggiornato). Inoltre la chiusura della closure cattura sempre la versione iniziale dei dati.
 
-In entrambi i componenti (EmailMarketingSurvey e ConversationalSurvey):
+**Soluzione**: Usare un `ref` per mantenere sempre la versione piu recente di `formData`, cosi il `beforeunload` handler invia sempre i dati aggiornati.
 
-- **All'avvio del quiz**: generare un `sessionId` univoco e creare un record in `partial_submissions`
-- **Ad ogni cambio di step**: aggiornare il record con lo step corrente e i dati del form raccolti fino a quel momento
-- **Al completamento**: segnare `completed = true` e collegare il `submission_id`
-- **All'abbandono** (beforeunload): segnare `abandoned = true`
+**3. Email senza @ viene accettata**
 
-I dati sensibili (email, telefono) vengono salvati solo se l'utente li ha gia inseriti volontariamente nel form.
+La funzione `validateEmail` restituisce `status: 'idle'` (non errore) quando l'email non contiene `@`. Il pulsante "Continua" e abilitato se lo status non e `'invalid'`, quindi `'idle'` passa. 
 
-### 3. RLS Policies
+**Soluzione**: Cambiare la validazione per restituire `'invalid'` quando l'email non contiene `@` o non ha un formato valido, e solo `'idle'` quando il campo e vuoto.
 
-La tabella avra policy permissive per INSERT e UPDATE pubblici (dato che gli utenti non sono autenticati), e SELECT limitato agli admin.
+**4. Nessun controllo sul numero di telefono**
 
-### 4. File modificati
+Lo step del telefono usa `single-input` che accetta qualsiasi testo non vuoto.
 
-- **Migrazione SQL**: creazione tabella `partial_submissions` con indici e RLS
-- `src/components/EmailMarketingSurvey.tsx`: aggiunta tracking sessione e aggiornamento ad ogni step
-- `src/components/ConversationalSurvey.tsx`: stessa logica di tracking
-- `src/hooks/usePartialTracking.ts` (nuovo): hook riutilizzabile per la logica di tracking
+**Soluzione**: Aggiungere validazione per il telefono che richieda almeno 8 cifre e accetti solo numeri, spazi e il prefisso +.
 
-### 5. Dettagli tecnici dell'hook
+---
 
-```text
-usePartialTracking(surveyType, formData, currentStep, stepName, totalSteps)
-```
+### Modifiche tecniche
 
-L'hook:
-- Genera un sessionId al mount (usando crypto.randomUUID)
-- Crea il record iniziale in partial_submissions
-- Aggiorna il record ad ogni cambio di step (debounced per evitare troppe chiamate)
-- Ascolta l'evento `beforeunload` per segnare abandoned = true
-- Al completamento del quiz, espone una funzione `markCompleted(submissionId)` da chiamare
+**`src/hooks/usePartialTracking.ts`**:
+- Aggiungere `formDataRef` (useRef) aggiornato ad ogni render per avere sempre i dati freschi nel `beforeunload`
+- Aggiungere effetto debounced che salva `form_data` ogni volta che cambia (non solo al cambio di step)
+- Usare `formDataRef.current` nel handler `beforeunload` invece della closure stale
+
+**`src/components/EmailMarketingSurvey.tsx`**:
+- Modificare `validateEmail`: restituire `'invalid'` per email senza `@` o senza formato corretto, `'idle'` solo se campo vuoto
+- Aggiungere validazione telefono nello step `phone`: minimo 8 cifre, solo caratteri validi (+, numeri, spazi)
+- Bloccare il pulsante "Continua" sullo step telefono se il numero non supera la validazione
+
+### File modificati
+- `src/hooks/usePartialTracking.ts`
+- `src/components/EmailMarketingSurvey.tsx`
 
