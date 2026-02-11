@@ -1621,8 +1621,8 @@ const EmailMarketingSurvey: React.FC = () => {
               {currentStepData.type === "contacts-combined" && <motion.div className="space-y-4" variants={containerVariants}>
                   {/* Honeypot field - hidden from users, visible to bots */}
                   <div style={{ position: 'absolute', left: '-9999px', opacity: 0, height: 0, overflow: 'hidden', pointerEvents: 'none' }} aria-hidden="true">
-                    <label htmlFor="company_website_url">Company Website URL</label>
-                    <input type="text" id="company_website_url" name="company_website_url" value={formData._hp_field} onChange={e => handleInputChange('_hp_field', e.target.value)} tabIndex={-1} autoComplete="off" />
+                    <label htmlFor="xf_q9z2">Leave this empty</label>
+                    <input type="text" id="xf_q9z2" name="xf_q9z2" value={formData._hp_field} onChange={e => handleInputChange('_hp_field', e.target.value)} tabIndex={-1} autoComplete="new-password" />
                   </div>
 
                   {/* Full Name */}
