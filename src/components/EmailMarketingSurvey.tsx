@@ -820,51 +820,16 @@ const EmailMarketingSurvey: React.FC = () => {
     value: 'none'
   }];
 
-  // REORDERED: Contact info FIRST to capture leads immediately - ONE AT A TIME
-  // Terms moved after email, then new motivation/satisfaction questions before business questions
+  // REORDERED: Sector → Website → Qualification → Email metrics → Motivation → Contacts (unified)
   const steps = [{
-    title: "Come ti chiami?",
-    subtitle: "Inserisci il tuo nome completo",
-    type: "single-input" as const,
-    field: "fullName" as keyof FormData,
-    placeholder: "Nome e Cognome"
-  }, {
-    title: "Qual è il tuo numero WhatsApp?",
-    subtitle: "Lo useremo solo per inviarti il report",
-    type: "single-input" as const,
-    field: "phone" as keyof FormData,
-    placeholder: "+39 xxx xxx xxxx"
-  }, {
-    title: "Qual è la tua email?",
-    subtitle: "Ti invieremo il report personalizzato",
-    type: "email-input" as const,
-    field: "email" as keyof FormData,
-    placeholder: "nome@email.com"
-  }, {
-    title: "Ultimo passaggio per le info di contatto",
-    subtitle: "Accetta i termini per continuare",
-    type: "terms" as const,
-    field: "acceptTerms" as keyof FormData
-  }, {
-    title: "Qual è il tuo sito web?",
-    type: "input" as const,
-    field: "website" as keyof FormData
-  }, {
     title: "In quale settore operi?",
     type: "radio" as const,
     field: "sector" as keyof FormData,
     options: sectors
   }, {
-    title: "Perché vuoi fare un'analisi del tuo email marketing?",
-    subtitle: "Seleziona la motivazione principale",
-    type: "radio" as const,
-    field: "motivation" as keyof FormData,
-    options: motivationOptions
-  }, {
-    title: "Quanto sei soddisfatto del tuo sistema email attuale?",
-    type: "radio" as const,
-    field: "emailSatisfaction" as keyof FormData,
-    options: satisfactionOptions
+    title: "Qual è il tuo sito web?",
+    type: "input" as const,
+    field: "website" as keyof FormData
   }, {
     title: "Qual è il fatturato mensile del tuo ecommerce?",
     type: "radio" as const,
@@ -881,21 +846,32 @@ const EmailMarketingSurvey: React.FC = () => {
     field: "emailRevenuePercentage" as keyof FormData,
     options: emailRevenueRanges
   }, {
-    title: "Quante email invii a settimana?",
-    type: "radio" as const,
-    field: "emailFrequency" as keyof FormData,
-    options: emailFrequencies
-  }, {
     title: "Quanti iscritti ha la tua lista email?",
     type: "radio" as const,
     field: "listSize" as keyof FormData,
     options: listSizes
+  }, {
+    title: "Quante email invii a settimana?",
+    type: "radio" as const,
+    field: "emailFrequency" as keyof FormData,
+    options: emailFrequencies
   }, {
     title: "Quali automazioni hai attive?",
     subtitle: "Seleziona tutte quelle attive",
     type: "checkbox" as const,
     field: "activeFlows" as keyof FormData,
     options: automationFlows
+  }, {
+    title: "Perché vuoi fare un'analisi del tuo email marketing?",
+    subtitle: "Seleziona la motivazione principale",
+    type: "radio" as const,
+    field: "motivation" as keyof FormData,
+    options: motivationOptions
+  }, {
+    title: "Quasi fatto! Inserisci i tuoi dati",
+    subtitle: "Per ricevere il report personalizzato gratuito",
+    type: "contacts-combined" as const,
+    field: "fullName" as keyof FormData
   }];
 
   // Partial tracking
@@ -1088,8 +1064,6 @@ const EmailMarketingSurvey: React.FC = () => {
     }
     const isValid = await verifyWebsite(formData.website, formData.sector);
     if (isValid) {
-      // Save lead immediately after contact + website steps are complete
-      await saveLeadToDatabase();
       goToNextStep();
     }
   };
@@ -1643,132 +1617,72 @@ const EmailMarketingSurvey: React.FC = () => {
                     </p>}
                 </motion.div>}
 
-              {/* Single text input step */}
-              {currentStepData.type === "single-input" && <motion.div className="space-y-4" variants={cardVariants}>
-                  <Input 
-                    value={formData[currentStepData.field] as string} 
-                    onChange={e => handleInputChange(currentStepData.field, e.target.value)} 
-                    onKeyDown={e => {
-                      if (e.key === 'Enter') {
-                        const val = (formData[currentStepData.field] as string).trim();
-                        if (currentStepData.field === 'phone') {
-                          const phoneCheck = validatePhone(val);
-                          if (phoneCheck.valid) goToNextStep();
-                        } else if (val) {
-                          goToNextStep();
-                        }
-                      }
-                    }}
-                    placeholder={currentStepData.placeholder || ''} 
-                    className="bg-slate-800 border-slate-700 text-white h-14 text-lg rounded-xl focus:border-orange focus:ring-orange" 
-                    autoFocus
-                  />
-                  {/* Phone validation message */}
-                  {currentStepData.field === 'phone' && (formData.phone as string).trim() && !validatePhone(formData.phone).valid && (
-                    <motion.p initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} className="text-sm text-red-400">
-                      {validatePhone(formData.phone).message}
-                    </motion.p>
-                  )}
-                  <motion.button 
-                    onClick={() => {
-                      const val = (formData[currentStepData.field] as string).trim();
-                      if (currentStepData.field === 'phone') {
-                        const phoneCheck = validatePhone(val);
-                        if (!phoneCheck.valid) {
-                          toast({ title: "Errore", description: phoneCheck.message || "Numero non valido", variant: "destructive" });
-                          return;
-                        }
-                      } else if (!val) {
-                        toast({ title: "Errore", description: "Questo campo è obbligatorio", variant: "destructive" });
-                        return;
-                      }
-                      goToNextStep();
-                    }} 
-                    disabled={
-                      currentStepData.field === 'phone' 
-                        ? !validatePhone(formData.phone).valid
-                        : !(formData[currentStepData.field] as string).trim()
-                    }
-                    whileHover={
-                      (currentStepData.field === 'phone' ? validatePhone(formData.phone).valid : !!(formData[currentStepData.field] as string).trim())
-                        ? { scale: 1.02 } : {}
-                    } 
-                    whileTap={
-                      (currentStepData.field === 'phone' ? validatePhone(formData.phone).valid : !!(formData[currentStepData.field] as string).trim())
-                        ? { scale: 0.98 } : {}
-                    } 
-                    className={`w-full py-4 rounded-xl font-semibold text-lg transition-colors duration-200 ${
-                      (currentStepData.field === 'phone' ? validatePhone(formData.phone).valid : !!(formData[currentStepData.field] as string).trim())
-                        ? 'bg-orange text-white hover:bg-orange/90' 
-                        : 'bg-slate-700 text-slate-400 cursor-not-allowed'
-                    }`}
-                  >
-                    Continua
-                  </motion.button>
-                </motion.div>}
-
-              {/* Email input step */}
-              {currentStepData.type === "email-input" && <motion.div className="space-y-4" variants={cardVariants}>
-                  <div className="relative">
-                    <Input 
-                      type="email" 
-                      value={formData.email} 
-                      onChange={e => handleInputChange('email', e.target.value)} 
-                      onKeyDown={e => {
-                        if (e.key === 'Enter' && formData.email.trim() && emailValidation.status !== 'invalid') {
-                          goToNextStep();
-                        }
-                      }}
-                      placeholder={currentStepData.placeholder || 'Email'} 
-                      className={`bg-slate-800 text-white h-14 text-lg rounded-xl pr-12 border-2 transition-colors ${emailValidation.status === 'valid' ? 'border-green-500 focus:border-green-500 focus:ring-green-500' : emailValidation.status === 'invalid' ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : emailValidation.status === 'warning' ? 'border-yellow-500 focus:border-yellow-500 focus:ring-yellow-500' : 'border-slate-700 focus:border-orange focus:ring-orange'}`} 
-                      autoFocus
-                    />
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                      {emailValidation.status === 'valid' && <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 500, damping: 25 }}>
-                          <CheckCircle2 className="w-5 h-5 text-green-500" />
-                        </motion.div>}
-                      {emailValidation.status === 'invalid' && <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 500, damping: 25 }}>
-                          <XCircle className="w-5 h-5 text-red-500" />
-                        </motion.div>}
-                      {emailValidation.status === 'warning' && <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 500, damping: 25 }}>
-                          <AlertCircle className="w-5 h-5 text-yellow-500" />
-                        </motion.div>}
-                    </div>
-                  </div>
-                  <AnimatePresence mode="wait">
-                    {emailValidation.message && <motion.p initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} className={`text-sm ${emailValidation.status === 'invalid' ? 'text-red-400' : 'text-yellow-400'}`}>
-                        {emailValidation.message}
-                      </motion.p>}
-                  </AnimatePresence>
-                  <motion.button 
-                    onClick={() => {
-                      if (!formData.email.trim()) {
-                        toast({ title: "Errore", description: "Inserisci la tua email", variant: "destructive" });
-                        return;
-                      }
-                      if (emailValidation.status === 'invalid') {
-                        toast({ title: "Email non valida", description: emailValidation.message, variant: "destructive" });
-                        return;
-                      }
-                      goToNextStep();
-                    }} 
-                    disabled={!formData.email.trim() || emailValidation.status === 'invalid'}
-                    whileHover={formData.email.trim() && emailValidation.status !== 'invalid' ? { scale: 1.02 } : {}} 
-                    whileTap={formData.email.trim() && emailValidation.status !== 'invalid' ? { scale: 0.98 } : {}} 
-                    className={`w-full py-4 rounded-xl font-semibold text-lg transition-colors duration-200 ${formData.email.trim() && emailValidation.status !== 'invalid' ? 'bg-orange text-white hover:bg-orange/90' : 'bg-slate-700 text-slate-400 cursor-not-allowed'}`}
-                  >
-                    Continua
-                  </motion.button>
-                </motion.div>}
-
-              {/* Terms step - now intermediate, just advances to next step */}
-              {currentStepData.type === "terms" && <motion.div className="space-y-4" variants={containerVariants}>
+              {/* Contacts combined step - final step */}
+              {currentStepData.type === "contacts-combined" && <motion.div className="space-y-4" variants={containerVariants}>
                   {/* Honeypot field - hidden from users, visible to bots */}
                   <div style={{ position: 'absolute', left: '-9999px', opacity: 0, height: 0, overflow: 'hidden', pointerEvents: 'none' }} aria-hidden="true">
                     <label htmlFor="company_website_url">Company Website URL</label>
                     <input type="text" id="company_website_url" name="company_website_url" value={formData._hp_field} onChange={e => handleInputChange('_hp_field', e.target.value)} tabIndex={-1} autoComplete="off" />
                   </div>
 
+                  {/* Full Name */}
+                  <motion.div variants={cardVariants}>
+                    <Label htmlFor="fullName" className="text-[#1d283a] text-sm font-medium mb-1.5 block">Nome completo</Label>
+                    <Input 
+                      id="fullName"
+                      value={formData.fullName} 
+                      onChange={e => handleInputChange('fullName', e.target.value)} 
+                      placeholder="Nome e Cognome" 
+                      className="bg-slate-800 border-slate-700 text-white h-14 text-lg rounded-xl focus:border-orange focus:ring-orange" 
+                    />
+                  </motion.div>
+
+                  {/* Phone */}
+                  <motion.div variants={cardVariants}>
+                    <Label htmlFor="phone" className="text-[#1d283a] text-sm font-medium mb-1.5 block">Numero WhatsApp</Label>
+                    <Input 
+                      id="phone"
+                      value={formData.phone} 
+                      onChange={e => handleInputChange('phone', e.target.value)} 
+                      placeholder="+39 xxx xxx xxxx" 
+                      className="bg-slate-800 border-slate-700 text-white h-14 text-lg rounded-xl focus:border-orange focus:ring-orange" 
+                    />
+                    {formData.phone.trim() && !validatePhone(formData.phone).valid && (
+                      <motion.p initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} className="text-sm text-red-400 mt-1">
+                        {validatePhone(formData.phone).message}
+                      </motion.p>
+                    )}
+                  </motion.div>
+
+                  {/* Email */}
+                  <motion.div variants={cardVariants}>
+                    <Label htmlFor="email" className="text-[#1d283a] text-sm font-medium mb-1.5 block">Email</Label>
+                    <div className="relative">
+                      <Input 
+                        id="email"
+                        type="email" 
+                        value={formData.email} 
+                        onChange={e => handleInputChange('email', e.target.value)} 
+                        placeholder="nome@email.com" 
+                        className={`bg-slate-800 text-white h-14 text-lg rounded-xl pr-12 border-2 transition-colors ${emailValidation.status === 'valid' ? 'border-green-500 focus:border-green-500 focus:ring-green-500' : emailValidation.status === 'invalid' ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-slate-700 focus:border-orange focus:ring-orange'}`} 
+                      />
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                        {emailValidation.status === 'valid' && <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 500, damping: 25 }}>
+                            <CheckCircle2 className="w-5 h-5 text-green-500" />
+                          </motion.div>}
+                        {emailValidation.status === 'invalid' && <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 500, damping: 25 }}>
+                            <XCircle className="w-5 h-5 text-red-500" />
+                          </motion.div>}
+                      </div>
+                    </div>
+                    <AnimatePresence mode="wait">
+                      {emailValidation.message && <motion.p initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} className={`text-sm mt-1 ${emailValidation.status === 'invalid' ? 'text-red-400' : 'text-yellow-400'}`}>
+                          {emailValidation.message}
+                        </motion.p>}
+                    </AnimatePresence>
+                  </motion.div>
+
+                  {/* Terms */}
                   <motion.div className="flex items-start gap-3 bg-slate-100 rounded-xl p-4 border border-slate-300" variants={cardVariants}>
                     <Checkbox id="terms" checked={formData.acceptTerms} onCheckedChange={checked => handleInputChange('acceptTerms', checked as boolean)} className="border-slate-400 data-[state=checked]:bg-orange data-[state=checked]:border-orange mt-1" />
                     <Label htmlFor="terms" className="text-slate-700 text-sm cursor-pointer leading-relaxed">
@@ -1776,21 +1690,31 @@ const EmailMarketingSurvey: React.FC = () => {
                     </Label>
                   </motion.div>
 
+                  {/* Submit button */}
                   <motion.button 
-                    variants={cardVariants} 
-                    onClick={goToNextStep} 
-                    disabled={!formData.acceptTerms} 
-                    whileHover={formData.acceptTerms ? { scale: 1.02 } : {}} 
-                    whileTap={formData.acceptTerms ? { scale: 0.98 } : {}} 
-                    className={`w-full py-4 rounded-xl font-semibold text-lg transition-colors duration-200 flex items-center justify-center gap-2 ${formData.acceptTerms ? 'bg-orange text-white hover:bg-orange/90' : 'bg-slate-700 text-slate-400 cursor-not-allowed'}`}
+                    variants={cardVariants}
+                    onClick={() => handleSubmit()} 
+                    disabled={!formData.fullName.trim() || !validatePhone(formData.phone).valid || !formData.email.trim() || emailValidation.status === 'invalid' || !formData.acceptTerms || isSubmitting}
+                    whileHover={formData.fullName.trim() && validatePhone(formData.phone).valid && formData.email.trim() && emailValidation.status !== 'invalid' && formData.acceptTerms && !isSubmitting ? { scale: 1.02 } : {}} 
+                    whileTap={formData.fullName.trim() && validatePhone(formData.phone).valid && formData.email.trim() && emailValidation.status !== 'invalid' && formData.acceptTerms && !isSubmitting ? { scale: 0.98 } : {}} 
+                    className={`w-full py-4 rounded-xl font-semibold text-lg transition-colors duration-200 flex items-center justify-center gap-2 ${
+                      formData.fullName.trim() && validatePhone(formData.phone).valid && formData.email.trim() && emailValidation.status !== 'invalid' && formData.acceptTerms && !isSubmitting
+                        ? 'bg-orange text-white hover:bg-orange/90' 
+                        : 'bg-slate-700 text-slate-400 cursor-not-allowed'
+                    }`}
                   >
-                    <Check className="h-5 w-5" />
-                    Continua
+                    {isSubmitting ? <>
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                        Generazione report...
+                      </> : <>
+                        <Check className="h-5 w-5" />
+                        Genera il mio Report Gratuito
+                      </>}
                   </motion.button>
                 </motion.div>}
             </motion.div>
 
-            {/* Submit button for checkbox steps (final step) */}
+            {/* Continue button for checkbox steps */}
             {currentStepData?.type === 'checkbox' && <motion.button initial={{
             opacity: 0,
             y: 20
@@ -1799,18 +1723,12 @@ const EmailMarketingSurvey: React.FC = () => {
             y: 0
           }} transition={{
             delay: 0.3
-          }} onClick={() => handleSubmit()} disabled={formData.activeFlows.length === 0 || isSubmitting} whileHover={formData.activeFlows.length > 0 && !isSubmitting ? {
+          }} onClick={goToNextStep} disabled={formData.activeFlows.length === 0} whileHover={formData.activeFlows.length > 0 ? {
             scale: 1.02
-          } : {}} whileTap={formData.activeFlows.length > 0 && !isSubmitting ? {
+          } : {}} whileTap={formData.activeFlows.length > 0 ? {
             scale: 0.98
-          } : {}} className={`w-full mt-6 py-4 rounded-xl font-semibold text-lg transition-colors duration-200 flex items-center justify-center gap-2 ${formData.activeFlows.length > 0 && !isSubmitting ? 'bg-orange text-white hover:bg-orange/90' : 'bg-slate-700 text-slate-400 cursor-not-allowed'}`}>
-                {isSubmitting ? <>
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                    Generazione report...
-                  </> : <>
-                    <Check className="h-5 w-5" />
-                    Genera il mio Report Gratuito ({formData.activeFlows.length} selezionati)
-                  </>}
+          } : {}} className={`w-full mt-6 py-4 rounded-xl font-semibold text-lg transition-colors duration-200 flex items-center justify-center gap-2 ${formData.activeFlows.length > 0 ? 'bg-orange text-white hover:bg-orange/90' : 'bg-slate-700 text-slate-400 cursor-not-allowed'}`}>
+                Continua ({formData.activeFlows.length} selezionati)
               </motion.button>}
             
             {/* Continue button for website input step with verification */}
