@@ -1,38 +1,49 @@
 
 
-## Fix: Partial Submissions Updates Not Persisting
+# Riordino domande quiz + contatti in un unico step
 
-### Root Cause
+## Nuovo ordine delle domande
 
-The `partial_submissions` table has no `SELECT` policy for the `anon` role. Only authenticated admin users can SELECT rows. When PostgREST processes a PATCH request, it needs to find matching rows first. Without SELECT access, the filter `session_id=eq.xxx` returns 0 rows, so the UPDATE affects 0 rows. PostgREST returns 204 regardless, masking the failure.
+1. **Hook** (schermata introduttiva esistente)
+2. **Settore** (radio)
+3. **Sito web** (input con verifica) -- subito dopo il settore, come richiesto
+4. **Fatturato mensile** (radio) -- qualifica: sotto 15K = disqualificato
+5. **Spesa Ads** (radio) -- qualifica: sotto 3K = disqualificato
+6. **% Revenue da email** (radio)
+7. **Dimensione lista** (radio)
+8. **Frequenza invio** (radio)
+9. **Flussi attivi** (checkbox)
+10. **Motivazione** (radio)
+11. **Contatti** (step unico: nome, telefono, email, accettazione termini)
 
-The INSERT works because it doesn't require reading existing rows. The UPDATE silently does nothing.
+## Contatti unificati in un unico step
 
-### Fix
+Lo step finale "Contatti" mostrera in un'unica schermata:
+- Campo nome completo
+- Campo telefono WhatsApp
+- Campo email (con validazione)
+- Checkbox accettazione termini
+- Campo honeypot nascosto (per anti-bot)
 
-Add a permissive SELECT policy for `anon` and `authenticated` roles on `partial_submissions` so the UPDATE filter can match rows.
+Tutte le validazioni esistenti (email con @, telefono minimo 8 cifre, termini obbligatori) restano attive. Il pulsante "Genera Report" si abilita solo quando tutti i campi sono validi.
 
-### Technical Details
+## Modifiche tecniche
 
-**SQL Migration:**
-```sql
-CREATE POLICY "Allow public read by session"
-  ON public.partial_submissions
-  FOR SELECT
-  TO anon, authenticated
-  USING (true);
-```
+### 1. Nuovo tipo di step `contacts-combined`
+Aggiunta di un nuovo tipo di step nell'array `steps` che raggruppa tutti i campi di contatto in una singola schermata con layout verticale.
 
-This allows the Supabase client to find rows when applying the UPDATE filter. The table does not contain sensitive PII beyond what the user themselves entered in the current session.
+### 2. Riordino array `steps`
+L'array `steps` viene riscritto con il nuovo ordine. Lo step "emailSatisfaction" viene rimosso dal flusso (non era nella tua lista).
 
-### Validation
+### 3. Spostamento logica salvataggio lead
+Attualmente il lead viene salvato dopo la verifica del sito web. Con il nuovo ordine, il salvataggio avverra nello step contatti finale, poiche i dati personali arrivano per ultimi.
 
-After applying the migration:
-- Existing phone and email validation will continue to work
-- The debounced PATCH updates will now persist `form_data` and `current_step` to the database
-- The `beforeunload` handler will correctly mark sessions as abandoned
-- All existing admin-only policies remain unchanged
+### 4. Verifica sito web
+La funzione `handleWebsiteContinue` continuera a verificare il sito, ma non salvera piu il lead (lo fara lo step contatti). Passera `formData.sector` che ora e gia disponibile essendo lo step precedente.
 
-### Files changed
-- New SQL migration (one `CREATE POLICY` statement)
+### 5. Partial tracking
+Il tracking parziale continuera a funzionare normalmente con i nuovi indici di step. I dati del form vengono tracciati ad ogni cambiamento, quindi anche senza i contatti salvati nel DB, il sistema `partial_submissions` cattura tutto.
+
+### 6. ConversationalSurvey
+Se vuoi, posso applicare lo stesso riordino anche al `ConversationalSurvey`. Per ora modifico solo l'`EmailMarketingSurvey`.
 
