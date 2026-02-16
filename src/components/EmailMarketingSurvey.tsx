@@ -1693,7 +1693,7 @@ const EmailMarketingSurvey: React.FC = () => {
                   {/* Submit button */}
                   <motion.button 
                     variants={cardVariants}
-                    onClick={() => handleSubmit()} 
+                    onClick={async () => { const newLeadId = await saveLeadToDatabase(); await handleSubmit(newLeadId); }} 
                     disabled={!formData.fullName.trim() || !validatePhone(formData.phone).valid || !formData.email.trim() || emailValidation.status === 'invalid' || !formData.acceptTerms || isSubmitting}
                     whileHover={formData.fullName.trim() && validatePhone(formData.phone).valid && formData.email.trim() && emailValidation.status !== 'invalid' && formData.acceptTerms && !isSubmitting ? { scale: 1.02 } : {}} 
                     whileTap={formData.fullName.trim() && validatePhone(formData.phone).valid && formData.email.trim() && emailValidation.status !== 'invalid' && formData.acceptTerms && !isSubmitting ? { scale: 0.98 } : {}} 
