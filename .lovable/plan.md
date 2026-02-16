@@ -1,49 +1,56 @@
 
+# Fix webhook non inviati + re-invio submission 15-16 febbraio
 
-# Riordino domande quiz + contatti in un unico step
+## Problema identificato
 
-## Nuovo ordine delle domande
+Dopo il riordino del quiz, la funzione `saveLeadToDatabase()` non viene piu chiamata prima di `handleSubmit()`. Risultato:
+- `leadId` e sempre `null` al momento del submit
+- Il record viene creato via fallback insert, ma il nuovo ID non viene usato per il webhook
+- `reportUrl` e `null` (dipende da `currentLeadId`)
+- Il webhook parte con dati incompleti o non parte affatto
+- 3 submission del 15-16 febbraio risultano `make_synced: false`
 
-1. **Hook** (schermata introduttiva esistente)
-2. **Settore** (radio)
-3. **Sito web** (input con verifica) -- subito dopo il settore, come richiesto
-4. **Fatturato mensile** (radio) -- qualifica: sotto 15K = disqualificato
-5. **Spesa Ads** (radio) -- qualifica: sotto 3K = disqualificato
-6. **% Revenue da email** (radio)
-7. **Dimensione lista** (radio)
-8. **Frequenza invio** (radio)
-9. **Flussi attivi** (checkbox)
-10. **Motivazione** (radio)
-11. **Contatti** (step unico: nome, telefono, email, accettazione termini)
+## Fix nel codice
 
-## Contatti unificati in un unico step
+### 1. Modificare il click handler del pulsante submit (contacts-combined)
 
-Lo step finale "Contatti" mostrera in un'unica schermata:
-- Campo nome completo
-- Campo telefono WhatsApp
-- Campo email (con validazione)
-- Checkbox accettazione termini
-- Campo honeypot nascosto (per anti-bot)
+Nel pulsante "Genera il mio Report Gratuito" (riga 1696), cambiare da:
 
-Tutte le validazioni esistenti (email con @, telefono minimo 8 cifre, termini obbligatori) restano attive. Il pulsante "Genera Report" si abilita solo quando tutti i campi sono validi.
+```
+onClick={() => handleSubmit()}
+```
 
-## Modifiche tecniche
+a una funzione che prima salva il lead, poi fa il submit:
 
-### 1. Nuovo tipo di step `contacts-combined`
-Aggiunta di un nuovo tipo di step nell'array `steps` che raggruppa tutti i campi di contatto in una singola schermata con layout verticale.
+```
+onClick={async () => {
+  const newLeadId = await saveLeadToDatabase();
+  await handleSubmit(newLeadId);
+}}
+```
 
-### 2. Riordino array `steps`
-L'array `steps` viene riscritto con il nuovo ordine. Lo step "emailSatisfaction" viene rimosso dal flusso (non era nella tua lista).
+Questo garantisce che:
+- Il lead viene salvato nel DB con un ID valido
+- L'ID viene passato a `handleSubmit` per generare il `reportUrl`
+- Il webhook riceve tutti i dati completi, incluso `submissionId`
 
-### 3. Spostamento logica salvataggio lead
-Attualmente il lead viene salvato dopo la verifica del sito web. Con il nuovo ordine, il salvataggio avverra nello step contatti finale, poiche i dati personali arrivano per ultimi.
+### 2. Re-invio webhook per le 3 submission bloccate
 
-### 4. Verifica sito web
-La funzione `handleWebsiteContinue` continuera a verificare il sito, ma non salvera piu il lead (lo fara lo step contatti). Passera `formData.sector` che ora e gia disponibile essendo lo step precedente.
+Creare un invio manuale dei webhook per le 3 submission gia completate:
+- `f70a9c47` - Cristina locato (crlov@hotmail.it)
+- `1a71c91e` - Lucio (l.carli@mediterranea.it) 
+- `5311a887` - Giacomo benedettini (giacomo.benedettini1@gmail.com)
 
-### 5. Partial tracking
-Il tracking parziale continuera a funzionare normalmente con i nuovi indici di step. I dati del form vengono tracciati ad ogni cambiamento, quindi anche senza i contatti salvati nel DB, il sistema `partial_submissions` cattura tutto.
+Questo verra fatto chiamando l'edge function `submit-webhook` con i dati `report_data` gia salvati nel DB per ciascuna submission.
 
-### 6. ConversationalSurvey
-Se vuoi, posso applicare lo stesso riordino anche al `ConversationalSurvey`. Per ora modifico solo l'`EmailMarketingSurvey`.
+## Dettagli tecnici
 
+File modificato: `src/components/EmailMarketingSurvey.tsx`
+
+La modifica e minima (1 riga) ma critica: il flusso diventa:
+1. Utente clicca "Genera Report"
+2. `saveLeadToDatabase()` crea il record nel DB e restituisce l'ID
+3. `handleSubmit(newLeadId)` usa quell'ID per generare `reportUrl` e inviare il webhook con `submissionId`
+4. Il webhook nell'edge function valida la submission e invia a Make.com e GHL
+
+Per il re-invio, leggero i `report_data` dal DB e li inviero manualmente tramite l'edge function per ciascuna delle 3 submission.
