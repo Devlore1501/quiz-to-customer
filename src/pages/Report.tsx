@@ -6,9 +6,14 @@ import type { AdvancedReport } from '@/lib/reportCalculations';
 import { Loader2, AlertCircle, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-// The RPC function only returns clientReport now (no PII)
+// The RPC function returns clientReport (no PII) + optional meta
 interface ReportData {
   clientReport: AdvancedReport;
+  meta?: {
+    showInvestment?: boolean;
+    clientName?: string;
+    website?: string;
+  };
 }
 
 const ReportPage = () => {
@@ -109,6 +114,13 @@ const ReportPage = () => {
   return (
     <AdvancedReportComponent
       report={reportData.clientReport}
+      userName={reportData.meta?.clientName || ''}
+      website={reportData.meta?.website || ''}
+      investmentData={
+        reportData.meta?.showInvestment
+          ? { show: true, currentEmailRevenue: reportData.clientReport.currentEmailRevenue }
+          : undefined
+      }
       onRestart={() => window.location.href = '/'}
     />
   );

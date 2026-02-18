@@ -490,7 +490,7 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
             {/* Nota esplicativa */}
             <div className="mt-4 p-4 bg-slate-700/30 rounded-lg border border-slate-600/50">
               <p className="text-slate-400 text-xs leading-relaxed">
-                ⚠️ <strong className="text-slate-300">Stima indicativa</strong> basata su benchmark di settore. Formula: CR 0.2% per newsletter, CR 2% per automazioni, AOV {report.listForecast.isCustomAov ? 'reale cliente' : 'stimato da dati di mercato'} {report.sectorBenchmark.label}. La colonna <span className="text-blue-300">Corrente</span> è modificabile tramite lo slider per simulare diversi scenari di invio.
+                ⚠️ <strong className="text-slate-300">Stima indicativa</strong> basata su benchmark di settore. Formula: CR 0.2% per newsletter, CR dinamico 0.3%–1.0% per automazioni (in base al numero di flussi attivi), AOV {report.listForecast.isCustomAov ? 'reale cliente' : 'stimato da dati di mercato'} {report.sectorBenchmark.label}. La colonna <span className="text-blue-300">Corrente</span> è modificabile tramite lo slider per simulare diversi scenari di invio.
               </p>
             </div>
           </div>
