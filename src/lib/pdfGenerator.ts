@@ -545,88 +545,263 @@ export const generatePdfReport = async (
   pdf.text('SCENARI DI CRESCITA', margin, y);
   y += 5;
   drawRect(margin, y, 60, 2, COLORS.accent);
-  y += 15;
-  
-  pdf.setTextColor(COLORS.textSecondary);
-  pdf.setFontSize(10);
-  pdf.setFont('helvetica', 'normal');
-  pdf.text('Proiezioni basate sui benchmark di settore e sulle best practice di email marketing.', margin, y);
   y += 12;
   
-  const scenarios = [
+  pdf.setTextColor(COLORS.textSecondary);
+  pdf.setFontSize(9);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text('Le percentuali indicano la quota del gap mensile recuperata rispetto al benchmark di settore.', margin, y);
+  pdf.text(`Gap mensile attuale: ${formatCurrency(report.revenueGap)} (differenza tra benchmark e fatturato email attuale)`, margin, y + 5);
+  y += 16;
+  
+  const scenariosList = [
     { 
       name: 'CONSERVATIVO', 
       data: report.scenarios.conservative, 
       color: COLORS.success,
-      icon: 'Obiettivo: Ottimizzazione base'
+      subtitle: `${report.scenarios.conservative.growthPercent}% del gap recuperato — ottimizzazioni base`
     },
     { 
       name: 'MODERATO', 
       data: report.scenarios.moderate, 
       color: COLORS.accent,
-      icon: 'Consigliato - Miglior rapporto costo/beneficio'
+      subtitle: `${report.scenarios.moderate.growthPercent}% del gap recuperato — flussi chiave + ottimizzazione`
     },
     { 
       name: 'AGGRESSIVO', 
       data: report.scenarios.aggressive, 
       color: COLORS.purple,
-      icon: 'Obiettivo: Massima crescita'
+      subtitle: `${report.scenarios.aggressive.growthPercent}% del gap recuperato — strategia email completa`
     }
   ];
   
-  scenarios.forEach((scenario) => {
-    checkNewPage(50);
+  scenariosList.forEach((scenario) => {
+    checkNewPage(52);
     
     // Scenario card
-    drawRoundedRect(margin, y, contentWidth, 45, 4, COLORS.lightGray);
+    drawRoundedRect(margin, y, contentWidth, 48, 4, COLORS.lightGray);
+    drawRect(margin, y, 5, 48, scenario.color);
     
-    // Left color bar
-    drawRect(margin, y, 5, 45, scenario.color);
-    
-    // Scenario name
+    // Name + badge
     pdf.setTextColor(scenario.color);
-    pdf.setFontSize(14);
+    pdf.setFontSize(13);
     pdf.setFont('helvetica', 'bold');
     pdf.text(scenario.name, margin + 15, y + 12);
     
-    // Badge for recommended
     if (scenario.name === 'MODERATO') {
-      drawRoundedRect(margin + 55, y + 5, 15, 10, 2, scenario.color);
+      drawRoundedRect(margin + 60, y + 5, 22, 10, 2, scenario.color);
       pdf.setTextColor(COLORS.white);
       pdf.setFontSize(6);
-      pdf.text('TOP', margin + 62, y + 12, { align: 'center' });
+      pdf.text('CONSIGLIATO', margin + 71, y + 12, { align: 'center' });
     }
     
-    // Growth percentage
+    // % del gap
     pdf.setTextColor(COLORS.primary);
-    pdf.setFontSize(24);
+    pdf.setFontSize(22);
     pdf.setFont('helvetica', 'bold');
-    pdf.text(`+${scenario.data.growthPercent}%`, pageWidth - margin - 40, y + 15);
+    pdf.text(`+${scenario.data.growthPercent}%`, pageWidth - margin - 38, y + 14);
+    pdf.setTextColor(COLORS.textMuted);
+    pdf.setFontSize(7);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text('del gap', pageWidth - margin - 38, y + 20);
     
     // Subtitle
     pdf.setTextColor(COLORS.textMuted);
     pdf.setFontSize(8);
-    pdf.setFont('helvetica', 'normal');
-    pdf.text(scenario.icon, margin + 15, y + 20);
+    pdf.text(scenario.subtitle, margin + 15, y + 21);
     
-    // Values
-    pdf.setTextColor(COLORS.primary);
-    pdf.setFontSize(11);
+    // Revenue values — recupero mensile aggiuntivo
+    pdf.setTextColor(scenario.color);
+    pdf.setFontSize(12);
     pdf.setFont('helvetica', 'bold');
-    pdf.text(`${formatCurrency(scenario.data.value)}/mese`, margin + 15, y + 32);
+    pdf.text(`+${formatCurrency(scenario.data.value)}/mese`, margin + 15, y + 34);
     pdf.setTextColor(COLORS.textSecondary);
-    pdf.setFont('helvetica', 'normal');
-    pdf.text(`= ${formatCurrency(scenario.data.value * 12)}/anno`, margin + 75, y + 32);
-    
-    // Description
     pdf.setFontSize(9);
-    const wrappedDesc = wrapText(scenario.data.description, contentWidth - 30);
-    pdf.text(wrappedDesc[0] || '', margin + 15, y + 40);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(`recupero aggiuntivo atteso`, margin + 15, y + 40);
+
+    // Annual
+    pdf.setTextColor(COLORS.primary);
+    pdf.setFontSize(10);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text(`= +${formatCurrency(scenario.data.value * 12)}/anno`, margin + 90, y + 34);
     
-    y += 52;
+    y += 55;
   });
+
+  // Box spiegazione
+  checkNewPage(25);
+  drawRoundedRect(margin, y, contentWidth, 22, 3, '#e0f2fe');
+  pdf.setTextColor('#0369a1');
+  pdf.setFontSize(8);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('Come leggere gli scenari:', margin + 8, y + 8);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text(`Il recupero mensile si aggiunge al fatturato email attuale di ${formatCurrency(report.currentEmailRevenue)}/mese.`, margin + 8, y + 14);
+  pdf.text(`Scenario moderato: ${formatCurrency(report.currentEmailRevenue)} + ${formatCurrency(report.scenarios.moderate.value)} = ${formatCurrency(report.currentEmailRevenue + report.scenarios.moderate.value)}/mese`, margin + 8, y + 19);
+  y += 28;
   
   drawPageFooter();
+
+  // ============================================
+  // PAGE 5b: POPUP & CRESCITA LISTA (solo se presenti)
+  // ============================================
+  if (report.popupData) {
+    const pd = report.popupData;
+    addNewPage();
+
+    pdf.setTextColor(COLORS.primary);
+    pdf.setFontSize(20);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('POPUP & CRESCITA LISTA', margin, y);
+    y += 5;
+    drawRect(margin, y, 70, 2, COLORS.accent);
+    y += 15;
+
+    if (pd.hasPopup) {
+      // Intro
+      pdf.setTextColor(COLORS.textSecondary);
+      pdf.setFontSize(9);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text('Analisi della capacita di acquisizione iscritti tramite popup e proiezione crescita lista.', margin, y);
+      y += 12;
+
+      // 3 KPI cards
+      const kpiW = (contentWidth - 10) / 3;
+
+      // Card 1: nuovi iscritti/mese
+      drawRoundedRect(margin, y, kpiW, 40, 3, COLORS.primary);
+      pdf.setTextColor(COLORS.textMuted);
+      pdf.setFontSize(7);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text('NUOVI ISCRITTI', margin + 5, y + 9);
+      pdf.text('/MESE DA POPUP', margin + 5, y + 14);
+      pdf.setTextColor(COLORS.accent);
+      pdf.setFontSize(18);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(`${Math.round(pd.newSubscribersPerMonth).toLocaleString('it-IT')}`, margin + 5, y + 28);
+      pdf.setTextColor(COLORS.textMuted);
+      pdf.setFontSize(7);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(`Conv. ${pd.conversionRate}% su ${Math.round(pd.monthlyVisitors).toLocaleString('it-IT')} visitatori`, margin + 5, y + 36);
+
+      // Card 2: lista a 12 mesi
+      drawRoundedRect(margin + kpiW + 5, y, kpiW, 40, 3, COLORS.darkSlate);
+      pdf.setTextColor(COLORS.textMuted);
+      pdf.setFontSize(7);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text('LISTA PROIETTATA', margin + kpiW + 10, y + 9);
+      pdf.text('A 12 MESI', margin + kpiW + 10, y + 14);
+      pdf.setTextColor(COLORS.white);
+      pdf.setFontSize(18);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(`${Math.round(pd.projectedListSize12m).toLocaleString('it-IT')}`, margin + kpiW + 10, y + 28);
+      pdf.setTextColor(COLORS.textMuted);
+      pdf.setFontSize(7);
+      pdf.setFont('helvetica', 'normal');
+      const growthPct12 = pd.projectedListSize12m > 0 && report.listSize > 0 
+        ? Math.round((pd.projectedListSize12m / report.listSize - 1) * 100) : 0;
+      pdf.text(`+${growthPct12}% vs lista attuale`, margin + kpiW + 10, y + 36);
+
+      // Card 3: revenue aggiuntiva/anno
+      drawRoundedRect(margin + (kpiW + 5) * 2, y, kpiW, 40, 3, COLORS.success);
+      pdf.setTextColor(COLORS.white);
+      pdf.setFontSize(7);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('REVENUE AGGIUNTIVA', margin + (kpiW + 5) * 2 + 5, y + 9);
+      pdf.text('STIMATA / ANNO', margin + (kpiW + 5) * 2 + 5, y + 14);
+      pdf.setFontSize(16);
+      pdf.text(formatCurrency(pd.projectedRevenue12m), margin + (kpiW + 5) * 2 + 5, y + 28);
+      pdf.setFontSize(7);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text('dai nuovi iscritti acquisiti', margin + (kpiW + 5) * 2 + 5, y + 36);
+
+      y += 50;
+
+      // Tabella proiezione crescita lista
+      pdf.setTextColor(COLORS.primary);
+      pdf.setFontSize(12);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('PROIEZIONE CRESCITA LISTA', margin, y);
+      y += 8;
+
+      // Intestazione tabella
+      drawRoundedRect(margin, y, contentWidth, 10, 2, COLORS.primary);
+      pdf.setTextColor(COLORS.white);
+      pdf.setFontSize(8);
+      pdf.setFont('helvetica', 'bold');
+      const colW = contentWidth / 4;
+      pdf.text('MESE', margin + 5, y + 7);
+      pdf.text('ISCRITTI', margin + colW + 5, y + 7);
+      pdf.text('CRESCITA', margin + colW * 2 + 5, y + 7);
+      pdf.text('REVENUE STIM.', margin + colW * 3 + 5, y + 7);
+      y += 12;
+
+      const growthRate = pd.monthlyListGrowthRate / 100;
+      const currentList = report.listSize;
+      const tableRows = [
+        { month: 'Attuale', list: currentList, growth: 0 },
+        { month: '3 mesi', list: currentList * Math.pow(1 + growthRate, 3), growth: 3 },
+        { month: '6 mesi', list: pd.projectedListSize6m, growth: 6 },
+        { month: '12 mesi', list: pd.projectedListSize12m, growth: 12 },
+      ];
+
+      tableRows.forEach((row, idx) => {
+        const rowBg = idx % 2 === 0 ? COLORS.lightGray : COLORS.white;
+        drawRoundedRect(margin, y, contentWidth, 10, 1, rowBg);
+        
+        const estRevenue = idx === 0 ? report.currentEmailRevenue : (row.list / currentList) * report.currentEmailRevenue;
+        const growthLabel = idx === 0 ? '—' : `+${Math.round((row.list / currentList - 1) * 100)}%`;
+
+        pdf.setTextColor(COLORS.primary);
+        pdf.setFontSize(8);
+        pdf.setFont('helvetica', idx === 0 ? 'bold' : 'normal');
+        pdf.text(row.month, margin + 5, y + 7);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(Math.round(row.list).toLocaleString('it-IT'), margin + colW + 5, y + 7);
+        pdf.setTextColor(idx === 0 ? COLORS.textSecondary : COLORS.success);
+        pdf.text(growthLabel, margin + colW * 2 + 5, y + 7);
+        pdf.setTextColor(COLORS.primary);
+        pdf.text(formatCurrency(estRevenue) + '/mese', margin + colW * 3 + 5, y + 7);
+        y += 11;
+      });
+
+      y += 6;
+
+      // Benchmark note
+      drawRoundedRect(margin, y, contentWidth, 20, 3, '#fef3c7');
+      pdf.setTextColor('#92400e');
+      pdf.setFontSize(8);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Benchmark popup e-commerce:', margin + 8, y + 8);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(`Tasso di conversione attuale: ${pd.conversionRate}% — Benchmark ottimale: 3-5%`, margin + 8, y + 14);
+      
+      if (pd.conversionRate < 3) {
+        pdf.setTextColor('#dc2626');
+        pdf.text('   Opportunita: ottimizzare il popup puo aumentare significativamente i nuovi iscritti.', margin + 8, y + 19);
+        y += 6;
+      }
+      y += 26;
+
+    } else {
+      // Non ha popup
+      drawRoundedRect(margin, y, contentWidth, 35, 4, '#fef2f2');
+      drawRect(margin, y, 4, 35, COLORS.danger);
+      pdf.setTextColor(COLORS.danger);
+      pdf.setFontSize(12);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('NESSUN POPUP ATTIVO', margin + 12, y + 12);
+      pdf.setTextColor(COLORS.primary);
+      pdf.setFontSize(9);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text('Il sito non dispone di un popup di raccolta email. Implementarne uno con un', margin + 12, y + 22);
+      pdf.text('tasso di conversione del 3-5% puo generare centinaia di nuovi iscritti al mese.', margin + 12, y + 28);
+      y += 45;
+    }
+
+    drawPageFooter();
+  }
 
   // ============================================
   // PAGE 6: ACTION PLAN & NEXT STEPS
