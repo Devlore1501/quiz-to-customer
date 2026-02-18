@@ -1,55 +1,33 @@
 
-# Piano: Sezione Investimento con ROI dinamico nel report Admin
 
-## Le 3 funzionalità richieste
+# Fix: Forecast invii mensili modificabile + Scenari/Potenziale annuo zero
 
-1. **Sezione "💼 Investimento & ROI"** nel report — mostra il costo del servizio e il tempo di payback
-2. **Toggle admin per mostrare/nascondere la sezione** al cliente (opzione nel quiz admin)
-3. **Struttura prezzi flessibile** — combinazione libera tra: Setup una-tantum + Fisso mensile + Percentuale mensile sul fatturato email; tutte e 3 opzioni sono opzionali e combinabili
+## Diagnosi dei due problemi
+
+### Problema 1 — Forecast invii mensili non modificabile
+
+Nel report generato, la card "Invii Mensili Attuali" e la colonna "Attuale" della tabella forecast mostrano il valore `report.listForecast.sendsPerMonth`, che è un numero **immutabile** calcolato al momento della generazione del report. Non c'è alcuna UI interattiva per cambiarlo una volta generato il report.
+
+**Causa root**: lo step 7 "Frequenza invio email" nel quiz admin usa opzioni testuali (`'1-2'`, `'3-4'` ecc.) che vengono mappate in invii/mese dalla funzione `parseEmailFrequency()`. Il valore calcolato è cristallizzato nel report e non è più modificabile. L'utente si aspetta di poter aggiustare gli invii mensili direttamente nel report o nel forecast.
+
+**Soluzione**: aggiungere nella sezione Forecast del report un **slider interattivo** "Invii/mese" che permette di far ricalcolare la colonna "Attuale" in tempo reale senza rigenerare il report. Il resto della pagina (scenari, potenziale annuo) non cambia — solo i dati del forecast vengono ricalcolati localmente.
 
 ---
 
-## Come funziona il calcolo del ROI
+### Problema 2 — Scenari e Potenziale Annuo a zero
 
-### Input raccolti nello step "Impostazioni Investimento" (nuovo step nel quiz admin)
+`yearlyPotential = scenarios.moderate.value * 12` dove `scenarios.moderate.value = currentEmailRevenue * (moderatePct / 100)`.
 
-| Campo | Tipo | Esempio |
-|---|---|---|
-| Setup una-tantum | Numero € (opzionale) | €1.500 |
-| Fee fissa mensile | Numero € (opzionale) | €800 |
-| Commissione % mensile | Numero % (opzionale, applica su revenue email attuale) | 10% |
+Se `currentEmailRevenue = 0` (succede quando `emailRevenuePercentage = 0` o campo vuoto), tutto è zero.
 
-### Calcoli automatici nel report
+**Causa root identificata**: nello step 4 "% fatturato da email", il campo è un `Input type="number"` con `canProceed: true` — non richiede un valore minimo, quindi l'utente può inserire `0` o lasciare vuoto e procedere. Risultato: `emailPct = 0` → `currentEmailRevenue = 0` → scenari e potenziale a zero.
 
-**Fee mensile totale** = fisso + (% × fatturato email mensile)
+**Seconda causa**: anche con % corretta, se `monthlyRevenue = 0` (step 2 vuoto) stesso problema.
 
-**Payback del setup** = Setup ÷ (Revenue moderato/mese − Fee mensile)
-
-**ROI annuo** = ((Revenue aggiunto annuo − Costo annuo) / Costo annuo) × 100
-
-Dove:
-- Revenue aggiunto annuo = `scenarios.moderate.value × 12` (già calcolato)
-- Costo annuo = `(fee mensile × 12) + setup una-tantum`
-- Break-even = `setup / (revenue_mese_aggiunto − fee_mensile)` → in mesi
-
-### Cosa viene mostrato nel report
-
-Una sezione con 3 card in alto + una tabella ROI:
-
-**Card in alto:**
-- 💰 Investimento Setup: `€1.500` (se presente, altrimenti nascosta)
-- 📅 Fee Mensile Totale: `€800 + 10% = €1.180/mese`
-- ⏱️ Break-even: `X mesi`
-
-**Tabella ROI:**
-| | Anno 1 | Anno 2 | Anno 3 |
-|---|---|---|---|
-| Revenue aggiunto | €X | €X | €X |
-| Costo servizio | €X | €X | €X |
-| **ROI netto** | **€X** | **€X** | **€X** |
-| **ROI %** | **X%** | **X%** | **X%** |
-
-(Al anno 1 il setup è incluso nel costo, anni 2 e 3 solo fee ricorrenti)
+**Soluzione**: 
+1. Aggiungere validazione minima: richiedere che entrambi i campi siano > 0 per poter procedere (rendere `canProceed` condizionale a valore positivo)
+2. Aggiungere feedback visivo in tempo reale sotto i due campi che mostra subito il fatturato email mensile calcolato — così l'utente capisce l'effetto immediato
+3. Nello step 11 "Impostazioni Report", mostrare un avviso se il potenziale è zero invece di un numero silenziosamente sbagliato
 
 ---
 
@@ -57,115 +35,62 @@ Una sezione con 3 card in alto + una tabella ROI:
 
 ### File 1: `src/components/AdminSurvey.tsx`
 
-**Aggiornare `AdminFormData`** con 4 nuovi campi:
-```typescript
-showInvestment: boolean;        // toggle: mostrare sezione investimento?
-setupFee: string;               // € una-tantum (opzionale)
-monthlyFixed: string;           // € fisso mensile (opzionale)
-monthlyPercent: string;         // % del fatturato email mensile (opzionale)
+**Step 2 — Fatturato mensile**: cambiare `canProceed: true` in `canProceed: parseFloat(formData.monthlyRevenue) > 0` — il campo è già obbligatorio nel quiz pubblico, lo rendiamo consistente.
+
+**Step 4 — % fatturato da email**: cambiare `canProceed: true` in `canProceed: parseFloat(formData.emailRevenuePercentage) > 0`. Aggiungere un helper sotto il campo che mostra in tempo reale:
+```
+= €12.500/mese di fatturato email
 ```
 
-**Nuovo step 12 — "💼 Impostazioni Investimento"** inserito tra step 11 (scenari) e il bottone Genera:
-- Toggle/Switch ON/OFF "Mostrare sezione investimento nel report?"
-- Se ON: appaiono i 3 campi facoltativi (Setup, Fisso mensile, % mensile)
-- Preview in tempo reale: mostra fee mensile totale calcolata usando i valori già inseriti
-- Ogni campo ha un'etichetta chiara e un placeholder
+**Step 7 — Frequenza invio email**: aggiungere accanto a ogni opzione il numero di invii mensili corrispondente (es. "1-2 volte a settimana → ~5 invii/mese") così l'utente sa cosa sta scegliendo. Questo risolve la confusione sul forecast.
 
-**Aggiornare `handleRestart`** per resettare i nuovi campi.
-
-**Aggiornare `handleGenerate`** per passare i dati di investimento al componente AdvancedReport via prop.
-
-**Nel render del report** (`if (report) { ... }`): passare `investmentData` come prop a `AdvancedReportComponent`.
+**Nessun altro cambiamento agli step.**
 
 ---
 
 ### File 2: `src/components/AdvancedReport.tsx`
 
-**Aggiungere prop opzionale `investmentData`:**
+**Slider interattivo nel Forecast**: aggiungere uno stato locale `customSends` inizializzato a `report.listForecast.sendsPerMonth`. Quando l'utente muove lo slider, ricalcola i valori della colonna "Attuale" (newsletter revenue e automation revenue) senza toccare le colonne Ottimizzato e Benchmark.
+
 ```typescript
-interface InvestmentData {
-  show: boolean;
-  setupFee: number;
-  monthlyFixed: number;
-  monthlyPercent: number;       // % da applicare
-  monthlyEmailRevenue: number;  // per calcolare la quota %
-}
+const [customSends, setCustomSends] = useState(report.listForecast.sendsPerMonth);
+
+// Ricalcolo colonna Attuale con invii personalizzati
+const aov = report.listForecast.sectorAOV;
+const listSize = report.listForecast.listSize;
+const liveNewsletterRev = aov * (listSize * customSends * 0.002);
+const liveAutomationRev = report.listForecast.current.automationRevenue; // invariata
+const liveTotal = liveNewsletterRev + liveAutomationRev;
 ```
 
-**Calcoli derivati** (all'interno del componente):
-```typescript
-const monthlyPercentFee = investmentData.monthlyEmailRevenue * (investmentData.monthlyPercent / 100);
-const totalMonthlyFee = investmentData.monthlyFixed + monthlyPercentFee;
-const annualRevAdded = report.yearlyPotential; // scenarios.moderate.value × 12
-const annualCostY1 = investmentData.setupFee + (totalMonthlyFee * 12);
-const annualCostY2 = totalMonthlyFee * 12;
-const netRoiY1 = annualRevAdded - annualCostY1;
-const netRoiY2 = annualRevAdded - annualCostY2;
-const roiPctY1 = annualCostY1 > 0 ? (netRoiY1 / annualCostY1) * 100 : 0;
-const roiPctY2 = annualCostY2 > 0 ? (netRoiY2 / annualCostY2) * 100 : 0;
-const breakEvenMonths = (annualRevAdded / 12 - totalMonthlyFee) > 0
-  ? Math.ceil(investmentData.setupFee / (annualRevAdded / 12 - totalMonthlyFee))
-  : null; // infinito se fee > revenue
-```
+**UI dello slider**: sostituire la card "Invii Mensili Attuali" (statica) con una card interattiva contenente uno slider da 0 a 30 invii/mese. Sotto lo slider il valore numerico cambia in tempo reale e la tabella si aggiorna istantaneamente.
 
-**Posizione nel report**: dopo "Potenziale Economico Annuo" e prima di "Download PDF", resa condizionale a `investmentData?.show === true`.
-
-**La sezione è visivamente distinta** con bordo e sfondo verde/teal per indicare valore aggiunto.
+La label "Attuale" diventa "📍 Corrente (modificabile)" per chiarire all'utente che può aggiustarlo.
 
 ---
 
-## Posizione step nel quiz admin (aggiornato)
+## Posizione nel report — invariata
 
 ```
-Step 0:  Settore
-Step 1:  Sito web
-Step 2:  Fatturato mensile
-Step 3:  Ads investment
-Step 4:  % email
-Step 5:  Lista
-Step 6:  AOV
-Step 7:  Frequenza
-Step 8:  Automazioni
-Step 9:  Obiettivo
-Step 10: Nome cliente
-Step 11: ⚙️ Scenari (%)
-► Step 12: 💼 Investimento & ROI  ← NUOVO
-           → [📊 Genera Report]
+[Forecast lista]
+  ├── Card: Lista Attuale (statica)
+  ├── Card: [Slider Invii/mese] ← MODIFICATA (da statica a interattiva)
+  └── Card: AOV (statica)
+  
+  [Tabella forecast]
+    ├── Colonna Attuale → usa customSends (reattiva)
+    ├── Colonna Ottimizzato → invariata (×2.5 calcolato al momento della gen.)
+    └── Colonna Benchmark → invariata (sempre 20 invii)
 ```
-
----
-
-## Posizione nel report generato
-
-```
-[Email Health Score]
-[Analisi Strategica]
-[Situazione Attuale vs Benchmark]
-[Analisi Automazioni]
-[Scenari di Crescita]
-[📬 Forecast Lista]
-[🎯 Top 3 Azioni]
-[💰 Potenziale Annuo Totale]
-► [💼 Investimento & ROI]  ← NUOVO (solo se abilitato)
-[Download PDF]
-[Prenota Consulenza]
-```
-
----
-
-## Ricalcolo dinamico
-
-Poiché i valori dello step Investimento sono inseriti prima di premere "Genera Report", al momento della generazione tutto è già disponibile. Il ricalcolo dinamico si ha già nello **step 12 stesso**: una preview in tempo reale mostra fee mensile e break-even approssimativi man mano che l'utente modifica i campi, usando i valori già inseriti nei passi precedenti.
-
-Questo è completamente **client-side** — nessuna modifica al database richiesta.
 
 ---
 
 ## File modificati
 
-| File | Modifica |
+| File | Tipo modifica |
 |---|---|
-| `src/components/AdminSurvey.tsx` | Nuovo step 12, 4 nuovi campi formData, reset, prop al report |
-| `src/components/AdvancedReport.tsx` | Nuova sezione condizionale "Investimento & ROI", prop `investmentData` |
+| `src/components/AdminSurvey.tsx` | `canProceed` per step 2 e 4, label descrittive in step 7 |
+| `src/components/AdvancedReport.tsx` | Stato `customSends` + slider + ricalcolo colonna Attuale in tempo reale |
 
-Nessun nuovo file. Nessuna modifica al database.
+Nessun nuovo file. Nessuna modifica al database. Nessuna modifica alle logiche di calcolo del backend.
+
