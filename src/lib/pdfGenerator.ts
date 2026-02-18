@@ -704,7 +704,7 @@ export const generatePdfReport = async (
       pdf.text(`+${growthPct12}% vs lista attuale`, margin + kpiW + 10, y + 36);
 
       // Card 3: revenue aggiuntiva/anno
-      drawRoundedRect(margin + (kpiW + 5) * 2, y, kpiW, 40, 3, COLORS.success);
+      drawRoundedRect(margin + (kpiW + 5) * 2, y, kpiW, 55, 3, COLORS.success);
       pdf.setTextColor(COLORS.white);
       pdf.setFontSize(7);
       pdf.setFont('helvetica', 'bold');
@@ -712,11 +712,15 @@ export const generatePdfReport = async (
       pdf.text('STIMATA / ANNO', margin + (kpiW + 5) * 2 + 5, y + 14);
       pdf.setFontSize(16);
       pdf.text(formatCurrency(pd.projectedRevenue12m), margin + (kpiW + 5) * 2 + 5, y + 28);
-      pdf.setFontSize(7);
+      // Breakdown 3 layer
+      pdf.setFontSize(6);
       pdf.setFont('helvetica', 'normal');
-      pdf.text('dai nuovi iscritti acquisiti', margin + (kpiW + 5) * 2 + 5, y + 36);
+      pdf.setTextColor('#d1fae5');
+      pdf.text(`Benvenuto (5%): ${formatCurrency(pd.revenueWelcome12m ?? 0)}`, margin + (kpiW + 5) * 2 + 5, y + 36);
+      pdf.text(`Recuperi (3%): ${formatCurrency(pd.revenueRecovery12m ?? 0)}`, margin + (kpiW + 5) * 2 + 5, y + 42);
+      pdf.text(`Automazioni: ${formatCurrency(pd.revenueAutomation12m ?? 0)}`, margin + (kpiW + 5) * 2 + 5, y + 48);
 
-      y += 50;
+      y += 65;
 
       // Tabella proiezione crescita lista
       pdf.setTextColor(COLORS.primary);
