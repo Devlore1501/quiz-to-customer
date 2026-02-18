@@ -506,7 +506,10 @@ const _calculateReport = (
   if (popupParams && popupParams.hasPopup) {
     const cr = popupParams.conversionRate / 100;
     const growthRate = popupParams.monthlyListGrowthRate / 100;
-    const newSubscribersPerMonth = Math.round(popupParams.monthlyVisitors * cr);
+    // Nuovi iscritti: da visitatori×CR se CR > 0, altrimenti da listSize×growthRate
+    const fromVisitors = Math.round(popupParams.monthlyVisitors * cr);
+    const fromGrowthRate = Math.round(listSize * growthRate);
+    const newSubscribersPerMonth = cr > 0 ? fromVisitors : fromGrowthRate;
     const projectedListSize6m = Math.round(listSize * Math.pow(1 + growthRate, 6));
     const projectedListSize12m = Math.round(listSize * Math.pow(1 + growthRate, 12));
     // Revenue nuovi iscritti popup — 3 layer:
