@@ -18,6 +18,11 @@ interface AdminFormData {
   adsInvestment: string;
   emailRevenuePercentage: string;
   listSize: string;
+  // Popup & Optin (step 6)
+  hasPopup: boolean;
+  popupConversionRate: string;    // %
+  monthlyVisitors: string;
+  monthlyListGrowthRate: string;  // % crescita lista mensile
   aov: string;                    // nuovo: AOV reale cliente
   emailFrequency: string;
   activeFlows: string[];
@@ -106,6 +111,10 @@ export const AdminSurvey: React.FC = () => {
     adsInvestment: '',
     emailRevenuePercentage: '',
     listSize: '',
+    hasPopup: false,
+    popupConversionRate: '',
+    monthlyVisitors: '',
+    monthlyListGrowthRate: '2',
     aov: '',
     emailFrequency: '',
     activeFlows: [],
@@ -146,6 +155,23 @@ export const AdminSurvey: React.FC = () => {
       aggressive: parseFloat(formData.scenarioAggressive) || 60,
     };
 
+    // Parametri popup (opzionali)
+    const popupParams = formData.hasPopup && formData.monthlyVisitors
+      ? {
+          hasPopup: true,
+          conversionRate: parseFloat(formData.popupConversionRate) || 0,
+          monthlyVisitors: parseFloat(formData.monthlyVisitors) || 0,
+          monthlyListGrowthRate: parseFloat(formData.monthlyListGrowthRate) || 2,
+        }
+      : formData.hasPopup === false
+        ? {
+            hasPopup: false,
+            conversionRate: 0,
+            monthlyVisitors: 0,
+            monthlyListGrowthRate: 0,
+          }
+        : undefined;
+
     const result = calculateAdvancedReportFromValues(
       formData.sector || 'other',
       revenue,
@@ -156,6 +182,7 @@ export const AdminSurvey: React.FC = () => {
       formData.emailFrequency || 'none',
       customAov,
       scenarioOverrides,
+      popupParams,
     );
 
     // Salva su DB per link condivisibile
@@ -210,6 +237,10 @@ export const AdminSurvey: React.FC = () => {
       adsInvestment: '',
       emailRevenuePercentage: '',
       listSize: '',
+      hasPopup: false,
+      popupConversionRate: '',
+      monthlyVisitors: '',
+      monthlyListGrowthRate: '2',
       aov: '',
       emailFrequency: '',
       activeFlows: [],
@@ -218,7 +249,7 @@ export const AdminSurvey: React.FC = () => {
       scenarioConservative: '15',
       scenarioModerate: '35',
       scenarioAggressive: '60',
-    showInvestment: false,
+      showInvestment: false,
     });
   };
 
@@ -400,7 +431,100 @@ export const AdminSurvey: React.FC = () => {
       ),
     },
 
-    // 6 — AOV reale (NUOVO)
+
+    // 6 — Popup & Acquisizione Optin (NUOVO)
+    {
+      title: '📊 Popup & Acquisizione Optin',
+      canProceed: true, // facoltativo
+      content: (
+        <div className="space-y-4">
+          <p className="text-slate-400 text-sm">
+            Facoltativo — se compilato, apparirà nel report una sezione dedicata alla crescita lista tramite popup.
+          </p>
+
+          {/* Toggle popup attivo */}
+          <div className="flex items-center justify-between bg-slate-700/40 px-4 py-3 rounded-xl border border-slate-600/50">
+            <div>
+              <p className="text-white font-semibold text-sm">Ha un popup di raccolta email attivo?</p>
+              <p className="text-slate-400 text-xs mt-0.5">Es. popup benvenuto, exit-intent, sconto first order</p>
+            </div>
+            <button
+              onClick={() => setFormData(p => ({ ...p, hasPopup: !p.hasPopup }))}
+              className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors duration-200 ${
+                formData.hasPopup ? 'bg-orange' : 'bg-slate-600'
+              }`}
+            >
+              <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform duration-200 ${
+                formData.hasPopup ? 'translate-x-6' : 'translate-x-1'
+              }`} />
+            </button>
+          </div>
+
+          {/* Campi aggiuntivi visibili solo se popup attivo */}
+          {formData.hasPopup && (
+            <div className="space-y-4 pt-2">
+              <div>
+                <Label className="text-slate-300 mb-2 block">🌐 Visitatori mensili al sito</Label>
+                <Input
+                  type="number"
+                  placeholder="es. 15000"
+                  min={0}
+                  value={formData.monthlyVisitors}
+                  onChange={e => setFormData(p => ({ ...p, monthlyVisitors: e.target.value }))}
+                  className="bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
+                />
+              </div>
+              <div>
+                <Label className="text-slate-300 mb-2 block">📊 Tasso conversione popup (%)</Label>
+                <div className="relative">
+                  <Input
+                    type="number"
+                    placeholder="es. 3.5"
+                    min={0}
+                    max={100}
+                    step={0.1}
+                    value={formData.popupConversionRate}
+                    onChange={e => setFormData(p => ({ ...p, popupConversionRate: e.target.value }))}
+                    className="bg-slate-700 border-slate-600 text-white placeholder:text-slate-400 pr-8"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 font-semibold">%</span>
+                </div>
+                <p className="text-slate-500 text-xs mt-1">Benchmark e-commerce: 3%–5%</p>
+              </div>
+              <div>
+                <Label className="text-slate-300 mb-2 block">📈 Crescita lista mensile stimata (%)</Label>
+                <div className="space-y-2">
+                  {[
+                    { value: '1', label: '+1%/mese', desc: 'Crescita lenta' },
+                    { value: '2', label: '+2%/mese', desc: 'Crescita media' },
+                    { value: '5', label: '+5%/mese', desc: 'Crescita accelerata' },
+                    { value: '10', label: '+10%/mese', desc: 'Crescita aggressiva' },
+                  ].map(opt => (
+                    <OptionButton
+                      key={opt.value}
+                      selected={formData.monthlyListGrowthRate === opt.value}
+                      onClick={() => setFormData(p => ({ ...p, monthlyListGrowthRate: opt.value }))}
+                      label={opt.label}
+                      description={opt.desc}
+                    />
+                  ))}
+                </div>
+              </div>
+              {/* Preview nuovi iscritti */}
+              {formData.monthlyVisitors && formData.popupConversionRate && (
+                <div className="bg-teal-900/20 border border-teal-500/30 rounded-xl p-3">
+                  <p className="text-teal-400 text-sm font-semibold">
+                    ≈ {Math.round(parseFloat(formData.monthlyVisitors) * (parseFloat(formData.popupConversionRate) / 100)).toLocaleString('it-IT')} nuovi iscritti/mese dal popup
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      ),
+    },
+
+    // 7 — AOV reale
     {
       title: 'Valore medio ordine (AOV)',
       canProceed: true, // facoltativo
@@ -437,6 +561,8 @@ export const AdminSurvey: React.FC = () => {
         </div>
       ),
     },
+
+
 
     // 7 — Frequenza invio
     {
@@ -567,22 +693,29 @@ export const AdminSurvey: React.FC = () => {
           {/* Preview dinamico */}
           {formData.monthlyRevenue && formData.emailRevenuePercentage && (
             <div className="bg-slate-700/40 rounded-lg border border-orange/20 p-4 space-y-2">
-              <p className="text-slate-400 text-xs font-medium uppercase tracking-wide">Anteprima Potenziale Annuo</p>
-              <p className="text-2xl font-bold text-orange">
-                €{Math.round(
-                  parseFloat(formData.monthlyRevenue) *
-                  (parseFloat(formData.emailRevenuePercentage) / 100) *
-                  (parseFloat(formData.scenarioModerate) / 100) *
-                  12
-                ).toLocaleString('it-IT')}
-              </p>
-              <p className="text-slate-500 text-xs">
-                {formData.monthlyRevenue && formData.emailRevenuePercentage
-                  ? `Fatturato email €${Math.round(parseFloat(formData.monthlyRevenue) * parseFloat(formData.emailRevenuePercentage) / 100).toLocaleString('it-IT')}/mese × ${formData.scenarioModerate}% (moderato) × 12`
-                  : ''}
-              </p>
+              <p className="text-slate-400 text-xs font-medium uppercase tracking-wide">Anteprima Recupero Annuo (Scenario Moderato)</p>
+              {(() => {
+                const rev = parseFloat(formData.monthlyRevenue) || 0;
+                const emailPct = parseFloat(formData.emailRevenuePercentage) || 0;
+                const currentEmailRev = rev * (emailPct / 100);
+                const benchmarkRev = rev * 0.35;
+                const gap = Math.max(0, benchmarkRev - currentEmailRev);
+                const moderatePct = parseFloat(formData.scenarioModerate) || 35;
+                const yearlyRecovery = Math.round(gap * (moderatePct / 100) * 12);
+                return (
+                  <>
+                    <p className="text-2xl font-bold text-orange">
+                      €{yearlyRecovery.toLocaleString('it-IT')}
+                    </p>
+                    <p className="text-slate-500 text-xs">
+                      Gap mensile €{Math.round(gap).toLocaleString('it-IT')}/mese × {moderatePct}% (moderato) × 12 mesi
+                    </p>
+                  </>
+                );
+              })()}
             </div>
           )}
+
 
           <div className="space-y-6">
             <ScenarioSlider
