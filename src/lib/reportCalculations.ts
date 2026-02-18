@@ -208,6 +208,19 @@ export interface AdvancedReport {
   };
 }
 
+// Direct-values version for admin mode (no range parsing needed)
+export const calculateAdvancedReportFromValues = (
+  sector: string,
+  monthlyRevenue: number,
+  currentEmailPercent: number,
+  listSize: number,
+  activeFlows: string[],
+  customSectorLabel?: string,
+  emailFrequency?: string
+): AdvancedReport => {
+  return _calculateReport(sector, monthlyRevenue, currentEmailPercent, listSize, activeFlows, customSectorLabel, emailFrequency);
+};
+
 export const calculateAdvancedReport = (
   sector: string,
   monthlyRevenueRange: string,
@@ -221,6 +234,18 @@ export const calculateAdvancedReport = (
   const monthlyRevenue = parseRevenueRange(monthlyRevenueRange);
   const currentEmailPercent = parseEmailPercentage(emailPercentRange);
   const listSize = parseListSize(listSizeRange);
+  return _calculateReport(sector, monthlyRevenue, currentEmailPercent, listSize, activeFlows, customSectorLabel, emailFrequency);
+};
+
+const _calculateReport = (
+  sector: string,
+  monthlyRevenue: number,
+  currentEmailPercent: number,
+  listSize: number,
+  activeFlows: string[],
+  customSectorLabel?: string,
+  emailFrequency?: string
+): AdvancedReport => {
   
   // Get sector benchmark
   const baseBenchmark = sectorBenchmarks[sector] || sectorBenchmarks.other;
