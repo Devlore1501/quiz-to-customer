@@ -1,56 +1,134 @@
 
-# Fix webhook non inviati + re-invio submission 15-16 febbraio
+# Nuovo scenario: Forecast basato sulla Lista
 
-## Problema identificato
+## Obiettivo
 
-Dopo il riordino del quiz, la funzione `saveLeadToDatabase()` non viene piu chiamata prima di `handleSubmit()`. Risultato:
-- `leadId` e sempre `null` al momento del submit
-- Il record viene creato via fallback insert, ma il nuovo ID non viene usato per il webhook
-- `reportUrl` e `null` (dipende da `currentLeadId`)
-- Il webhook parte con dati incompleti o non parte affatto
-- 3 submission del 15-16 febbraio risultano `make_synced: false`
+Aggiungere una nuova sezione nel report che mostra quanto fatturato il lead potrebbe generare sfruttando la propria lista con un piano di invio newsletter regolare, usando i dati già disponibili (dimensione lista + frequenza attuale).
 
-## Fix nel codice
+---
 
-### 1. Modificare il click handler del pulsante submit (contacts-combined)
+## La formula (quella proposta dall'utente)
 
-Nel pulsante "Genera il mio Report Gratuito" (riga 1696), cambiare da:
+Il forecast viene calcolato su due componenti:
 
-```
-onClick={() => handleSubmit()}
-```
+**Newsletter (campagne manuali):**
+`Revenue Newsletter = AOV × (list_size × sends_per_month × 0.2%)`
 
-a una funzione che prima salva il lead, poi fa il submit:
+**Automazioni:**
+`Revenue Automazioni = AOV × (list_size × 2%)`
 
-```
-onClick={async () => {
-  const newLeadId = await saveLeadToDatabase();
-  await handleSubmit(newLeadId);
-}}
-```
+Dove:
+- `sends_per_month` viene derivato da `emailFrequency` (già raccolto)
+- `AOV` (Average Order Value) viene stimato dai benchmark di settore, senza aggiungere domande al quiz
 
-Questo garantisce che:
-- Il lead viene salvato nel DB con un ID valido
-- L'ID viene passato a `handleSubmit` per generare il `reportUrl`
-- Il webhook riceve tutti i dati completi, incluso `submissionId`
+---
 
-### 2. Re-invio webhook per le 3 submission bloccate
+## AOV per settore (benchmark)
 
-Creare un invio manuale dei webhook per le 3 submission gia completate:
-- `f70a9c47` - Cristina locato (crlov@hotmail.it)
-- `1a71c91e` - Lucio (l.carli@mediterranea.it) 
-- `5311a887` - Giacomo benedettini (giacomo.benedettini1@gmail.com)
+Poiché non chiediamo l'AOV direttamente, lo stimiamo per settore:
 
-Questo verra fatto chiamando l'edge function `submit-webhook` con i dati `report_data` gia salvati nel DB per ciascuna submission.
+| Settore | AOV stimato |
+|---|---|
+| Beauty | €55 |
+| Fashion | €80 |
+| Food | €45 |
+| Digital | €35 |
+| Jewelry | €150 |
+| Home | €90 |
+| Health | €50 |
+| Other | €65 |
+
+---
+
+## Conversione frequenza → invii/mese
+
+| Valore quiz | Invii per mese |
+|---|---|
+| none | 0 |
+| 1-2 | 5 (media 1,5/sett × 4) |
+| 3-4 | 14 (media 3,5/sett × 4) |
+| 5-7 | 24 (media 6/sett × 4) |
+| daily+ | 30 |
+
+---
+
+## Cosa viene mostrato nel report
+
+Una nuova sezione **"📬 Forecast: Il Potenziale della Tua Lista"** inserita dopo gli Scenari di Crescita, con:
+
+**Card superiori (3 colonne):**
+- Lista attuale: `X iscritti`
+- Invii mensili attuali: basati sulla frequenza dichiarata
+- AOV stimato del settore: `€XX`
+
+**Tabella forecast (3 scenari):**
+
+| | Attuale | Ottimizzato | Benchmark |
+|---|---|---|---|
+| **Invii/mese** | 5 | 12 | 20 |
+| **CR applicato** | 0.2% | 0.2% | 0.2% |
+| **Ordini stimati** | 30 | 72 | 120 |
+| **Revenue Newsletter** | €1.650 | €3.960 | €6.600 |
+| **Revenue Automazioni** | €3.850 | €3.850 | €3.850 |
+| **Totale stimato** | €5.500 | €7.810 | €10.450 |
+
+**Nota esplicativa** sotto la tabella che spiega le assunzioni (CR 0.2% per newsletter, 2% per automazioni, AOV da benchmark settore).
+
+---
 
 ## Dettagli tecnici
 
-File modificato: `src/components/EmailMarketingSurvey.tsx`
+### File 1: `src/lib/reportCalculations.ts`
 
-La modifica e minima (1 riga) ma critica: il flusso diventa:
-1. Utente clicca "Genera Report"
-2. `saveLeadToDatabase()` crea il record nel DB e restituisce l'ID
-3. `handleSubmit(newLeadId)` usa quell'ID per generare `reportUrl` e inviare il webhook con `submissionId`
-4. Il webhook nell'edge function valida la submission e invia a Make.com e GHL
+Aggiungere:
+- Mappa `sectorAOV` con AOV per settore
+- Funzione helper `parseEmailFrequency(freq: string): number` → converte il valore in invii/mese
+- Nuovo tipo `ListForecast` nell'interfaccia `AdvancedReport`
+- Calcolo del forecast in `calculateAdvancedReport()` (aggiunta del parametro `emailFrequency`)
 
-Per il re-invio, leggero i `report_data` dal DB e li inviero manualmente tramite l'edge function per ciascuna delle 3 submission.
+```typescript
+// Nuovo campo nell'AdvancedReport
+listForecast: {
+  listSize: number;
+  sendsPerMonth: number;
+  sectorAOV: number;
+  current: { sends: number; newsletterRevenue: number; automationRevenue: number; total: number };
+  optimized: { sends: number; newsletterRevenue: number; automationRevenue: number; total: number };
+  benchmark: { sends: number; newsletterRevenue: number; automationRevenue: number; total: number };
+}
+```
+
+### File 2: `src/components/AdvancedReport.tsx`
+
+Aggiungere la nuova sezione visuale dopo "Scenari di Crescita" (riga ~298).
+
+### File 3: `src/components/EmailMarketingSurvey.tsx` e `ConversationalSurvey.tsx`
+
+Passare `emailFrequency` come parametro aggiuntivo a `calculateAdvancedReport()`.
+
+---
+
+## Posizione nel report
+
+```text
+[Email Health Score]
+[Analisi Strategica]
+[Situazione Attuale vs Benchmark]
+[Analisi Automazioni]
+[Scenari di Crescita]
+► [📬 Forecast: Il Potenziale della Tua Lista]  ← NUOVO
+[Roadmap: Top 3 Azioni]
+[Potenziale Annuo Totale]
+[Download PDF]
+[Prenota Consulenza]
+```
+
+---
+
+## Note sui valori
+
+- Il forecast è presentato come **stima indicativa** basata su benchmark di settore, non come garanzia
+- Il CR 0.2% per newsletter è il benchmark positivo dichiarato dall'utente (conservativo)
+- Il CR 2% per automazioni è il benchmark standard per flussi e-commerce ottimizzati
+- I 3 scenari (Attuale / Ottimizzato / Benchmark) mostrano progressione naturale basata su frequenza di invio crescente
+
