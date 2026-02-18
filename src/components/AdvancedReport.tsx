@@ -524,6 +524,21 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
                 <p className="text-green-400 text-sm mb-1">💰 Revenue aggiuntiva</p>
                 <p className="text-3xl font-bold text-white">{formatCurrency(report.popupData.projectedRevenue12m)}</p>
                 <p className="text-green-400/70 text-xs mt-1">dai nuovi iscritti (12 mesi)</p>
+                {/* Breakdown tre layer */}
+                <div className="mt-3 pt-3 border-t border-green-500/20 space-y-1 text-left">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-slate-400">🎁 Welcome (5% CR)</span>
+                    <span className="text-green-300">{formatCurrency(report.popupData.revenueWelcome12m)}</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-slate-400">🛒 Recuperi (3% CR)</span>
+                    <span className="text-green-300">{formatCurrency(report.popupData.revenueRecovery12m)}</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-slate-400">⚡ Automazioni</span>
+                    <span className="text-green-300">{formatCurrency(report.popupData.revenueAutomation12m)}</span>
+                  </div>
+                </div>
               </div>
             </div>
 

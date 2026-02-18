@@ -218,6 +218,9 @@ export interface AdvancedReport {
     projectedListSize12m: number;
     projectedRevenue12m: number;
     monthlyListGrowthRate: number; // % es. 2
+    revenueWelcome12m: number;    // layer acquisto diretto welcome flow (5% CR)
+    revenueRecovery12m: number;   // layer recuperi carrello + checkout (3% CR)
+    revenueAutomation12m: number; // layer automazioni (CR dinamico basato su flussi attivi)
   };
 }
 
@@ -496,8 +499,22 @@ const _calculateReport = (
     const newSubscribersPerMonth = Math.round(popupParams.monthlyVisitors * cr);
     const projectedListSize6m = Math.round(listSize * Math.pow(1 + growthRate, 6));
     const projectedListSize12m = Math.round(listSize * Math.pow(1 + growthRate, 12));
-    // Revenue aggiuntiva stimata: nuovi iscritti × AOV × 2% CR automazioni × 12 mesi
-    const projectedRevenue12m = Math.round(newSubscribersPerMonth * aov * 0.02 * 12);
+    // Revenue nuovi iscritti popup — 3 layer:
+    // 1) Acquisto diretto via welcome flow (5% CR)
+    const revenueWelcome12m = Math.round(newSubscribersPerMonth * aov * 0.05 * 12);
+    // 2) Recuperi carrello + checkout (3% CR)
+    const revenueRecovery12m = Math.round(newSubscribersPerMonth * aov * 0.03 * 12);
+    // 3) Automazioni attive nel tempo (CR dinamico 0–1% basato sui flussi attivi)
+    const getAutomationCR = (activeCount: number): number => {
+      if (activeCount === 0) return 0;
+      if (activeCount <= 2) return 0.003;
+      if (activeCount <= 4) return 0.005;
+      if (activeCount <= 6) return 0.007;
+      return 0.01;
+    };
+    const revenueAutomation12m = Math.round(newSubscribersPerMonth * aov * getAutomationCR(activeFlowsCount) * 12);
+    // Totale 3 layer
+    const projectedRevenue12m = revenueWelcome12m + revenueRecovery12m + revenueAutomation12m;
     popupData = {
       hasPopup: true,
       conversionRate: popupParams.conversionRate,
@@ -507,6 +524,9 @@ const _calculateReport = (
       projectedListSize12m,
       projectedRevenue12m,
       monthlyListGrowthRate: popupParams.monthlyListGrowthRate,
+      revenueWelcome12m,
+      revenueRecovery12m,
+      revenueAutomation12m,
     };
   } else if (popupParams && !popupParams.hasPopup) {
     popupData = {
@@ -518,6 +538,9 @@ const _calculateReport = (
       projectedListSize12m: listSize,
       projectedRevenue12m: 0,
       monthlyListGrowthRate: 0,
+      revenueWelcome12m: 0,
+      revenueRecovery12m: 0,
+      revenueAutomation12m: 0,
     };
   }
 
