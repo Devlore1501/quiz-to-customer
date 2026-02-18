@@ -8,10 +8,7 @@ import { generatePdfReport } from '@/lib/pdfGenerator';
 
 interface InvestmentData {
   show: boolean;
-  setupFee: number;
-  monthlyFixed: number;
-  monthlyPercent: number;
-  monthlyEmailRevenue: number;
+  currentEmailRevenue?: number;
 }
 
 interface AdvancedReportProps {
@@ -56,6 +53,11 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
     report.listForecast ? report.listForecast.sendsPerMonth : 4
   );
 
+  // ── Stati locali fee (form inline nella sezione investimento) ─────────────
+  const [setupFee, setSetupFee] = useState<string>('');
+  const [monthlyFixed, setMonthlyFixed] = useState<string>('');
+  const [monthlyPercent, setMonthlyPercent] = useState<string>('');
+
   // ── Ricalcolo colonna Attuale con invii personalizzati ────────────────────
   const liveAov = report.listForecast?.sectorAOV ?? 0;
   const liveListSize = report.listForecast?.listSize ?? 0;
@@ -64,13 +66,16 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
   const liveTotal = liveNewsletterRev + liveAutomationRev;
   const liveOrders = Math.round(liveListSize * customSends * 0.002);
 
-  // ── Calcoli ROI investimento ──────────────────────────────────────────────
-  const inv = investmentData;
-  const showInvestment = inv?.show === true;
-  const monthlyPercentFee = inv ? inv.monthlyEmailRevenue * (inv.monthlyPercent / 100) : 0;
-  const totalMonthlyFee = inv ? inv.monthlyFixed + monthlyPercentFee : 0;
+  // ── Calcoli ROI investimento (live dagli input locali) ────────────────────
+  const showInvestment = investmentData?.show === true;
+  const baseEmailRevenue = investmentData?.currentEmailRevenue ?? report.currentEmailRevenue;
+  const setupFeeN = parseFloat(setupFee) || 0;
+  const monthlyFixedN = parseFloat(monthlyFixed) || 0;
+  const monthlyPercentN = parseFloat(monthlyPercent) || 0;
+  const monthlyPercentFee = baseEmailRevenue * (monthlyPercentN / 100);
+  const totalMonthlyFee = monthlyFixedN + monthlyPercentFee;
   const annualRevAdded = report.yearlyPotential;
-  const annualCostY1 = inv ? inv.setupFee + totalMonthlyFee * 12 : 0;
+  const annualCostY1 = setupFeeN + totalMonthlyFee * 12;
   const annualCostY2 = totalMonthlyFee * 12;
   const annualCostY3 = totalMonthlyFee * 12;
   const netRoiY1 = annualRevAdded - annualCostY1;
@@ -80,8 +85,8 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
   const roiPctY2 = annualCostY2 > 0 ? (netRoiY2 / annualCostY2) * 100 : 0;
   const roiPctY3 = annualCostY3 > 0 ? (netRoiY3 / annualCostY3) * 100 : 0;
   const monthlyNetGain = annualRevAdded / 12 - totalMonthlyFee;
-  const breakEvenMonths = inv && inv.setupFee > 0 && monthlyNetGain > 0
-    ? Math.ceil(inv.setupFee / monthlyNetGain)
+  const breakEvenMonths = setupFeeN > 0 && monthlyNetGain > 0
+    ? Math.ceil(setupFeeN / monthlyNetGain)
     : null;
 
   const handleDownloadPdf = async () => {
@@ -529,50 +534,119 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
         </div>
 
         {/* ── Sezione Investimento & ROI ─────────────────────────────────── */}
-        {showInvestment && inv && (
+        {showInvestment && (
           <div className="bg-gradient-to-br from-teal-900/40 to-teal-800/20 p-6 rounded-xl border border-teal-500/30 animate-fade-in" style={{ animationDelay: '820ms' }}>
-            <h2 className="text-xl font-bold text-teal-400 mb-6 flex items-center gap-2">
+            <h2 className="text-xl font-bold text-teal-400 mb-2 flex items-center gap-2">
               💼 Investimento & ROI
             </h2>
+            <p className="text-slate-400 text-sm mb-6">
+              Inserisci i costi del servizio per calcolare il break-even e il ROI in tempo reale.
+            </p>
+
+            {/* Form inline fee */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 bg-slate-800/50 p-4 rounded-xl border border-teal-500/20">
+              {/* Setup una-tantum */}
+              <div>
+                <label className="block text-slate-400 text-xs font-medium mb-1.5">💰 Setup una-tantum</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-semibold text-sm">€</span>
+                  <input
+                    type="number"
+                    placeholder="es. 1500"
+                    min={0}
+                    value={setupFee}
+                    onChange={e => setSetupFee(e.target.value)}
+                    className="w-full bg-slate-700 border border-slate-600 text-white rounded-lg px-3 py-2 pl-8 text-sm placeholder:text-slate-500 focus:outline-none focus:border-teal-500"
+                  />
+                </div>
+              </div>
+              {/* Fee fissa mensile */}
+              <div>
+                <label className="block text-slate-400 text-xs font-medium mb-1.5">📅 Fee fissa mensile</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-semibold text-sm">€</span>
+                  <input
+                    type="number"
+                    placeholder="es. 800"
+                    min={0}
+                    value={monthlyFixed}
+                    onChange={e => setMonthlyFixed(e.target.value)}
+                    className="w-full bg-slate-700 border border-slate-600 text-white rounded-lg px-3 py-2 pl-8 text-sm placeholder:text-slate-500 focus:outline-none focus:border-teal-500"
+                  />
+                </div>
+              </div>
+              {/* Commissione % */}
+              <div>
+                <label className="block text-slate-400 text-xs font-medium mb-1.5">📊 Commissione % su rev. email</label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    placeholder="es. 10"
+                    min={0}
+                    max={100}
+                    value={monthlyPercent}
+                    onChange={e => setMonthlyPercent(e.target.value)}
+                    className="w-full bg-slate-700 border border-slate-600 text-white rounded-lg px-3 py-2 pr-8 text-sm placeholder:text-slate-500 focus:outline-none focus:border-teal-500"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 font-semibold text-sm">%</span>
+                </div>
+                {monthlyPercentN > 0 && baseEmailRevenue > 0 && (
+                  <p className="text-slate-500 text-xs mt-1">
+                    = {formatCurrency(monthlyPercentFee)}/mese su {formatCurrency(baseEmailRevenue)} rev. email
+                  </p>
+                )}
+              </div>
+            </div>
 
             {/* Card summary */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              {inv.setupFee > 0 && (
-                <div className="bg-slate-800/60 p-4 rounded-xl border border-slate-700/50 text-center">
-                  <p className="text-slate-400 text-sm mb-1">💰 Setup una-tantum</p>
-                  <p className="text-2xl font-bold text-white">{formatCurrency(inv.setupFee)}</p>
-                  <p className="text-slate-500 text-xs mt-1">investimento iniziale</p>
-                </div>
-              )}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              {/* Setup */}
+              <div className="bg-slate-800/60 p-4 rounded-xl border border-slate-700/50 text-center">
+                <p className="text-slate-400 text-sm mb-1">💰 Setup una-tantum</p>
+                {setupFeeN > 0 ? (
+                  <>
+                    <p className="text-2xl font-bold text-white">{formatCurrency(setupFeeN)}</p>
+                    <p className="text-slate-500 text-xs mt-1">investimento iniziale</p>
+                  </>
+                ) : (
+                  <p className="text-slate-500 text-lg font-semibold">—</p>
+                )}
+              </div>
 
-              {(inv.monthlyFixed > 0 || inv.monthlyPercent > 0) && (
-                <div className="bg-slate-800/60 p-4 rounded-xl border border-slate-700/50 text-center">
-                  <p className="text-slate-400 text-sm mb-1">📅 Fee Mensile Totale</p>
-                  <p className="text-2xl font-bold text-teal-400">{formatCurrency(totalMonthlyFee)}/mese</p>
-                  {inv.monthlyFixed > 0 && inv.monthlyPercent > 0 && (
-                    <p className="text-slate-500 text-xs mt-1">
-                      {formatCurrency(inv.monthlyFixed)} fisso + {inv.monthlyPercent}% su rev. email
-                    </p>
-                  )}
-                  {inv.monthlyFixed > 0 && inv.monthlyPercent === 0 && (
-                    <p className="text-slate-500 text-xs mt-1">fee fissa mensile</p>
-                  )}
-                  {inv.monthlyFixed === 0 && inv.monthlyPercent > 0 && (
-                    <p className="text-slate-500 text-xs mt-1">{inv.monthlyPercent}% sul fatturato email</p>
-                  )}
-                </div>
-              )}
+              {/* Fee mensile */}
+              <div className="bg-slate-800/60 p-4 rounded-xl border border-slate-700/50 text-center">
+                <p className="text-slate-400 text-sm mb-1">📅 Fee Mensile Totale</p>
+                {totalMonthlyFee > 0 ? (
+                  <>
+                    <p className="text-2xl font-bold text-teal-400">{formatCurrency(totalMonthlyFee)}/mese</p>
+                    {monthlyFixedN > 0 && monthlyPercentN > 0 && (
+                      <p className="text-slate-500 text-xs mt-1">
+                        {formatCurrency(monthlyFixedN)} fisso + {monthlyPercentN}% su rev. email
+                      </p>
+                    )}
+                    {monthlyFixedN > 0 && monthlyPercentN === 0 && (
+                      <p className="text-slate-500 text-xs mt-1">fee fissa mensile</p>
+                    )}
+                    {monthlyFixedN === 0 && monthlyPercentN > 0 && (
+                      <p className="text-slate-500 text-xs mt-1">{monthlyPercentN}% sul fatturato email</p>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-slate-500 text-lg font-semibold">—</p>
+                )}
+              </div>
 
+              {/* Break-even */}
               <div className={`p-4 rounded-xl border text-center ${
                 breakEvenMonths !== null
                   ? 'bg-green-900/30 border-green-500/30'
-                  : inv.setupFee > 0
+                  : setupFeeN > 0
                     ? 'bg-red-900/20 border-red-500/20'
                     : 'bg-slate-800/60 border-slate-700/50'
               }`}>
                 <p className="text-slate-400 text-sm mb-1">⏱️ Break-even Setup</p>
-                {inv.setupFee === 0 ? (
-                  <p className="text-slate-500 text-lg font-semibold">N/A</p>
+                {setupFeeN === 0 ? (
+                  <p className="text-slate-500 text-lg font-semibold">—</p>
                 ) : breakEvenMonths !== null ? (
                   <>
                     <p className="text-2xl font-bold text-green-400">{breakEvenMonths} mesi</p>
@@ -585,6 +659,19 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
                   </>
                 )}
               </div>
+            </div>
+
+            {/* Nota esplicativa break-even */}
+            <div className="bg-slate-800/40 border border-slate-700/50 rounded-xl p-4 mb-6">
+              <p className="text-slate-400 text-xs leading-relaxed">
+                <strong className="text-teal-400">📐 Formula break-even:</strong>{' '}
+                Setup ÷ (Potenziale Mensile Moderato − Fee Mensile Totale) = mesi per rientrare nell'investimento iniziale.
+                {setupFeeN > 0 && totalMonthlyFee > 0 && (
+                  <span className="block mt-1 text-slate-500">
+                    Esempio con i tuoi valori: {formatCurrency(setupFeeN)} ÷ ({formatCurrency(annualRevAdded / 12)} − {formatCurrency(totalMonthlyFee)}) = {monthlyNetGain > 0 ? `${formatCurrency(setupFeeN / monthlyNetGain).replace('€', '')} → ${breakEvenMonths} mes${breakEvenMonths === 1 ? 'e' : 'i'}` : 'N/A (fee > revenue mensile)'}
+                  </span>
+                )}
+              </p>
             </div>
 
             {/* Tabella ROI 3 anni */}
@@ -615,7 +702,7 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
                     <td className="p-4 text-slate-400">💸 Costo servizio</td>
                     <td className="p-4 text-center text-red-400 font-medium bg-slate-800/20">
                       {formatCurrency(annualCostY1)}
-                      {inv.setupFee > 0 && <span className="block text-xs text-slate-500">(incl. setup)</span>}
+                      {setupFeeN > 0 && <span className="block text-xs text-slate-500">(incl. setup)</span>}
                     </td>
                     <td className="p-4 text-center text-red-400 font-medium bg-slate-800/10">
                       {formatCurrency(annualCostY2)}
@@ -653,7 +740,7 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
             </div>
 
             <p className="text-slate-500 text-xs mt-3">
-              * Revenue aggiunto = scenario moderato annualizzato. Anno 1 include setup una-tantum. Anno 2 e 3 solo fee ricorrenti.
+              * Revenue aggiunto = scenario moderato annualizzato ({formatCurrency(annualRevAdded/12)}/mese × 12). Anno 1 include setup una-tantum. Anno 2 e 3 solo fee ricorrenti.
             </p>
           </div>
         )}
