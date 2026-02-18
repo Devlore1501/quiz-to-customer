@@ -61,6 +61,19 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
           <p className="text-lg text-[#1d283a]">
             Analisi personalizzata per il settore <span className="text-orange font-semibold">{report.sectorBenchmark.label}</span>
           </p>
+          {website && (
+            <p className="text-sm text-slate-500 mt-1">
+              🌐{' '}
+              <a
+                href={website.startsWith('http') ? website : `https://${website}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-orange hover:underline"
+              >
+                {website.replace(/^https?:\/\//, '')}
+              </a>
+            </p>
+          )}
         </div>
 
         {/* Email Health Score */}
