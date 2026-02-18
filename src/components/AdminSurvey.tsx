@@ -193,22 +193,20 @@ export const AdminSurvey: React.FC = () => {
       aggressive: parseFloat(formData.scenarioAggressive) || 60,
     };
 
-    // Parametri popup (opzionali)
-    const popupParams = formData.hasPopup && formData.monthlyVisitors
+    // Parametri popup — passati sempre se popup attivo (anche con visitatori = 0)
+    const popupParams = formData.hasPopup
       ? {
           hasPopup: true,
           conversionRate: parseFloat(formData.popupConversionRate) || 0,
           monthlyVisitors: parseFloat(formData.monthlyVisitors) || 0,
           monthlyListGrowthRate: parseFloat(formData.monthlyListGrowthRate) || 2,
         }
-      : formData.hasPopup === false
-        ? {
-            hasPopup: false,
-            conversionRate: 0,
-            monthlyVisitors: 0,
-            monthlyListGrowthRate: 0,
-          }
-        : undefined;
+      : {
+          hasPopup: false,
+          conversionRate: 0,
+          monthlyVisitors: 0,
+          monthlyListGrowthRate: 0,
+        };
 
     const result = calculateAdvancedReportFromValues(
       formData.sector || 'other',
