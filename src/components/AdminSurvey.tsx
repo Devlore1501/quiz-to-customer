@@ -128,6 +128,37 @@ export const AdminSurvey: React.FC = () => {
 
   // ── Helpers ────────────────────────────────────────────────────────────────
 
+  const saveReportToDb = async (result: AdvancedReport, fd: AdminFormData) => {
+    try {
+      const { data: saved, error } = await supabase
+        .from('survey_submissions')
+        .insert({
+          full_name: fd.clientName || 'Report Admin',
+          email: `admin-${Date.now()}@interno.mailift`,
+          phone: null,
+          sector: fd.sector || 'other',
+          website: fd.website || null,
+          report_data: { clientReport: result } as any,
+          email_health_score: result.emailHealthScore,
+          yearly_potential: result.yearlyPotential,
+          qualified: false,
+          status: 'admin_report',
+        })
+        .select('id')
+        .single();
+
+      if (error) {
+        console.error('DB insert error:', error.code, error.message, error.details);
+        setReportId(null);
+      } else if (saved) {
+        setReportId(saved.id);
+      }
+    } catch (e) {
+      console.error('DB save exception:', e);
+      setReportId(null);
+    }
+  };
+
   const go = (delta: 1 | -1) => {
     setDirection(delta);
     setStep(s => s + delta);
@@ -186,30 +217,7 @@ export const AdminSurvey: React.FC = () => {
     );
 
     // Salva su DB per link condivisibile
-    try {
-      const { data: saved, error } = await supabase
-        .from('survey_submissions')
-        .insert({
-          full_name: formData.clientName || 'Report Admin',
-          email: `admin-${Date.now()}@interno.mailift`,
-          phone: null,
-          sector: formData.sector || 'other',
-          website: formData.website || null,
-          report_data: { clientReport: result } as any,
-          email_health_score: result.emailHealthScore,
-          yearly_potential: result.yearlyPotential,
-          qualified: false,
-          status: 'admin_report',
-        })
-        .select('id')
-        .single();
-
-      if (!error && saved) {
-        setReportId(saved.id);
-      }
-    } catch (e) {
-      console.warn('DB save failed (non-critical):', e);
-    }
+    await saveReportToDb(result, formData);
 
     setReport(result);
     setIsGenerating(false);
@@ -822,9 +830,16 @@ export const AdminSurvey: React.FC = () => {
                 {copied ? 'Link copiato!' : 'Copia link'}
               </button>
             ) : (
-              <span className="text-red-400 text-xs flex items-center gap-1.5 px-2 py-1 rounded border border-red-500/30 bg-red-900/20">
-                ⚠️ Link non disponibile
-              </span>
+              <button
+                onClick={async () => {
+                  if (!report) return;
+                  await saveReportToDb(report, formData);
+                }}
+                title="Salvataggio non riuscito — clicca per riprovare"
+                className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded border border-red-500/40 bg-red-900/20 text-red-400 hover:border-red-400 hover:bg-red-900/40 transition-all duration-200"
+              >
+                ⚠️ Link non disponibile — Riprova
+              </button>
             )}
             <button
               onClick={handleRestart}
