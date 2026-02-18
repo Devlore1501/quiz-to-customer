@@ -1,87 +1,132 @@
 
+# Piano: 3 fix — URL condivisibile garantito, spiegazione break-even, fee solo nel report
 
-# Fix: Forecast invii mensili modificabile + Scenari/Potenziale annuo zero
+## Riepilogo dei 3 cambiamenti richiesti
 
-## Diagnosi dei due problemi
-
-### Problema 1 — Forecast invii mensili non modificabile
-
-Nel report generato, la card "Invii Mensili Attuali" e la colonna "Attuale" della tabella forecast mostrano il valore `report.listForecast.sendsPerMonth`, che è un numero **immutabile** calcolato al momento della generazione del report. Non c'è alcuna UI interattiva per cambiarlo una volta generato il report.
-
-**Causa root**: lo step 7 "Frequenza invio email" nel quiz admin usa opzioni testuali (`'1-2'`, `'3-4'` ecc.) che vengono mappate in invii/mese dalla funzione `parseEmailFrequency()`. Il valore calcolato è cristallizzato nel report e non è più modificabile. L'utente si aspetta di poter aggiustare gli invii mensili direttamente nel report o nel forecast.
-
-**Soluzione**: aggiungere nella sezione Forecast del report un **slider interattivo** "Invii/mese" che permette di far ricalcolare la colonna "Attuale" in tempo reale senza rigenerare il report. Il resto della pagina (scenari, potenziale annuo) non cambia — solo i dati del forecast vengono ricalcolati localmente.
+1. **URL condivisibile garantito** — il pulsante "Copia link" attualmente appare solo se il salvataggio DB riesce (`if reportId`). Rendiamo il pulsante sempre visibile con l'URL della pagina corrente come fallback
+2. **Sezione fee spostata nel report** — rimuovere i campi setup/fee/commissione dallo step 12 del quiz admin, e inserire un form inline direttamente nella sezione Investimento del report generato, così si può inserire la fee dopo aver visto i risultati
+3. **Spiegazione logica break-even** — aggiungere una nota esplicativa nella sezione investimento che chiarisca la formula usata
 
 ---
 
-### Problema 2 — Scenari e Potenziale Annuo a zero
+## Come funziona il break-even (da chiarire all'utente nel report)
 
-`yearlyPotential = scenarios.moderate.value * 12` dove `scenarios.moderate.value = currentEmailRevenue * (moderatePct / 100)`.
+La formula attuale è corretta:
 
-Se `currentEmailRevenue = 0` (succede quando `emailRevenuePercentage = 0` o campo vuoto), tutto è zero.
+```
+Guadagno mensile netto = (Potenziale Annuo Moderato / 12) − Fee Mensile Totale
+Break-even (mesi) = Setup una-tantum / Guadagno mensile netto
+```
 
-**Causa root identificata**: nello step 4 "% fatturato da email", il campo è un `Input type="number"` con `canProceed: true` — non richiede un valore minimo, quindi l'utente può inserire `0` o lasciare vuoto e procedere. Risultato: `emailPct = 0` → `currentEmailRevenue = 0` → scenari e potenziale a zero.
+**Esempio**: Setup €1.500, Fee €800/mese, Potenziale annuo €36.000
+- Guadagno mensile: €3.000 − €800 = €2.200/mese netto
+- Break-even: €1.500 / €2.200 = 0,68 → **1 mese**
 
-**Seconda causa**: anche con % corretta, se `monthlyRevenue = 0` (step 2 vuoto) stesso problema.
-
-**Soluzione**: 
-1. Aggiungere validazione minima: richiedere che entrambi i campi siano > 0 per poter procedere (rendere `canProceed` condizionale a valore positivo)
-2. Aggiungere feedback visivo in tempo reale sotto i due campi che mostra subito il fatturato email mensile calcolato — così l'utente capisce l'effetto immediato
-3. Nello step 11 "Impostazioni Report", mostrare un avviso se il potenziale è zero invece di un numero silenziosamente sbagliato
+Aggiungeremo questa spiegazione come tooltip o nota sotto la card break-even.
 
 ---
 
-## Modifiche tecniche
+## Problema 1 — URL condivisibile
+
+**Situazione attuale**: il pulsante "Copia link" dipende da `reportId` che viene settato solo se il DB insert riesce (righe 799-810 di `AdminSurvey.tsx`). Se l'insert fallisce silenziosamente, il pulsante non appare.
+
+**Soluzione**: rendere il pulsante sempre presente dopo la generazione del report, con 2 livelli:
+- Se `reportId` è disponibile → copia `https://quiz-to-customer.lovable.app/report/${reportId}`
+- Se `reportId` è null (DB fallito) → mostra un avviso "Link non disponibile (errore salvataggio)"
+
+In aggiunta, migliorare la gestione errori nell'insert per mostrare un warning visibile invece di silenzio.
+
+---
+
+## Problema 2 — Fee nel report invece che nel quiz
+
+### Cosa rimuovere dal quiz admin (Step 12)
+- Rimuovere tutti i campi: `setupFee`, `monthlyFixed`, `monthlyPercent`
+- Mantenere solo il **toggle** `showInvestment` per decidere se mostrare la sezione
+- I campi `setupFee`, `monthlyFixed`, `monthlyPercent` vengono rimossi anche da `AdminFormData`
+
+### Cosa aggiungere nel report (AdvancedReport.tsx)
+Nella sezione "💼 Investimento & ROI", prima della tabella ROI, aggiungere un **form inline** con:
+- 3 input numerici: Setup (€), Fee fissa (€/mese), Commissione (%)
+- Tutti con `useState` locale nel componente report
+- La tabella ROI e la card break-even si ricalcolano in tempo reale al variare degli input
+- Nessun salvataggio necessario: tutto è locale e visivo
+
+```
+Struttura sezione Investimento nel report:
+┌─────────────────────────────────────┐
+│ 💼 Investimento & ROI               │
+├─────────────────────────────────────┤
+│ [€ Setup]  [€/mese Fisso]  [% Comm] │  ← form inline
+├─────────────────────────────────────┤
+│ Card: Setup  │ Card: Fee  │ Card: BE │  ← calcolate live
+├─────────────────────────────────────┤
+│ Nota formula break-even             │
+├─────────────────────────────────────┤
+│ Tabella ROI 3 anni                  │  ← calcolata live
+└─────────────────────────────────────┘
+```
+
+### Impatto su AdminFormData
+Rimuovere `setupFee`, `monthlyFixed`, `monthlyPercent` — rimane solo `showInvestment: boolean`.
+
+### Impatto su InvestmentData (prop passata al report)
+La prop `investmentData` diventa opzionale e si semplifica: porta solo `show: boolean`. I valori economici vengono gestiti con stato locale nel componente.
+
+---
+
+## Modifiche tecniche dettagliate
 
 ### File 1: `src/components/AdminSurvey.tsx`
 
-**Step 2 — Fatturato mensile**: cambiare `canProceed: true` in `canProceed: parseFloat(formData.monthlyRevenue) > 0` — il campo è già obbligatorio nel quiz pubblico, lo rendiamo consistente.
+**AdminFormData**: rimuovere `setupFee`, `monthlyFixed`, `monthlyPercent`.
 
-**Step 4 — % fatturato da email**: cambiare `canProceed: true` in `canProceed: parseFloat(formData.emailRevenuePercentage) > 0`. Aggiungere un helper sotto il campo che mostra in tempo reale:
+**Step 12 — Investimento & ROI**: semplificare il contenuto — tenere solo il toggle ON/OFF, rimuovere tutti i campi numerici e la preview.
+
+**investmentData** passato al report: solo `{ show: formData.showInvestment }`.
+
+**handleRestart**: rimuovere il reset dei 3 campi rimossi.
+
+**Pulsante "Copia link"**: renderlo sempre visibile dopo la generazione, con logica:
+```tsx
+// Sempre visibile dopo la generazione
+{report && (
+  reportId ? (
+    <button onClick={handleCopyLink}>...</button>
+  ) : (
+    <span className="text-red-400 text-xs">Link non disponibile</span>
+  )
+)}
 ```
-= €12.500/mese di fatturato email
-```
-
-**Step 7 — Frequenza invio email**: aggiungere accanto a ogni opzione il numero di invii mensili corrispondente (es. "1-2 volte a settimana → ~5 invii/mese") così l'utente sa cosa sta scegliendo. Questo risolve la confusione sul forecast.
-
-**Nessun altro cambiamento agli step.**
-
----
 
 ### File 2: `src/components/AdvancedReport.tsx`
 
-**Slider interattivo nel Forecast**: aggiungere uno stato locale `customSends` inizializzato a `report.listForecast.sendsPerMonth`. Quando l'utente muove lo slider, ricalcola i valori della colonna "Attuale" (newsletter revenue e automation revenue) senza toccare le colonne Ottimizzato e Benchmark.
+**Interfaccia InvestmentData**: semplificare — solo `show: boolean`.
 
+**Nuovi stati locali** nella sezione investimento:
 ```typescript
-const [customSends, setCustomSends] = useState(report.listForecast.sendsPerMonth);
-
-// Ricalcolo colonna Attuale con invii personalizzati
-const aov = report.listForecast.sectorAOV;
-const listSize = report.listForecast.listSize;
-const liveNewsletterRev = aov * (listSize * customSends * 0.002);
-const liveAutomationRev = report.listForecast.current.automationRevenue; // invariata
-const liveTotal = liveNewsletterRev + liveAutomationRev;
+const [setupFee, setSetupFee] = useState<string>('');
+const [monthlyFixed, setMonthlyFixed] = useState<string>('');
+const [monthlyPercent, setMonthlyPercent] = useState<string>('');
 ```
 
-**UI dello slider**: sostituire la card "Invii Mensili Attuali" (statica) con una card interattiva contenente uno slider da 0 a 30 invii/mese. Sotto lo slider il valore numerico cambia in tempo reale e la tabella si aggiorna istantaneamente.
-
-La label "Attuale" diventa "📍 Corrente (modificabile)" per chiarire all'utente che può aggiustarlo.
-
----
-
-## Posizione nel report — invariata
-
+**Ricalcolo live** basato su `report.currentEmailRevenue` per la commissione %:
+```typescript
+const setupFeeN = parseFloat(setupFee) || 0;
+const monthlyFixedN = parseFloat(monthlyFixed) || 0;
+const monthlyPercentN = parseFloat(monthlyPercent) || 0;
+const monthlyPercentFee = report.currentEmailRevenue * (monthlyPercentN / 100);
+const totalMonthlyFee = monthlyFixedN + monthlyPercentFee;
+const monthlyNetGain = report.yearlyPotential / 12 - totalMonthlyFee;
+const breakEvenMonths = setupFeeN > 0 && monthlyNetGain > 0
+  ? Math.ceil(setupFeeN / monthlyNetGain)
+  : null;
 ```
-[Forecast lista]
-  ├── Card: Lista Attuale (statica)
-  ├── Card: [Slider Invii/mese] ← MODIFICATA (da statica a interattiva)
-  └── Card: AOV (statica)
-  
-  [Tabella forecast]
-    ├── Colonna Attuale → usa customSends (reattiva)
-    ├── Colonna Ottimizzato → invariata (×2.5 calcolato al momento della gen.)
-    └── Colonna Benchmark → invariata (sempre 20 invii)
-```
+
+**Form inline**: 3 input con bordi teal nella sezione, sopra le card riassuntive.
+
+**Nota esplicativa break-even** sotto le card:
+> Formula: Setup ÷ (Potenziale Mensile Moderato − Fee Mensile) = mesi per rientrare nell'investimento iniziale
 
 ---
 
@@ -89,8 +134,7 @@ La label "Attuale" diventa "📍 Corrente (modificabile)" per chiarire all'utent
 
 | File | Tipo modifica |
 |---|---|
-| `src/components/AdminSurvey.tsx` | `canProceed` per step 2 e 4, label descrittive in step 7 |
-| `src/components/AdvancedReport.tsx` | Stato `customSends` + slider + ricalcolo colonna Attuale in tempo reale |
+| `src/components/AdminSurvey.tsx` | Rimuove campi fee da step 12, semplifica `investmentData`, migliora visibilità pulsante link |
+| `src/components/AdvancedReport.tsx` | Aggiunge form inline nella sezione investimento, stati locali fee, ricalcolo live, nota break-even |
 
-Nessun nuovo file. Nessuna modifica al database. Nessuna modifica alle logiche di calcolo del backend.
-
+Nessun nuovo file. Nessuna modifica al database.
