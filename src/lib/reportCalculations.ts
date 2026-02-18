@@ -391,8 +391,9 @@ const _calculateReport = (
   const automationScore = automationCoverage;
   const emailHealthScore = Math.round((percentScore * 0.6) + (automationScore * 0.4));
   
-  // Potenziale annuo — agganciato allo scenario moderato (cambia in base agli override)
-  const yearlyPotential = scenarios.moderate.value * 12;
+  // Potenziale annuo — gap reale tra benchmark e situazione attuale, moltiplicato per 12 mesi
+  // Esempio: cliente a 10% su €10k/mese, benchmark 35% → gap €2.500/mese → €30.000/anno
+  const yearlyPotential = revenueGap * 12;
   
   // Analisi Strategica - Generazione testi dinamici
   const formatCurrencyInternal = (value: number) => `€${Math.round(value).toLocaleString('it-IT')}`;
