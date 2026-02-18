@@ -138,7 +138,14 @@ export const AdminSurvey: React.FC = () => {
           phone: null,
           sector: fd.sector || 'other',
           website: fd.website || null,
-          report_data: { clientReport: result } as any,
+          report_data: {
+            clientReport: result,
+            meta: {
+              showInvestment: fd.showInvestment ?? false,
+              clientName: fd.clientName || '',
+              website: fd.website || '',
+            },
+          } as any,
           email_health_score: result.emailHealthScore,
           yearly_potential: result.yearlyPotential,
           qualified: false,
