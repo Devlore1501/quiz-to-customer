@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { calculateAdvancedReportFromValues, type AdvancedReport } from '@/lib/reportCalculations';
+import { Slider } from '@/components/ui/slider';
+import { calculateAdvancedReportFromValues, sectorAOV, type AdvancedReport } from '@/lib/reportCalculations';
 import AdvancedReportComponent from '@/components/AdvancedReport';
-import { ChevronLeft, RotateCcw } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { ChevronLeft, RotateCcw, Copy, Check } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -12,14 +14,18 @@ interface AdminFormData {
   sector: string;
   customSector: string;
   website: string;
-  monthlyRevenue: string;         // free numeric input (€)
+  monthlyRevenue: string;
   adsInvestment: string;
-  emailRevenuePercentage: string; // free numeric input (%)
-  listSize: string;               // free numeric input (#)
+  emailRevenuePercentage: string;
+  listSize: string;
+  aov: string;                    // nuovo: AOV reale cliente
   emailFrequency: string;
   activeFlows: string[];
   motivation: string;
   clientName: string;
+  scenarioConservative: string;   // default '15'
+  scenarioModerate: string;       // default '35'
+  scenarioAggressive: string;     // default '60'
 }
 
 // ─── Animation variants ───────────────────────────────────────────────────────
@@ -51,12 +57,46 @@ const OptionButton: React.FC<{
   </button>
 );
 
+// ─── Scenario slider row ──────────────────────────────────────────────────────
+
+const ScenarioSlider: React.FC<{
+  label: string;
+  color: string;
+  value: number;
+  min: number;
+  max: number;
+  onChange: (v: number) => void;
+}> = ({ label, color, value, min, max, onChange }) => (
+  <div className="space-y-2">
+    <div className="flex justify-between items-center">
+      <span className={`text-sm font-semibold ${color}`}>{label}</span>
+      <span className={`text-lg font-bold ${color}`}>{value}%</span>
+    </div>
+    <Slider
+      min={min}
+      max={max}
+      step={1}
+      value={[value]}
+      onValueChange={(v) => onChange(v[0])}
+      className="w-full"
+    />
+    <div className="flex justify-between text-xs text-slate-500">
+      <span>{min}%</span>
+      <span>{max}%</span>
+    </div>
+  </div>
+);
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export const AdminSurvey: React.FC = () => {
   const [step, setStep] = useState(0);
   const [direction, setDirection] = useState(1);
   const [report, setReport] = useState<AdvancedReport | null>(null);
+  const [reportId, setReportId] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+
   const [formData, setFormData] = useState<AdminFormData>({
     sector: '',
     customSector: '',
@@ -65,10 +105,14 @@ export const AdminSurvey: React.FC = () => {
     adsInvestment: '',
     emailRevenuePercentage: '',
     listSize: '',
+    aov: '',
     emailFrequency: '',
     activeFlows: [],
     motivation: '',
     clientName: '',
+    scenarioConservative: '15',
+    scenarioModerate: '35',
+    scenarioAggressive: '60',
   });
 
   // ── Helpers ────────────────────────────────────────────────────────────────
@@ -87,10 +131,18 @@ export const AdminSurvey: React.FC = () => {
     }));
   };
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
+    setIsGenerating(true);
     const revenue = parseFloat(formData.monthlyRevenue) || 0;
     const emailPct = parseFloat(formData.emailRevenuePercentage) || 0;
     const list = parseFloat(formData.listSize) || 0;
+    const customAov = formData.aov ? parseFloat(formData.aov) : undefined;
+
+    const scenarioOverrides = {
+      conservative: parseFloat(formData.scenarioConservative) || 15,
+      moderate: parseFloat(formData.scenarioModerate) || 35,
+      aggressive: parseFloat(formData.scenarioAggressive) || 60,
+    };
 
     const result = calculateAdvancedReportFromValues(
       formData.sector || 'other',
@@ -100,12 +152,53 @@ export const AdminSurvey: React.FC = () => {
       formData.activeFlows,
       formData.sector === 'other' ? formData.customSector : undefined,
       formData.emailFrequency || 'none',
+      customAov,
+      scenarioOverrides,
     );
+
+    // Salva su DB per link condivisibile
+    try {
+      const { data: saved, error } = await supabase
+        .from('survey_submissions')
+        .insert({
+          full_name: formData.clientName || 'Report Admin',
+          email: `admin-${Date.now()}@interno.mailift`,
+          phone: null,
+          sector: formData.sector || 'other',
+          website: formData.website || null,
+          report_data: { clientReport: result } as any,
+          email_health_score: result.emailHealthScore,
+          yearly_potential: result.yearlyPotential,
+          qualified: false,
+          status: 'admin_report',
+        })
+        .select('id')
+        .single();
+
+      if (!error && saved) {
+        setReportId(saved.id);
+      }
+    } catch (e) {
+      console.warn('DB save failed (non-critical):', e);
+    }
+
     setReport(result);
+    setIsGenerating(false);
+  };
+
+  const handleCopyLink = () => {
+    if (!reportId) return;
+    const url = `https://quiz-to-customer.lovable.app/report/${reportId}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    });
   };
 
   const handleRestart = () => {
     setReport(null);
+    setReportId(null);
+    setCopied(false);
     setStep(0);
     setFormData({
       sector: '',
@@ -115,12 +208,19 @@ export const AdminSurvey: React.FC = () => {
       adsInvestment: '',
       emailRevenuePercentage: '',
       listSize: '',
+      aov: '',
       emailFrequency: '',
       activeFlows: [],
       motivation: '',
       clientName: '',
+      scenarioConservative: '15',
+      scenarioModerate: '35',
+      scenarioAggressive: '60',
     });
   };
+
+  // Benchmark AOV per settore selezionato (per placeholder step AOV)
+  const benchmarkAov = formData.sector ? (sectorAOV[formData.sector] ?? sectorAOV.other) : null;
 
   // ── Steps definition ───────────────────────────────────────────────────────
 
@@ -297,7 +397,45 @@ export const AdminSurvey: React.FC = () => {
       ),
     },
 
-    // 6 — Frequenza invio
+    // 6 — AOV reale (NUOVO)
+    {
+      title: 'Valore medio ordine (AOV)',
+      canProceed: true, // facoltativo
+      content: (
+        <div className="space-y-4">
+          <p className="text-slate-400 text-sm">
+            Inserisci il ticket medio degli ordini del cliente. Se lasci vuoto verrà usato il benchmark di settore.
+          </p>
+          {benchmarkAov && (
+            <div className="bg-slate-700/40 px-4 py-3 rounded-lg border border-slate-600/50 flex items-center justify-between">
+              <span className="text-slate-400 text-sm">Benchmark settore</span>
+              <span className="text-orange font-bold">€{benchmarkAov}</span>
+            </div>
+          )}
+          <div>
+            <Label className="text-slate-300 mb-2 block">💶 AOV reale cliente</Label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-semibold">€</span>
+              <Input
+                type="number"
+                placeholder={benchmarkAov ? `es. ${benchmarkAov} (benchmark)` : 'es. 75'}
+                min={1}
+                value={formData.aov}
+                onChange={e => setFormData(p => ({ ...p, aov: e.target.value }))}
+                className="bg-slate-700 border-slate-600 text-white placeholder:text-slate-400 pl-8"
+              />
+            </div>
+            {formData.aov && (
+              <p className="text-green-400 text-sm mt-2 font-medium">
+                ✅ AOV reale: €{Number(formData.aov).toLocaleString('it-IT')} — sarà usato nel forecast lista
+              </p>
+            )}
+          </div>
+        </div>
+      ),
+    },
+
+    // 7 — Frequenza invio
     {
       title: 'Frequenza invio email',
       canProceed: !!formData.emailFrequency,
@@ -321,7 +459,7 @@ export const AdminSurvey: React.FC = () => {
       ),
     },
 
-    // 7 — Automazioni attive
+    // 8 — Automazioni attive
     {
       title: 'Automazioni email attive',
       canProceed: true,
@@ -367,7 +505,7 @@ export const AdminSurvey: React.FC = () => {
       ),
     },
 
-    // 8 — Motivazione
+    // 9 — Motivazione
     {
       title: 'Principale obiettivo del cliente',
       canProceed: !!formData.motivation,
@@ -392,7 +530,7 @@ export const AdminSurvey: React.FC = () => {
       ),
     },
 
-    // 9 — Nome cliente (facoltativo)
+    // 10 — Nome cliente (facoltativo)
     {
       title: 'Nome cliente (facoltativo)',
       canProceed: true,
@@ -411,6 +549,66 @@ export const AdminSurvey: React.FC = () => {
         </div>
       ),
     },
+
+    // 11 — Impostazioni Report (NUOVO)
+    {
+      title: '⚙️ Impostazioni Report',
+      canProceed: true,
+      content: (
+        <div className="space-y-6">
+          <p className="text-slate-400 text-sm">
+            Personalizza le percentuali di crescita degli scenari. Il <strong className="text-white">potenziale annuo</strong> nel banner finale rifletterà lo scenario <span className="text-orange font-semibold">Moderato</span>.
+          </p>
+
+          {/* Preview dinamico */}
+          {formData.monthlyRevenue && formData.emailRevenuePercentage && (
+            <div className="bg-slate-700/40 rounded-lg border border-orange/20 p-4 space-y-2">
+              <p className="text-slate-400 text-xs font-medium uppercase tracking-wide">Anteprima Potenziale Annuo</p>
+              <p className="text-2xl font-bold text-orange">
+                €{Math.round(
+                  parseFloat(formData.monthlyRevenue) *
+                  (parseFloat(formData.emailRevenuePercentage) / 100) *
+                  (parseFloat(formData.scenarioModerate) / 100) *
+                  12
+                ).toLocaleString('it-IT')}
+              </p>
+              <p className="text-slate-500 text-xs">
+                {formData.monthlyRevenue && formData.emailRevenuePercentage
+                  ? `Fatturato email €${Math.round(parseFloat(formData.monthlyRevenue) * parseFloat(formData.emailRevenuePercentage) / 100).toLocaleString('it-IT')}/mese × ${formData.scenarioModerate}% (moderato) × 12`
+                  : ''}
+              </p>
+            </div>
+          )}
+
+          <div className="space-y-6">
+            <ScenarioSlider
+              label="🟢 Conservativo"
+              color="text-green-400"
+              value={parseInt(formData.scenarioConservative) || 15}
+              min={5}
+              max={30}
+              onChange={v => setFormData(p => ({ ...p, scenarioConservative: String(v) }))}
+            />
+            <ScenarioSlider
+              label="🟠 Moderato (usa per Potenziale Annuo)"
+              color="text-orange"
+              value={parseInt(formData.scenarioModerate) || 35}
+              min={15}
+              max={60}
+              onChange={v => setFormData(p => ({ ...p, scenarioModerate: String(v) }))}
+            />
+            <ScenarioSlider
+              label="🟣 Aggressivo"
+              color="text-purple-400"
+              value={parseInt(formData.scenarioAggressive) || 60}
+              min={30}
+              max={120}
+              onChange={v => setFormData(p => ({ ...p, scenarioAggressive: String(v) }))}
+            />
+          </div>
+        </div>
+      ),
+    },
   ];
 
   const currentStepData = STEPS[step];
@@ -421,17 +619,32 @@ export const AdminSurvey: React.FC = () => {
   if (report) {
     return (
       <div>
-        <div className="bg-slate-900 px-4 py-3 flex items-center justify-between border-b border-slate-700">
+        <div className="bg-slate-900 px-4 py-3 flex items-center justify-between border-b border-slate-700 gap-3 flex-wrap">
           <span className="text-orange font-bold text-sm flex items-center gap-2">
             🔒 Admin Mode
           </span>
-          <button
-            onClick={handleRestart}
-            className="flex items-center gap-2 text-slate-400 hover:text-white text-sm transition-colors"
-          >
-            <RotateCcw className="w-4 h-4" />
-            Nuovo report
-          </button>
+          <div className="flex items-center gap-3">
+            {reportId && (
+              <button
+                onClick={handleCopyLink}
+                className={`flex items-center gap-2 text-sm px-3 py-1.5 rounded-lg border transition-all duration-200 ${
+                  copied
+                    ? 'border-green-500 bg-green-500/10 text-green-400'
+                    : 'border-slate-600 bg-slate-700 text-slate-300 hover:border-orange hover:text-orange'
+                }`}
+              >
+                {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                {copied ? 'Link copiato!' : 'Copia link'}
+              </button>
+            )}
+            <button
+              onClick={handleRestart}
+              className="flex items-center gap-2 text-slate-400 hover:text-white text-sm transition-colors"
+            >
+              <RotateCcw className="w-4 h-4" />
+              Nuovo report
+            </button>
+          </div>
         </div>
         <AdvancedReportComponent
           report={report}
@@ -512,12 +725,12 @@ export const AdminSurvey: React.FC = () => {
                 ) : (
                   <button
                     onClick={handleGenerate}
-                    disabled={!currentStepData.canProceed}
+                    disabled={!currentStepData.canProceed || isGenerating}
                     className="px-6 py-2.5 rounded-xl font-semibold text-sm transition-all duration-200
                       bg-green-600 hover:bg-green-500 text-white
                       disabled:opacity-40 disabled:cursor-not-allowed"
                   >
-                    📊 Genera Report
+                    {isGenerating ? '⏳ Generazione...' : '📊 Genera Report'}
                   </button>
                 )}
               </div>

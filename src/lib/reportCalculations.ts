@@ -202,6 +202,7 @@ export interface AdvancedReport {
     listSize: number;
     sendsPerMonth: number;
     sectorAOV: number;
+    isCustomAov: boolean;
     current: { sends: number; newsletterRevenue: number; automationRevenue: number; total: number };
     optimized: { sends: number; newsletterRevenue: number; automationRevenue: number; total: number };
     benchmark: { sends: number; newsletterRevenue: number; automationRevenue: number; total: number };
@@ -216,9 +217,11 @@ export const calculateAdvancedReportFromValues = (
   listSize: number,
   activeFlows: string[],
   customSectorLabel?: string,
-  emailFrequency?: string
+  emailFrequency?: string,
+  customAOV?: number,
+  scenarioOverrides?: { conservative: number; moderate: number; aggressive: number }
 ): AdvancedReport => {
-  return _calculateReport(sector, monthlyRevenue, currentEmailPercent, listSize, activeFlows, customSectorLabel, emailFrequency);
+  return _calculateReport(sector, monthlyRevenue, currentEmailPercent, listSize, activeFlows, customSectorLabel, emailFrequency, customAOV, scenarioOverrides);
 };
 
 export const calculateAdvancedReport = (
@@ -234,7 +237,7 @@ export const calculateAdvancedReport = (
   const monthlyRevenue = parseRevenueRange(monthlyRevenueRange);
   const currentEmailPercent = parseEmailPercentage(emailPercentRange);
   const listSize = parseListSize(listSizeRange);
-  return _calculateReport(sector, monthlyRevenue, currentEmailPercent, listSize, activeFlows, customSectorLabel, emailFrequency);
+  return _calculateReport(sector, monthlyRevenue, currentEmailPercent, listSize, activeFlows, customSectorLabel, emailFrequency, undefined, undefined);
 };
 
 const _calculateReport = (
@@ -244,7 +247,9 @@ const _calculateReport = (
   listSize: number,
   activeFlows: string[],
   customSectorLabel?: string,
-  emailFrequency?: string
+  emailFrequency?: string,
+  customAOV?: number,
+  scenarioOverrides?: { conservative: number; moderate: number; aggressive: number }
 ): AdvancedReport => {
   
   // Get sector benchmark
@@ -303,21 +308,25 @@ const _calculateReport = (
   
   const totalFlowGap = missingFlows.reduce((sum, f) => sum + f.impactValue, 0);
   
-  // Scenari di crescita
+  // Scenari di crescita (con override opzionali dall'admin)
+  const conservPct = scenarioOverrides?.conservative ?? 15;
+  const moderatePct = scenarioOverrides?.moderate ?? 35;
+  const aggressPct = scenarioOverrides?.aggressive ?? 60;
+
   const scenarios = {
     conservative: {
-      growthPercent: 15,
-      value: currentEmailRevenue * 0.15,
+      growthPercent: conservPct,
+      value: currentEmailRevenue * (conservPct / 100),
       description: 'Ottimizzazione flussi esistenti e campagne'
     },
     moderate: {
-      growthPercent: 35,
-      value: currentEmailRevenue * 0.35,
+      growthPercent: moderatePct,
+      value: currentEmailRevenue * (moderatePct / 100),
       description: 'Implementazione flussi chiave + ottimizzazione'
     },
     aggressive: {
-      growthPercent: 60,
-      value: currentEmailRevenue * 0.60,
+      growthPercent: aggressPct,
+      value: currentEmailRevenue * (aggressPct / 100),
       description: 'Strategia completa email marketing'
     }
   };
@@ -382,8 +391,8 @@ const _calculateReport = (
   const automationScore = automationCoverage;
   const emailHealthScore = Math.round((percentScore * 0.6) + (automationScore * 0.4));
   
-  // Potenziale annuo
-  const yearlyPotential = (revenueGap + totalFlowGap) * 12;
+  // Potenziale annuo — agganciato allo scenario moderato (cambia in base agli override)
+  const yearlyPotential = scenarios.moderate.value * 12;
   
   // Analisi Strategica - Generazione testi dinamici
   const formatCurrencyInternal = (value: number) => `€${Math.round(value).toLocaleString('it-IT')}`;
@@ -422,8 +431,8 @@ const _calculateReport = (
     potentialObstacles: potentialObstacles.slice(0, 4)
   };
   
-  // Calcolo Forecast Lista
-  const aov = sectorAOV[sector] || sectorAOV.other;
+  // Calcolo Forecast Lista — usa AOV reale se fornito, altrimenti benchmark settore
+  const aov = customAOV ?? sectorAOV[sector] ?? sectorAOV.other;
   const sendsPerMonth = parseEmailFrequency(emailFrequency || 'none');
   
   // Calcola revenue per uno scenario dato
@@ -446,6 +455,7 @@ const _calculateReport = (
     listSize,
     sendsPerMonth,
     sectorAOV: aov,
+    isCustomAov: customAOV !== undefined,
     current: calcScenario(sendsPerMonth),
     optimized: calcScenario(optimizedSends),
     benchmark: calcScenario(benchmarkSends)
