@@ -1,207 +1,171 @@
 
-# Piano: AOV reale + Link condivisibile + % Potenziale personalizzabile + Totali dinamici
+# Piano: Sezione Investimento con ROI dinamico nel report Admin
 
-## Riepilogo delle 4 funzionalità
+## Le 3 funzionalità richieste
 
-1. **AOV reale nel quiz admin** — step aggiuntivo per inserire il ticket medio in €
-2. **% scenari personalizzabili** — step "Impostazioni Report" con slider per conservativo/moderato/aggressivo
-3. **Link report condivisibile** — salvataggio su DB + pulsante "📋 Copia link" nella barra admin
-4. **Totali generici dinamici** — quando si cambiano le % degli scenari, si ricalcolano anche `yearlyPotential` e le metriche mostrate nel banner finale
+1. **Sezione "💼 Investimento & ROI"** nel report — mostra il costo del servizio e il tempo di payback
+2. **Toggle admin per mostrare/nascondere la sezione** al cliente (opzione nel quiz admin)
+3. **Struttura prezzi flessibile** — combinazione libera tra: Setup una-tantum + Fisso mensile + Percentuale mensile sul fatturato email; tutte e 3 opzioni sono opzionali e combinabili
 
 ---
 
-## Come funzionano i totali generici legati alle %
+## Come funziona il calcolo del ROI
 
-Attualmente `yearlyPotential` è calcolato così in `_calculateReport`:
-```
-yearlyPotential = (revenueGap + totalFlowGap) * 12
-```
+### Input raccolti nello step "Impostazioni Investimento" (nuovo step nel quiz admin)
 
-Questo valore è indipendente dagli scenari. Il collegamento richiesto dall'utente è:
+| Campo | Tipo | Esempio |
+|---|---|---|
+| Setup una-tantum | Numero € (opzionale) | €1.500 |
+| Fee fissa mensile | Numero € (opzionale) | €800 |
+| Commissione % mensile | Numero % (opzionale, applica su revenue email attuale) | 10% |
 
-> "al variare delle % di attribuzione del email cambiano anche i totali generici a fine report"
+### Calcoli automatici nel report
 
-Questo significa che gli scenari non sono solo "aggiuntivi" al reddito attuale, ma rappresentano il **reddito email atteso** dopo l'implementazione. Quindi:
-- Il banner "Potenziale Economico Annuo Recuperabile" deve usare lo scenario **moderato** (quello consigliato) come base
-- Formula: `yearlyPotential = scenarios.moderate.value * 12` (o un valore calcolato da scenarioOverrides)
+**Fee mensile totale** = fisso + (% × fatturato email mensile)
 
-Così, se cambio il moderato da 35% a 50%, il banner in fondo cambia da riflettere il nuovo obiettivo. Questo è il comportamento atteso.
+**Payback del setup** = Setup ÷ (Revenue moderato/mese − Fee mensile)
+
+**ROI annuo** = ((Revenue aggiunto annuo − Costo annuo) / Costo annuo) × 100
+
+Dove:
+- Revenue aggiunto annuo = `scenarios.moderate.value × 12` (già calcolato)
+- Costo annuo = `(fee mensile × 12) + setup una-tantum`
+- Break-even = `setup / (revenue_mese_aggiunto − fee_mensile)` → in mesi
+
+### Cosa viene mostrato nel report
+
+Una sezione con 3 card in alto + una tabella ROI:
+
+**Card in alto:**
+- 💰 Investimento Setup: `€1.500` (se presente, altrimenti nascosta)
+- 📅 Fee Mensile Totale: `€800 + 10% = €1.180/mese`
+- ⏱️ Break-even: `X mesi`
+
+**Tabella ROI:**
+| | Anno 1 | Anno 2 | Anno 3 |
+|---|---|---|---|
+| Revenue aggiunto | €X | €X | €X |
+| Costo servizio | €X | €X | €X |
+| **ROI netto** | **€X** | **€X** | **€X** |
+| **ROI %** | **X%** | **X%** | **X%** |
+
+(Al anno 1 il setup è incluso nel costo, anni 2 e 3 solo fee ricorrenti)
 
 ---
 
 ## Modifiche tecniche
 
-### File 1: `src/lib/reportCalculations.ts`
+### File 1: `src/components/AdminSurvey.tsx`
 
-**Aggiungere parametri opzionali a `calculateAdvancedReportFromValues` e `_calculateReport`:**
-
+**Aggiornare `AdminFormData`** con 4 nuovi campi:
 ```typescript
-// Nuovi parametri opzionali
-customAOV?: number,
-scenarioOverrides?: { conservative: number; moderate: number; aggressive: number }
+showInvestment: boolean;        // toggle: mostrare sezione investimento?
+setupFee: string;               // € una-tantum (opzionale)
+monthlyFixed: string;           // € fisso mensile (opzionale)
+monthlyPercent: string;         // % del fatturato email mensile (opzionale)
 ```
 
-**Nel calcolo `listForecast`**: sostituire `sectorAOV[sector]` con `customAOV ?? sectorAOV[sector]`
+**Nuovo step 12 — "💼 Impostazioni Investimento"** inserito tra step 11 (scenari) e il bottone Genera:
+- Toggle/Switch ON/OFF "Mostrare sezione investimento nel report?"
+- Se ON: appaiono i 3 campi facoltativi (Setup, Fisso mensile, % mensile)
+- Preview in tempo reale: mostra fee mensile totale calcolata usando i valori già inseriti
+- Ogni campo ha un'etichetta chiara e un placeholder
 
-**Nel calcolo scenari**: sostituire le costanti hardcodate con i valori degli override se presenti:
+**Aggiornare `handleRestart`** per resettare i nuovi campi.
+
+**Aggiornare `handleGenerate`** per passare i dati di investimento al componente AdvancedReport via prop.
+
+**Nel render del report** (`if (report) { ... }`): passare `investmentData` come prop a `AdvancedReportComponent`.
+
+---
+
+### File 2: `src/components/AdvancedReport.tsx`
+
+**Aggiungere prop opzionale `investmentData`:**
 ```typescript
-const conservPct = scenarioOverrides?.conservative ?? 15;
-const moderatePct = scenarioOverrides?.moderate ?? 35;
-const aggressPct = scenarioOverrides?.aggressive ?? 60;
+interface InvestmentData {
+  show: boolean;
+  setupFee: number;
+  monthlyFixed: number;
+  monthlyPercent: number;       // % da applicare
+  monthlyEmailRevenue: number;  // per calcolare la quota %
+}
 ```
 
-**Nel calcolo `yearlyPotential`**: agganciare allo scenario moderato:
+**Calcoli derivati** (all'interno del componente):
 ```typescript
-// Prima: (revenueGap + totalFlowGap) * 12
-// Dopo: scenarios.moderate.value * 12
-// (rappresenta il guadagno aggiuntivo atteso con lo scenario consigliato)
+const monthlyPercentFee = investmentData.monthlyEmailRevenue * (investmentData.monthlyPercent / 100);
+const totalMonthlyFee = investmentData.monthlyFixed + monthlyPercentFee;
+const annualRevAdded = report.yearlyPotential; // scenarios.moderate.value × 12
+const annualCostY1 = investmentData.setupFee + (totalMonthlyFee * 12);
+const annualCostY2 = totalMonthlyFee * 12;
+const netRoiY1 = annualRevAdded - annualCostY1;
+const netRoiY2 = annualRevAdded - annualCostY2;
+const roiPctY1 = annualCostY1 > 0 ? (netRoiY1 / annualCostY1) * 100 : 0;
+const roiPctY2 = annualCostY2 > 0 ? (netRoiY2 / annualCostY2) * 100 : 0;
+const breakEvenMonths = (annualRevAdded / 12 - totalMonthlyFee) > 0
+  ? Math.ceil(investmentData.setupFee / (annualRevAdded / 12 - totalMonthlyFee))
+  : null; // infinito se fee > revenue
+```
+
+**Posizione nel report**: dopo "Potenziale Economico Annuo" e prima di "Download PDF", resa condizionale a `investmentData?.show === true`.
+
+**La sezione è visivamente distinta** con bordo e sfondo verde/teal per indicare valore aggiunto.
+
+---
+
+## Posizione step nel quiz admin (aggiornato)
+
+```
+Step 0:  Settore
+Step 1:  Sito web
+Step 2:  Fatturato mensile
+Step 3:  Ads investment
+Step 4:  % email
+Step 5:  Lista
+Step 6:  AOV
+Step 7:  Frequenza
+Step 8:  Automazioni
+Step 9:  Obiettivo
+Step 10: Nome cliente
+Step 11: ⚙️ Scenari (%)
+► Step 12: 💼 Investimento & ROI  ← NUOVO
+           → [📊 Genera Report]
 ```
 
 ---
 
-### File 2: `src/components/AdminSurvey.tsx`
+## Posizione nel report generato
 
-**Aggiornare `AdminFormData`:**
-```typescript
-aov: string;                   // nuovo
-scenarioConservative: string;  // default '15'
-scenarioModerate: string;      // default '35'
-scenarioAggressive: string;    // default '60'
 ```
-
-**Aggiungere step 6 — AOV** (dopo "Dimensione lista", prima di "Frequenza invio"):
-- Input numerico € con placeholder che mostra il benchmark di settore
-- Campo opzionale (canProceed: true)
-- Mostra il benchmark attuale del settore selezionato come riferimento
-
-**Aggiungere step finale — ⚙️ Impostazioni Report** (prima del bottone Genera Report):
-- Tre slider o input numerici (range limitato):
-  - Conservativo: 5–30%, default 15%
-  - Moderato: 15–60%, default 35%
-  - Aggressivo: 30–120%, default 60%
-- UI: ogni scenario ha il suo colore (verde/arancione/viola) con il valore in tempo reale
-
-**Aggiornare `handleGenerate`:**
-```typescript
-const result = calculateAdvancedReportFromValues(
-  formData.sector || 'other',
-  revenue,
-  emailPct,
-  list,
-  formData.activeFlows,
-  formData.sector === 'other' ? formData.customSector : undefined,
-  formData.emailFrequency || 'none',
-  formData.aov ? parseFloat(formData.aov) : undefined,  // ← customAOV
-  {                                                       // ← scenarioOverrides
-    conservative: parseFloat(formData.scenarioConservative) || 15,
-    moderate: parseFloat(formData.scenarioModerate) || 35,
-    aggressive: parseFloat(formData.scenarioAggressive) || 60,
-  }
-);
-
-// Salva su DB per link condivisibile
-const { data: saved } = await supabase
-  .from('survey_submissions')
-  .insert({
-    full_name: formData.clientName || 'Report Admin',
-    email: `admin-${Date.now()}@interno.mailift`,
-    phone: null,
-    sector: formData.sector,
-    website: formData.website || null,
-    report_data: { clientReport: result },
-    email_health_score: result.emailHealthScore,
-    yearly_potential: result.yearlyPotential,
-    qualified: false,
-    status: 'admin_report'
-  })
-  .select('id')
-  .single();
-
-setReportId(saved?.id ?? null);
-setReport(result);
-```
-
-**Aggiungere stato `reportId` e `copied`:**
-```typescript
-const [reportId, setReportId] = useState<string | null>(null);
-const [copied, setCopied] = useState(false);
-```
-
-**Aggiornare la barra admin post-report:**
-```tsx
-// Pulsante Copia link accanto a "Nuovo report"
-<button onClick={handleCopyLink}>
-  {copied ? '✅ Link copiato!' : '📋 Copia link'}
-</button>
+[Email Health Score]
+[Analisi Strategica]
+[Situazione Attuale vs Benchmark]
+[Analisi Automazioni]
+[Scenari di Crescita]
+[📬 Forecast Lista]
+[🎯 Top 3 Azioni]
+[💰 Potenziale Annuo Totale]
+► [💼 Investimento & ROI]  ← NUOVO (solo se abilitato)
+[Download PDF]
+[Prenota Consulenza]
 ```
 
 ---
 
-### File 3: `src/components/AdvancedReport.tsx`
+## Ricalcolo dinamico
 
-**Card AOV nel listForecast** — aggiungere prop `isCustomAov` e label dinamica:
-- Se `customAOV` è stato passato: mostrare "AOV Reale Cliente" (testo bianco)
-- Altrimenti: "AOV Stimato Settore" (testo arancione)
+Poiché i valori dello step Investimento sono inseriti prima di premere "Genera Report", al momento della generazione tutto è già disponibile. Il ricalcolo dinamico si ha già nello **step 12 stesso**: una preview in tempo reale mostra fee mensile e break-even approssimativi man mano che l'utente modifica i campi, usando i valori già inseriti nei passi precedenti.
 
-Per riconoscere se l'AOV è custom o benchmark, aggiungo un campo opzionale `isCustomAov: boolean` nell'oggetto `listForecast` del tipo `AdvancedReport`.
-
----
-
-## Flusso admin aggiornato
-
-```text
-Step 0:  Settore e-commerce
-Step 1:  Sito web (facoltativo)
-Step 2:  Fatturato mensile (input libero €)
-Step 3:  Investimento Ads
-Step 4:  % fatturato da email (input libero %)
-Step 5:  Dimensione lista (input libero #)
-Step 6:  AOV reale (input libero €) ← NUOVO
-Step 7:  Frequenza invio
-Step 8:  Automazioni attive
-Step 9:  Obiettivo cliente
-Step 10: Nome cliente (facoltativo)
-Step 11: ⚙️ Impostazioni Report (3 slider %) ← NUOVO
-         → [📊 Genera Report]
-```
-
----
-
-## Salvataggio DB per link condivisibile
-
-La tabella `survey_submissions` già accetta INSERT pubblici (RLS policy "Allow public inserts" con `WITH CHECK: true`). Il record viene inserito con:
-- `full_name`: nome cliente o "Report Admin"
-- `email`: `admin-{timestamp}@interno.mailift` (univoca, non reale)
-- `status`: `'admin_report'` (distinguibile dai lead reali)
-- `qualified`: `false` (non appare nei lead)
-- `report_data`: `{ clientReport: result }`
-
-L'ID generato costruisce il link: `https://quiz-to-customer.lovable.app/report/{id}`
-
-La pagina `/report/:id` già legge `report_data.clientReport` tramite RPC — funziona senza modifiche.
-
----
-
-## Impatto sui totali a fine report
-
-Con `yearlyPotential = scenarios.moderate.value * 12`:
-
-| Scenario moderato impostato | Banner "Potenziale Annuo" |
-|---|---|
-| 35% (default) | `currentEmailRevenue × 0.35 × 12` |
-| 50% (personalizzato) | `currentEmailRevenue × 0.50 × 12` |
-| 20% (conservativo) | `currentEmailRevenue × 0.20 × 12` |
-
-Il banner cambia in modo coerente con le scelte fatte nello step impostazioni.
+Questo è completamente **client-side** — nessuna modifica al database richiesta.
 
 ---
 
 ## File modificati
 
-| File | Tipo modifica |
+| File | Modifica |
 |---|---|
-| `src/lib/reportCalculations.ts` | Parametri `customAOV`, `scenarioOverrides`, ricalcolo `yearlyPotential` |
-| `src/components/AdminSurvey.tsx` | 2 nuovi step, stato `reportId`, salvataggio DB, pulsante copia link |
-| `src/components/AdvancedReport.tsx` | Label AOV dinamica (reale vs stimato) |
+| `src/components/AdminSurvey.tsx` | Nuovo step 12, 4 nuovi campi formData, reset, prop al report |
+| `src/components/AdvancedReport.tsx` | Nuova sezione condizionale "Investimento & ROI", prop `investmentData` |
 
-Nessun nuovo file. Nessuna modifica al DB (la tabella `survey_submissions` è già compatibile).
+Nessun nuovo file. Nessuna modifica al database.
