@@ -353,7 +353,7 @@ export const AdminSurvey: React.FC = () => {
     {
       title: '% fatturato da email',
       canProceed: !!formData.emailRevenuePercentage &&
-        parseFloat(formData.emailRevenuePercentage) >= 0 &&
+        parseFloat(formData.emailRevenuePercentage) > 0 &&
         parseFloat(formData.emailRevenuePercentage) <= 100,
       content: (
         <div className="space-y-4">
@@ -454,17 +454,18 @@ export const AdminSurvey: React.FC = () => {
       content: (
         <div className="space-y-3">
           {[
-            { value: 'none', label: 'Non invio email' },
-            { value: '1-2', label: '1-2 volte a settimana' },
-            { value: '3-4', label: '3-4 volte a settimana' },
-            { value: '5-7', label: '5-7 volte a settimana' },
-            { value: 'daily+', label: 'Più volte al giorno' },
+            { value: 'none', label: 'Non invio email', desc: '0 invii/mese' },
+            { value: '1-2', label: '1-2 volte a settimana', desc: '≈ 4–8 invii/mese' },
+            { value: '3-4', label: '3-4 volte a settimana', desc: '≈ 12–16 invii/mese' },
+            { value: '5-7', label: '5-7 volte a settimana', desc: '≈ 20–28 invii/mese' },
+            { value: 'daily+', label: 'Più volte al giorno', desc: '30+ invii/mese' },
           ].map(opt => (
             <OptionButton
               key={opt.value}
               selected={formData.emailFrequency === opt.value}
               onClick={() => setFormData(p => ({ ...p, emailFrequency: opt.value }))}
               label={opt.label}
+              description={opt.desc}
             />
           ))}
         </div>

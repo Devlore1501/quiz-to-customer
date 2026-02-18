@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
+import { Slider } from '@/components/ui/slider';
 import { Download, Loader2 } from 'lucide-react';
 import type { AdvancedReport } from '@/lib/reportCalculations';
 import { generatePdfReport } from '@/lib/pdfGenerator';
@@ -51,6 +52,17 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
   investmentData,
 }) => {
   const [isDownloading, setIsDownloading] = useState(false);
+  const [customSends, setCustomSends] = useState<number>(
+    report.listForecast ? report.listForecast.sendsPerMonth : 4
+  );
+
+  // ── Ricalcolo colonna Attuale con invii personalizzati ────────────────────
+  const liveAov = report.listForecast?.sectorAOV ?? 0;
+  const liveListSize = report.listForecast?.listSize ?? 0;
+  const liveNewsletterRev = liveAov * (liveListSize * customSends * 0.002);
+  const liveAutomationRev = report.listForecast?.current.automationRevenue ?? 0;
+  const liveTotal = liveNewsletterRev + liveAutomationRev;
+  const liveOrders = Math.round(liveListSize * customSends * 0.002);
 
   // ── Calcoli ROI investimento ──────────────────────────────────────────────
   const inv = investmentData;
@@ -351,16 +363,37 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
 
             {/* Card superiori */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              {/* Lista Attuale — statica */}
               <div className="bg-slate-700/50 p-4 rounded-lg text-center">
                 <p className="text-slate-400 text-sm mb-1">Lista Attuale</p>
                 <p className="text-2xl font-bold text-white">{report.listForecast.listSize.toLocaleString('it-IT')}</p>
                 <p className="text-slate-400 text-sm">iscritti</p>
               </div>
-              <div className="bg-slate-700/50 p-4 rounded-lg text-center">
-                <p className="text-slate-400 text-sm mb-1">Invii Mensili Attuali</p>
-                <p className="text-2xl font-bold text-white">{report.listForecast.sendsPerMonth}</p>
-                <p className="text-slate-400 text-sm">email/mese</p>
+
+              {/* Slider Invii/mese — interattivo */}
+              <div className="bg-gradient-to-br from-blue-600/20 to-blue-500/5 p-4 rounded-lg border border-blue-500/30 flex flex-col justify-between">
+                <div className="text-center mb-3">
+                  <p className="text-blue-300 text-sm mb-1">✏️ Invii/mese (modificabile)</p>
+                  <p className="text-3xl font-bold text-white">{customSends}</p>
+                  <p className="text-blue-300/70 text-xs">email/mese</p>
+                </div>
+                <div className="space-y-1 px-1">
+                  <Slider
+                    min={0}
+                    max={30}
+                    step={1}
+                    value={[customSends]}
+                    onValueChange={(v) => setCustomSends(v[0])}
+                    className="w-full"
+                  />
+                  <div className="flex justify-between text-xs text-slate-500">
+                    <span>0</span>
+                    <span>30</span>
+                  </div>
+                </div>
               </div>
+
+              {/* AOV — statico */}
               <div className={`p-4 rounded-lg text-center border ${
                 report.listForecast.isCustomAov
                   ? 'bg-gradient-to-br from-green-600/20 to-green-500/5 border-green-500/30'
@@ -384,8 +417,8 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
                 <thead>
                   <tr className="border-b border-slate-700">
                     <th className="text-left p-4 text-slate-400 font-medium w-1/4"></th>
-                    <th className="text-center p-4 text-slate-300 font-semibold bg-slate-700/30">
-                      📍 Attuale
+                    <th className="text-center p-4 text-blue-300 font-semibold bg-blue-500/10 border-x border-blue-500/20">
+                      📍 Corrente (mod.)
                     </th>
                     <th className="text-center p-4 text-orange font-semibold bg-orange/10 border-x border-orange/20">
                       ⚡ Ottimizzato
@@ -398,39 +431,39 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
                 <tbody>
                   <tr className="border-b border-slate-700/50">
                     <td className="p-4 text-slate-400">Invii/mese</td>
-                    <td className="p-4 text-center text-white font-medium bg-slate-700/10">{report.listForecast.current.sends}</td>
+                    <td className="p-4 text-center text-blue-300 font-bold bg-blue-500/5 border-x border-blue-500/10">{customSends}</td>
                     <td className="p-4 text-center text-orange font-medium bg-orange/5 border-x border-orange/20">{report.listForecast.optimized.sends}</td>
                     <td className="p-4 text-center text-green-400 font-medium bg-green-500/5">{report.listForecast.benchmark.sends}</td>
                   </tr>
                   <tr className="border-b border-slate-700/50">
                     <td className="p-4 text-slate-400">CR newsletter</td>
-                    <td className="p-4 text-center text-slate-300 bg-slate-700/10">0.2%</td>
+                    <td className="p-4 text-center text-slate-300 bg-blue-500/5 border-x border-blue-500/10">0.2%</td>
                     <td className="p-4 text-center text-slate-300 bg-orange/5 border-x border-orange/20">0.2%</td>
                     <td className="p-4 text-center text-slate-300 bg-green-500/5">0.2%</td>
                   </tr>
                   <tr className="border-b border-slate-700/50">
                     <td className="p-4 text-slate-400">Ordini stimati</td>
-                    <td className="p-4 text-center text-white bg-slate-700/10">{Math.round(report.listForecast.listSize * report.listForecast.current.sends * 0.002).toLocaleString('it-IT')}</td>
+                    <td className="p-4 text-center text-blue-300 font-medium bg-blue-500/5 border-x border-blue-500/10">{liveOrders.toLocaleString('it-IT')}</td>
                     <td className="p-4 text-center text-orange bg-orange/5 border-x border-orange/20">{Math.round(report.listForecast.listSize * report.listForecast.optimized.sends * 0.002).toLocaleString('it-IT')}</td>
                     <td className="p-4 text-center text-green-400 bg-green-500/5">{Math.round(report.listForecast.listSize * report.listForecast.benchmark.sends * 0.002).toLocaleString('it-IT')}</td>
                   </tr>
                   <tr className="border-b border-slate-700/50">
                     <td className="p-4 text-slate-400">Revenue Newsletter</td>
-                    <td className="p-4 text-center text-white font-medium bg-slate-700/10">{formatCurrency(report.listForecast.current.newsletterRevenue)}</td>
+                    <td className="p-4 text-center text-blue-300 font-medium bg-blue-500/5 border-x border-blue-500/10">{formatCurrency(liveNewsletterRev)}</td>
                     <td className="p-4 text-center text-orange font-medium bg-orange/5 border-x border-orange/20">{formatCurrency(report.listForecast.optimized.newsletterRevenue)}</td>
                     <td className="p-4 text-center text-green-400 font-medium bg-green-500/5">{formatCurrency(report.listForecast.benchmark.newsletterRevenue)}</td>
                   </tr>
                   <tr className="border-b border-slate-700/50">
                     <td className="p-4 text-slate-400">Revenue Automazioni</td>
-                    <td className="p-4 text-center text-white font-medium bg-slate-700/10">{formatCurrency(report.listForecast.current.automationRevenue)}</td>
+                    <td className="p-4 text-center text-blue-300 font-medium bg-blue-500/5 border-x border-blue-500/10">{formatCurrency(liveAutomationRev)}</td>
                     <td className="p-4 text-center text-orange font-medium bg-orange/5 border-x border-orange/20">{formatCurrency(report.listForecast.optimized.automationRevenue)}</td>
                     <td className="p-4 text-center text-green-400 font-medium bg-green-500/5">{formatCurrency(report.listForecast.benchmark.automationRevenue)}</td>
                   </tr>
                   <tr>
                     <td className="p-4 text-white font-bold">💰 Totale stimato</td>
-                    <td className="p-4 text-center bg-slate-700/20">
-                      <span className="text-white font-bold text-base">{formatCurrency(report.listForecast.current.total)}</span>
-                      <span className="text-slate-400 text-xs block">/mese</span>
+                    <td className="p-4 text-center bg-blue-500/10 border-x border-blue-500/20">
+                      <span className="text-blue-300 font-bold text-base">{formatCurrency(liveTotal)}</span>
+                      <span className="text-blue-300/60 text-xs block">/mese</span>
                     </td>
                     <td className="p-4 text-center bg-orange/10 border-x border-orange/20">
                       <span className="text-orange font-bold text-base">{formatCurrency(report.listForecast.optimized.total)}</span>
@@ -448,7 +481,7 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
             {/* Nota esplicativa */}
             <div className="mt-4 p-4 bg-slate-700/30 rounded-lg border border-slate-600/50">
               <p className="text-slate-400 text-xs leading-relaxed">
-                ⚠️ <strong className="text-slate-300">Stima indicativa</strong> basata su benchmark di settore. Formula: CR 0.2% per newsletter, CR 2% per automazioni, AOV stimato da dati di mercato {report.sectorBenchmark.label}. I risultati reali dipendono dalla qualità della lista, dalla rilevanza dei contenuti e dall'ottimizzazione delle campagne.
+                ⚠️ <strong className="text-slate-300">Stima indicativa</strong> basata su benchmark di settore. Formula: CR 0.2% per newsletter, CR 2% per automazioni, AOV {report.listForecast.isCustomAov ? 'reale cliente' : 'stimato da dati di mercato'} {report.sectorBenchmark.label}. La colonna <span className="text-blue-300">Corrente</span> è modificabile tramite lo slider per simulare diversi scenari di invio.
               </p>
             </div>
           </div>
