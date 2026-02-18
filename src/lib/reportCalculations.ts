@@ -465,10 +465,20 @@ const _calculateReport = (
   const aov = customAOV ?? sectorAOV[sector] ?? sectorAOV.other;
   const sendsPerMonth = parseEmailFrequency(emailFrequency || 'none');
   
+  // CR dinamico automazioni in base ai flussi attivi (0.3%–1.0%)
+  const getAutomationCR = (activeCount: number): number => {
+    if (activeCount === 0) return 0;
+    if (activeCount <= 2) return 0.003;
+    if (activeCount <= 4) return 0.005;
+    if (activeCount <= 6) return 0.007;
+    return 0.01;
+  };
+  const automationCR = getAutomationCR(activeFlowsCount);
+
   // Calcola revenue per uno scenario dato
   const calcScenario = (sends: number) => {
-    const newsletterRevenue = aov * (listSize * sends * 0.002); // 0.2% CR
-    const automationRevenue = aov * (listSize * 0.02);          // 2% CR
+    const newsletterRevenue = aov * (listSize * sends * 0.002); // 0.2% CR newsletter
+    const automationRevenue = aov * (listSize * automationCR);  // CR dinamico automazioni
     return {
       sends,
       newsletterRevenue,
@@ -491,9 +501,9 @@ const _calculateReport = (
     benchmark: calcScenario(benchmarkSends)
   };
 
-  // Calcolo popupData (opzionale — solo se forniti dati popup)
+  // Calcolo popupData (opzionale — solo se popup attivo, anche con 0 visitatori)
   let popupData: AdvancedReport['popupData'] = undefined;
-  if (popupParams && popupParams.hasPopup && popupParams.monthlyVisitors > 0) {
+  if (popupParams && popupParams.hasPopup) {
     const cr = popupParams.conversionRate / 100;
     const growthRate = popupParams.monthlyListGrowthRate / 100;
     const newSubscribersPerMonth = Math.round(popupParams.monthlyVisitors * cr);
@@ -504,15 +514,8 @@ const _calculateReport = (
     const revenueWelcome12m = Math.round(newSubscribersPerMonth * aov * 0.05 * 12);
     // 2) Recuperi carrello + checkout (3% CR)
     const revenueRecovery12m = Math.round(newSubscribersPerMonth * aov * 0.03 * 12);
-    // 3) Automazioni attive nel tempo (CR dinamico 0–1% basato sui flussi attivi)
-    const getAutomationCR = (activeCount: number): number => {
-      if (activeCount === 0) return 0;
-      if (activeCount <= 2) return 0.003;
-      if (activeCount <= 4) return 0.005;
-      if (activeCount <= 6) return 0.007;
-      return 0.01;
-    };
-    const revenueAutomation12m = Math.round(newSubscribersPerMonth * aov * getAutomationCR(activeFlowsCount) * 12);
+    // 3) Automazioni attive nel tempo (CR dinamico — riusa automationCR già calcolato)
+    const revenueAutomation12m = Math.round(newSubscribersPerMonth * aov * automationCR * 12);
     // Totale 3 layer
     const projectedRevenue12m = revenueWelcome12m + revenueRecovery12m + revenueAutomation12m;
     popupData = {
