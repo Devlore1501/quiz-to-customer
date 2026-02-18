@@ -1,153 +1,117 @@
 
-# Fix: Revenue Popup — Formula più realistica (5% conversione + recuperi)
+# Verifica: Sezioni mancanti nel Report Condivisibile URL
 
-## Problema attuale
+## Problema identificato
 
-La formula corrente per la revenue dei nuovi iscritti dal popup usa un CR generico del 2%:
+Dopo un'analisi completa del codice, ho trovato **due gap distinti** tra il report admin e il report condivisibile via URL.
 
+### Gap 1 — Sezione "Investimento & ROI" non appare mai nel link
+
+Il componente `AdvancedReportComponent` accetta la prop `investmentData` che controlla se mostrare la sezione Investimento & ROI (con tabella ROI 3 anni, break-even, fee input).
+
+- In `AdminSurvey.tsx` (riga 853-860): `investmentData` viene passato correttamente con `show: true/false`
+- In `Report.tsx` (riga 110-113): `investmentData` **non viene passato** → la sezione non appare mai
+
+Il dato `showInvestment` però non è nemmeno salvato nel DB — viene salvato solo il risultato dei calcoli (`AdvancedReport`), non le impostazioni del form admin.
+
+### Gap 2 — Nome cliente e sito web non appaiono nel link condivisibile
+
+- `userName` e `website` non vengono passati a `AdvancedReportComponent` in `Report.tsx`
+- Tuttavia `website` è già salvato nel DB nella colonna `website` della tabella `survey_submissions`, ma il campo `clientName` non è mai salvato nel DB separatamente (solo come `full_name`)
+
+### Gap 3 — La nota esplicativa CR 2% nella tabella Forecast non è aggiornata
+
+La nota sotto la tabella Forecast (riga 493 in `AdvancedReport.tsx`) dice ancora:
 ```
-projectedRevenue12m = newSubscribersPerMonth × AOV × 0.02 × 12
+"CR 2% per automazioni"
 ```
-
-Questo è sbagliato per due motivi:
-1. Il 2% è il CR delle automazioni sulla lista esistente, non il comportamento dei nuovi iscritti
-2. Ignora la struttura del valore reale: chi si iscrive via popup ha un comportamento diverso — c'è una quota che compra subito (welcome flow), e poi recuperi nel tempo
+Mentre la formula reale aggiornata usa il CR dinamico (0.3%–1.0%). Non è un gap del link, ma un'incoerenza testuale visibile sia nel link che nell'admin.
 
 ---
 
-## Nuova logica del calcolo revenue popup
+## Soluzione
 
-Il valore generato da ogni nuovo iscritto si scompone in tre parti:
+### Fix 1 — Salvare `showInvestment`, `clientName` e `website` nell'oggetto `report_data`
 
-| Layer | Logica | CR utilizzato |
-|---|---|---|
-| Acquisto diretto (welcome) | % di chi compra entro le prime settimane dopo iscrizione | **5%** (come da indicazione) |
-| Recuperi carrello + checkout | Chi abbandona dopo aver visitato il sito — già nella pipeline | **3%** (benchmark cart recovery) |
-| Automazioni nel tempo (upsell, winback) | Valore residuo generato nel corso dei 12 mesi | **CR dinamico** basato sulle automazioni attive del cliente |
+Attualmente `report_data` nel DB contiene solo `{ clientReport: AdvancedReport }`. Bisogna estenderlo per includere le impostazioni admin:
 
-**Formula risultante per i 12 mesi**:
-```
-Revenue diretta        = newSubscribersPerMonth × AOV × 0.05 × 12  (welcome/primo acquisto)
-Revenue recuperi       = newSubscribersPerMonth × AOV × 0.03 × 12  (cart + checkout recovery)
-Revenue automazioni    = newSubscribersPerMonth × AOV × automationCR × 12
-─────────────────────────────────────────────────────────────────────
-projectedRevenue12m    = somma dei tre layer
-```
-
-**Esempio concreto** (500 nuovi iscritti/mese, AOV €80, 3 automazioni attive → CR 0.5%):
-- Welcome: `500 × €80 × 5% × 12 = €24.000`
-- Recuperi: `500 × €80 × 3% × 12 = €14.400`
-- Automazioni: `500 × €80 × 0.5% × 12 = €2.400`
-- **Totale: €40.800/anno** (vs i ~€9.600 precedenti, che erano sia troppo bassi che basati sulla logica sbagliata)
-
----
-
-## Dove viene mostrato il valore
-
-1. **Card "💰 Revenue aggiuntiva"** nella sezione Popup & Crescita Lista — mostra `projectedRevenue12m`
-2. **Breakdown dettagliato** — aggiungere sotto la card i tre layer separati, così il cliente capisce come si compone il numero
-3. **PDF** — si aggiorna automaticamente leggendo `report.popupData.projectedRevenue12m`
-
----
-
-## Aggiungere anche breakdown visivo nella card Revenue
-
-La card verde "Revenue aggiuntiva" attualmente mostra solo il totale. Aggiungiamo tre righe breakdown sotto il numero:
-
-```
-💰 Revenue aggiuntiva    €40.800
-                        ─────────────────────────────
-                        🎁 Welcome (5% CR):   €24.000
-                        🛒 Recuperi (3% CR):  €14.400
-                        ⚡ Automazioni:         €2.400
-```
-
-Questo rende il numero credibile e spiega la logica al cliente.
-
----
-
-## Aggiungere al tipo `popupData` i campi breakdown
-
-Aggiungere al tipo `AdvancedReport['popupData']` tre nuovi campi opzionali:
 ```typescript
-popupData?: {
-  ...
-  revenueWelcome12m: number;      // revenue layer acquisto diretto (5%)
-  revenueRecovery12m: number;     // revenue layer recuperi carrello (3%)
-  revenueAutomation12m: number;   // revenue layer automazioni (CR dinamico)
+report_data: {
+  clientReport: result,
+  meta: {
+    showInvestment: formData.showInvestment,
+    clientName: formData.clientName || '',
+    website: formData.website || '',
+  }
 }
 ```
 
----
+Questo modo è retrocompatibile — i record vecchi semplicemente non hanno `meta`, e il link li visualizzerà senza quelle sezioni (comportamento già esistente).
 
-## Modifiche tecniche
+### Fix 2 — Leggere i metadati in `Report.tsx` e passarli al componente
 
-### File 1: `src/lib/reportCalculations.ts`
-
-**Riga 499-500** — Aggiornare il calcolo `projectedRevenue12m`:
+Aggiornare l'interfaccia `ReportData` per includere `meta` (opzionale):
 
 ```typescript
-// Revenue nuovi iscritti popup — 3 layer:
-// 1) Acquisto diretto via welcome flow (5%)
-const revenueWelcome12m = Math.round(newSubscribersPerMonth * aov * 0.05 * 12);
-// 2) Recuperi carrello + checkout (3%)
-const revenueRecovery12m = Math.round(newSubscribersPerMonth * aov * 0.03 * 12);
-// 3) Automazioni attive nel tempo (CR dinamico 0–1%)
-const currentAutomationCR = getAutomationCR(activeFlowsCount);
-const revenueAutomation12m = Math.round(newSubscribersPerMonth * aov * currentAutomationCR * 12);
-// Totale
-const projectedRevenue12m = revenueWelcome12m + revenueRecovery12m + revenueAutomation12m;
+interface ReportData {
+  clientReport: AdvancedReport;
+  meta?: {
+    showInvestment?: boolean;
+    clientName?: string;
+    website?: string;
+  };
+}
 ```
 
-**Tipo `popupData`** — Aggiungere i 3 campi breakdown:
+E nel render del componente:
+
 ```typescript
-revenueWelcome12m: number;
-revenueRecovery12m: number;
-revenueAutomation12m: number;
+<AdvancedReportComponent
+  report={reportData.clientReport}
+  userName={reportData.meta?.clientName || ''}
+  website={reportData.meta?.website || ''}
+  investmentData={
+    reportData.meta?.showInvestment
+      ? { show: true, currentEmailRevenue: reportData.clientReport.currentEmailRevenue }
+      : undefined
+  }
+  onRestart={() => window.location.href = '/'}
+/>
 ```
 
-**Importante**: `getAutomationCR` è già definita nella stessa funzione `_calculateReport` — basta richiamarla.
+### Fix 3 — Aggiornare la nota CR nella tabella Forecast
 
-### File 2: `src/components/AdvancedReport.tsx`
-
-**Card "💰 Revenue aggiuntiva"** (righe 523-527) — aggiungere breakdown sotto il valore totale:
-
-```tsx
-<div className="...card verde...">
-  <p className="text-green-400 text-sm mb-1">💰 Revenue aggiuntiva</p>
-  <p className="text-3xl font-bold text-white">{formatCurrency(report.popupData.projectedRevenue12m)}</p>
-  <p className="text-green-400/70 text-xs mt-1">dai nuovi iscritti (12 mesi)</p>
-  
-  {/* Breakdown tre layer */}
-  <div className="mt-3 pt-3 border-t border-green-500/20 space-y-1 text-left">
-    <div className="flex justify-between text-xs">
-      <span className="text-slate-400">🎁 Welcome (5% CR)</span>
-      <span className="text-green-300">{formatCurrency(report.popupData.revenueWelcome12m)}</span>
-    </div>
-    <div className="flex justify-between text-xs">
-      <span className="text-slate-400">🛒 Recuperi (3% CR)</span>
-      <span className="text-green-300">{formatCurrency(report.popupData.revenueRecovery12m)}</span>
-    </div>
-    <div className="flex justify-between text-xs">
-      <span className="text-slate-400">⚡ Automazioni</span>
-      <span className="text-green-300">{formatCurrency(report.popupData.revenueAutomation12m)}</span>
-    </div>
-  </div>
-</div>
-```
-
-### File 3: `src/lib/pdfGenerator.ts`
-
-La sezione popup del PDF legge `pd.projectedRevenue12m` — si aggiorna automaticamente. Aggiungere opzionalmente una riga breakdown nella pagina PDF se i tre campi sono presenti.
+Cambiare il testo fisso "CR 2% per automazioni" con il testo corretto che riflette il CR dinamico.
 
 ---
 
-## Riepilogo file modificati
+## Riepilogo delle sezioni del report e stato attuale
+
+| Sezione | Admin | Link condivisibile | Dopo fix |
+|---|---|---|---|
+| Email Health Score | ✅ | ✅ | ✅ |
+| Analisi Strategica | ✅ | ✅ | ✅ |
+| Situazione Attuale vs Benchmark | ✅ | ✅ | ✅ |
+| Analisi Automazioni | ✅ | ✅ | ✅ |
+| Scenari di Crescita | ✅ | ✅ | ✅ |
+| Forecast Lista (tabella) | ✅ | ✅ | ✅ |
+| Popup & Crescita Lista | ✅ (se attivo) | ✅ (se attivo) | ✅ |
+| Roadmap 3 Azioni Prioritarie | ✅ | ✅ | ✅ |
+| Potenziale Annuo (banner) | ✅ | ✅ | ✅ |
+| **Investimento & ROI** | ✅ (se attivato) | ❌ manca sempre | ✅ dopo fix |
+| **Nome cliente nell'header** | ✅ | ❌ non visualizzato | ✅ dopo fix |
+| **Sito web nell'header** | ✅ | ❌ non visualizzato | ✅ dopo fix |
+| Download PDF | ✅ | ✅ | ✅ |
+| Calendario prenotazione | ✅ | ✅ | ✅ |
+
+---
+
+## File modificati
 
 | File | Modifica |
 |---|---|
-| `src/lib/reportCalculations.ts` | Nuova formula a 3 layer per `projectedRevenue12m`, aggiunta campi `revenueWelcome12m`, `revenueRecovery12m`, `revenueAutomation12m` al tipo e al calcolo |
-| `src/components/AdvancedReport.tsx` | Breakdown visivo nella card verde Revenue aggiuntiva |
-| `src/lib/pdfGenerator.ts` | Aggiunta riga breakdown nella pagina popup PDF |
+| `src/components/AdminSurvey.tsx` | Aggiunta `meta` nell'oggetto `report_data` salvato su DB |
+| `src/pages/Report.tsx` | Lettura `meta` e passaggio corretto di tutte le props al componente |
+| `src/components/AdvancedReport.tsx` | Fix testo nota CR nella tabella Forecast (da "2%" a "CR dinamico") |
 
-Nessun nuovo file. Nessuna modifica al database.
+Nessuna migrazione DB — l'aggiunta di `meta` è un campo JSON opzionale, retrocompatibile con i record già esistenti.
