@@ -46,7 +46,7 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
   userEmail = '',
   website = '',
   onRestart,
-  investmentData,
+  investmentData
 }) => {
   const [isDownloading, setIsDownloading] = useState(false);
   const [customSends, setCustomSends] = useState<number>(
@@ -81,13 +81,13 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
   const netRoiY1 = annualRevAdded - annualCostY1;
   const netRoiY2 = annualRevAdded - annualCostY2;
   const netRoiY3 = annualRevAdded - annualCostY3;
-  const roiPctY1 = annualCostY1 > 0 ? (netRoiY1 / annualCostY1) * 100 : 0;
-  const roiPctY2 = annualCostY2 > 0 ? (netRoiY2 / annualCostY2) * 100 : 0;
-  const roiPctY3 = annualCostY3 > 0 ? (netRoiY3 / annualCostY3) * 100 : 0;
+  const roiPctY1 = annualCostY1 > 0 ? netRoiY1 / annualCostY1 * 100 : 0;
+  const roiPctY2 = annualCostY2 > 0 ? netRoiY2 / annualCostY2 * 100 : 0;
+  const roiPctY3 = annualCostY3 > 0 ? netRoiY3 / annualCostY3 * 100 : 0;
   const monthlyNetGain = annualRevAdded / 12 - totalMonthlyFee;
-  const breakEvenMonths = setupFeeN > 0 && monthlyNetGain > 0
-    ? Math.ceil(setupFeeN / monthlyNetGain)
-    : null;
+  const breakEvenMonths = setupFeeN > 0 && monthlyNetGain > 0 ?
+  Math.ceil(setupFeeN / monthlyNetGain) :
+  null;
 
   const handleDownloadPdf = async () => {
     setIsDownloading(true);
@@ -110,19 +110,19 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
           <p className="text-lg text-[#1d283a]">
             Analisi personalizzata per il settore <span className="text-orange font-semibold">{report.sectorBenchmark.label}</span>
           </p>
-          {website && (
-            <p className="text-sm text-slate-500 mt-1">
+          {website &&
+        <p className="text-sm text-slate-500 mt-1">
               🌐{' '}
               <a
-                href={website.startsWith('http') ? website : `https://${website}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-orange hover:underline"
-              >
+            href={website.startsWith('http') ? website : `https://${website}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-orange hover:underline">
+
                 {website.replace(/^https?:\/\//, '')}
               </a>
             </p>
-          )}
+        }
         </div>
 
         {/* Email Health Score */}
@@ -360,8 +360,8 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
         </div>
 
         {/* Sezione Forecast: Il Potenziale della Tua Lista */}
-        {report.listForecast && (
-          <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 animate-fade-in" style={{ animationDelay: '550ms' }}>
+        {report.listForecast &&
+      <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 animate-fade-in" style={{ animationDelay: '550ms' }}>
             <h2 className="text-xl font-bold text-orange mb-6 flex items-center gap-2">
               📬 Forecast: Il Potenziale della Tua Lista
             </h2>
@@ -384,13 +384,13 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
                 </div>
                 <div className="space-y-1 px-1">
                   <Slider
-                    min={0}
-                    max={30}
-                    step={1}
-                    value={[customSends]}
-                    onValueChange={(v) => setCustomSends(v[0])}
-                    className="w-full"
-                  />
+                min={0}
+                max={30}
+                step={1}
+                value={[customSends]}
+                onValueChange={(v) => setCustomSends(v[0])}
+                className="w-full" />
+
                   <div className="flex justify-between text-xs text-slate-500">
                     <span>0</span>
                     <span>30</span>
@@ -400,10 +400,10 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
 
               {/* AOV — statico */}
               <div className={`p-4 rounded-lg text-center border ${
-                report.listForecast.isCustomAov
-                  ? 'bg-gradient-to-br from-green-600/20 to-green-500/5 border-green-500/30'
-                  : 'bg-gradient-to-br from-orange/20 to-orange/5 border-orange/30'
-              }`}>
+          report.listForecast.isCustomAov ?
+          'bg-gradient-to-br from-green-600/20 to-green-500/5 border-green-500/30' :
+          'bg-gradient-to-br from-orange/20 to-orange/5 border-orange/30'}`
+          }>
                 <p className={`text-sm mb-1 ${report.listForecast.isCustomAov ? 'text-green-400' : 'text-orange'}`}>
                   {report.listForecast.isCustomAov ? '✅ AOV Reale Cliente' : 'AOV Stimato Settore'}
                 </p>
@@ -490,7 +490,7 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
               </p>
             </div>
           </div>
-        )}
+      }
 
         {/* Sezione 4: Top 3 Azioni Prioritarie */}
         <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 animate-fade-in" style={{
@@ -536,8 +536,8 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
         </div>
 
         {/* ── Sezione Investimento & ROI ─────────────────────────────────── */}
-        {showInvestment && (
-          <div className="bg-gradient-to-br from-teal-900/40 to-teal-800/20 p-6 rounded-xl border border-teal-500/30 animate-fade-in" style={{ animationDelay: '820ms' }}>
+        {showInvestment &&
+      <div className="bg-gradient-to-br from-teal-900/40 to-teal-800/20 p-6 rounded-xl border animate-fade-in border-primary bg-primary" style={{ animationDelay: '820ms' }}>
             <h2 className="text-xl font-bold text-teal-400 mb-2 flex items-center gap-2">
               💼 Investimento & ROI
             </h2>
@@ -546,20 +546,20 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
             </p>
 
             {/* Form inline fee */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 bg-slate-800/50 p-4 rounded-xl border border-teal-500/20">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 bg-slate-800/50 p-4 rounded-xl border border-primary">
               {/* Setup una-tantum */}
               <div>
                 <label className="block text-slate-400 text-xs font-medium mb-1.5">💰 Setup una-tantum</label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-semibold text-sm">€</span>
                   <input
-                    type="number"
-                    placeholder="es. 1500"
-                    min={0}
-                    value={setupFee}
-                    onChange={e => setSetupFee(e.target.value)}
-                    className="w-full bg-slate-700 border border-slate-600 text-white rounded-lg px-3 py-2 pl-8 text-sm placeholder:text-slate-500 focus:outline-none focus:border-teal-500"
-                  />
+                type="number"
+                placeholder="es. 1500"
+                min={0}
+                value={setupFee}
+                onChange={(e) => setSetupFee(e.target.value)}
+                className="w-full bg-slate-700 border border-slate-600 text-white rounded-lg px-3 py-2 pl-8 text-sm placeholder:text-slate-500 focus:outline-none focus:border-teal-500" />
+
                 </div>
               </div>
               {/* Fee fissa mensile */}
@@ -568,13 +568,13 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-semibold text-sm">€</span>
                   <input
-                    type="number"
-                    placeholder="es. 800"
-                    min={0}
-                    value={monthlyFixed}
-                    onChange={e => setMonthlyFixed(e.target.value)}
-                    className="w-full bg-slate-700 border border-slate-600 text-white rounded-lg px-3 py-2 pl-8 text-sm placeholder:text-slate-500 focus:outline-none focus:border-teal-500"
-                  />
+                type="number"
+                placeholder="es. 800"
+                min={0}
+                value={monthlyFixed}
+                onChange={(e) => setMonthlyFixed(e.target.value)}
+                className="w-full bg-slate-700 border border-slate-600 text-white rounded-lg px-3 py-2 pl-8 text-sm placeholder:text-slate-500 focus:outline-none focus:border-teal-500" />
+
                 </div>
               </div>
               {/* Commissione % */}
@@ -582,21 +582,21 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
                 <label className="block text-slate-400 text-xs font-medium mb-1.5">📊 Commissione % su rev. email</label>
                 <div className="relative">
                   <input
-                    type="number"
-                    placeholder="es. 10"
-                    min={0}
-                    max={100}
-                    value={monthlyPercent}
-                    onChange={e => setMonthlyPercent(e.target.value)}
-                    className="w-full bg-slate-700 border border-slate-600 text-white rounded-lg px-3 py-2 pr-8 text-sm placeholder:text-slate-500 focus:outline-none focus:border-teal-500"
-                  />
+                type="number"
+                placeholder="es. 10"
+                min={0}
+                max={100}
+                value={monthlyPercent}
+                onChange={(e) => setMonthlyPercent(e.target.value)}
+                className="w-full bg-slate-700 border border-slate-600 text-white rounded-lg px-3 py-2 pr-8 text-sm placeholder:text-slate-500 focus:outline-none focus:border-teal-500" />
+
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 font-semibold text-sm">%</span>
                 </div>
-                {monthlyPercentN > 0 && baseEmailRevenue > 0 && (
-                  <p className="text-slate-500 text-xs mt-1">
+                {monthlyPercentN > 0 && baseEmailRevenue > 0 &&
+            <p className="text-slate-500 text-xs mt-1">
                     = {formatCurrency(monthlyPercentFee)}/mese su {formatCurrency(baseEmailRevenue)} rev. email
                   </p>
-                )}
+            }
               </div>
             </div>
 
@@ -605,61 +605,61 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
               {/* Setup */}
               <div className="bg-slate-800/60 p-4 rounded-xl border border-slate-700/50 text-center">
                 <p className="text-slate-400 text-sm mb-1">💰 Setup una-tantum</p>
-                {setupFeeN > 0 ? (
-                  <>
+                {setupFeeN > 0 ?
+            <>
                     <p className="text-2xl font-bold text-white">{formatCurrency(setupFeeN)}</p>
                     <p className="text-slate-500 text-xs mt-1">investimento iniziale</p>
-                  </>
-                ) : (
-                  <p className="text-slate-500 text-lg font-semibold">—</p>
-                )}
+                  </> :
+
+            <p className="text-slate-500 text-lg font-semibold">—</p>
+            }
               </div>
 
               {/* Fee mensile */}
               <div className="bg-slate-800/60 p-4 rounded-xl border border-slate-700/50 text-center">
                 <p className="text-slate-400 text-sm mb-1">📅 Fee Mensile Totale</p>
-                {totalMonthlyFee > 0 ? (
-                  <>
+                {totalMonthlyFee > 0 ?
+            <>
                     <p className="text-2xl font-bold text-teal-400">{formatCurrency(totalMonthlyFee)}/mese</p>
-                    {monthlyFixedN > 0 && monthlyPercentN > 0 && (
-                      <p className="text-slate-500 text-xs mt-1">
+                    {monthlyFixedN > 0 && monthlyPercentN > 0 &&
+              <p className="text-slate-500 text-xs mt-1">
                         {formatCurrency(monthlyFixedN)} fisso + {monthlyPercentN}% su rev. email
                       </p>
-                    )}
-                    {monthlyFixedN > 0 && monthlyPercentN === 0 && (
-                      <p className="text-slate-500 text-xs mt-1">fee fissa mensile</p>
-                    )}
-                    {monthlyFixedN === 0 && monthlyPercentN > 0 && (
-                      <p className="text-slate-500 text-xs mt-1">{monthlyPercentN}% sul fatturato email</p>
-                    )}
-                  </>
-                ) : (
-                  <p className="text-slate-500 text-lg font-semibold">—</p>
-                )}
+              }
+                    {monthlyFixedN > 0 && monthlyPercentN === 0 &&
+              <p className="text-slate-500 text-xs mt-1">fee fissa mensile</p>
+              }
+                    {monthlyFixedN === 0 && monthlyPercentN > 0 &&
+              <p className="text-slate-500 text-xs mt-1">{monthlyPercentN}% sul fatturato email</p>
+              }
+                  </> :
+
+            <p className="text-slate-500 text-lg font-semibold">—</p>
+            }
               </div>
 
               {/* Break-even */}
               <div className={`p-4 rounded-xl border text-center ${
-                breakEvenMonths !== null
-                  ? 'bg-green-900/30 border-green-500/30'
-                  : setupFeeN > 0
-                    ? 'bg-red-900/20 border-red-500/20'
-                    : 'bg-slate-800/60 border-slate-700/50'
-              }`}>
+          breakEvenMonths !== null ?
+          'bg-green-900/30 border-green-500/30' :
+          setupFeeN > 0 ?
+          'bg-red-900/20 border-red-500/20' :
+          'bg-slate-800/60 border-slate-700/50'}`
+          }>
                 <p className="text-slate-400 text-sm mb-1">⏱️ Break-even Setup</p>
-                {setupFeeN === 0 ? (
-                  <p className="text-slate-500 text-lg font-semibold">—</p>
-                ) : breakEvenMonths !== null ? (
-                  <>
+                {setupFeeN === 0 ?
+            <p className="text-slate-500 text-lg font-semibold">—</p> :
+            breakEvenMonths !== null ?
+            <>
                     <p className="text-2xl font-bold text-green-400">{breakEvenMonths} mesi</p>
                     <p className="text-green-400/70 text-xs mt-1">tempo di rientro</p>
-                  </>
-                ) : (
-                  <>
+                  </> :
+
+            <>
                     <p className="text-xl font-bold text-red-400">Fee &gt; Revenue</p>
                     <p className="text-red-400/70 text-xs mt-1">rientro non calcolabile</p>
                   </>
-                )}
+            }
               </div>
             </div>
 
@@ -668,11 +668,11 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
               <p className="text-slate-400 text-xs leading-relaxed">
                 <strong className="text-teal-400">📐 Formula break-even:</strong>{' '}
                 Setup ÷ (Potenziale Mensile Moderato − Fee Mensile Totale) = mesi per rientrare nell'investimento iniziale.
-                {setupFeeN > 0 && totalMonthlyFee > 0 && (
-                  <span className="block mt-1 text-slate-500">
+                {setupFeeN > 0 && totalMonthlyFee > 0 &&
+            <span className="block mt-1 text-slate-500">
                     Esempio con i tuoi valori: {formatCurrency(setupFeeN)} ÷ ({formatCurrency(annualRevAdded / 12)} − {formatCurrency(totalMonthlyFee)}) = {monthlyNetGain > 0 ? `${formatCurrency(setupFeeN / monthlyNetGain).replace('€', '')} → ${breakEvenMonths} mes${breakEvenMonths === 1 ? 'e' : 'i'}` : 'N/A (fee > revenue mensile)'}
                   </span>
-                )}
+            }
               </p>
             </div>
 
@@ -742,10 +742,10 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
             </div>
 
             <p className="text-slate-500 text-xs mt-3">
-              * Revenue aggiunto = gap annuale tra fatturato email attuale e benchmark di settore ({formatCurrency(annualRevAdded/12)}/mese × 12). Anno 1 include setup una-tantum. Anno 2 e 3 solo fee ricorrenti.
+              * Revenue aggiunto = gap annuale tra fatturato email attuale e benchmark di settore ({formatCurrency(annualRevAdded / 12)}/mese × 12). Anno 1 include setup una-tantum. Anno 2 e 3 solo fee ricorrenti.
             </p>
           </div>
-        )}
+      }
 
         {/* Download PDF */}
         <div className="bg-gradient-to-br from-slate-800 to-slate-700 p-6 rounded-xl border border-slate-600 animate-fade-in" style={{
@@ -788,11 +788,11 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
           {/* GHL Calendar Embed */}
           <div className="bg-white rounded-xl overflow-hidden mb-6">
             <iframe
-              src="https://go.mailift.com/widget/booking/3IIFrrczXhMvLYQAL4md"
-              style={{ width: '100%', height: '700px', border: 'none' }}
-              title="Prenota Consulenza Gratuita"
-              loading="lazy"
-            />
+            src="https://go.mailift.com/widget/booking/3IIFrrczXhMvLYQAL4md"
+            style={{ width: '100%', height: '700px', border: 'none' }}
+            title="Prenota Consulenza Gratuita"
+            loading="lazy" />
+
           </div>
 
           <div className="text-center">
