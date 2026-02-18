@@ -329,10 +329,20 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
                 <p className="text-2xl font-bold text-white">{report.listForecast.sendsPerMonth}</p>
                 <p className="text-slate-400 text-sm">email/mese</p>
               </div>
-              <div className="bg-gradient-to-br from-orange/20 to-orange/5 p-4 rounded-lg text-center border border-orange/30">
-                <p className="text-orange text-sm mb-1">AOV Stimato Settore</p>
-                <p className="text-2xl font-bold text-orange">€{report.listForecast.sectorAOV}</p>
-                <p className="text-orange/70 text-sm">valore medio ordine</p>
+              <div className={`p-4 rounded-lg text-center border ${
+                report.listForecast.isCustomAov
+                  ? 'bg-gradient-to-br from-green-600/20 to-green-500/5 border-green-500/30'
+                  : 'bg-gradient-to-br from-orange/20 to-orange/5 border-orange/30'
+              }`}>
+                <p className={`text-sm mb-1 ${report.listForecast.isCustomAov ? 'text-green-400' : 'text-orange'}`}>
+                  {report.listForecast.isCustomAov ? '✅ AOV Reale Cliente' : 'AOV Stimato Settore'}
+                </p>
+                <p className={`text-2xl font-bold ${report.listForecast.isCustomAov ? 'text-green-400' : 'text-orange'}`}>
+                  €{report.listForecast.sectorAOV}
+                </p>
+                <p className={`text-sm ${report.listForecast.isCustomAov ? 'text-green-400/70' : 'text-orange/70'}`}>
+                  valore medio ordine
+                </p>
               </div>
             </div>
 
