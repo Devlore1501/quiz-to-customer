@@ -207,6 +207,18 @@ export interface AdvancedReport {
     optimized: { sends: number; newsletterRevenue: number; automationRevenue: number; total: number };
     benchmark: { sends: number; newsletterRevenue: number; automationRevenue: number; total: number };
   };
+
+  // Dati popup & optin (opzionale — presente solo se forniti dallo step popup)
+  popupData?: {
+    hasPopup: boolean;
+    conversionRate: number;       // %
+    monthlyVisitors: number;
+    newSubscribersPerMonth: number;
+    projectedListSize6m: number;
+    projectedListSize12m: number;
+    projectedRevenue12m: number;
+    monthlyListGrowthRate: number; // % es. 2
+  };
 }
 
 // Direct-values version for admin mode (no range parsing needed)
@@ -219,9 +231,15 @@ export const calculateAdvancedReportFromValues = (
   customSectorLabel?: string,
   emailFrequency?: string,
   customAOV?: number,
-  scenarioOverrides?: { conservative: number; moderate: number; aggressive: number }
+  scenarioOverrides?: { conservative: number; moderate: number; aggressive: number },
+  popupParams?: {
+    hasPopup: boolean;
+    conversionRate: number;
+    monthlyVisitors: number;
+    monthlyListGrowthRate: number;
+  }
 ): AdvancedReport => {
-  return _calculateReport(sector, monthlyRevenue, currentEmailPercent, listSize, activeFlows, customSectorLabel, emailFrequency, customAOV, scenarioOverrides);
+  return _calculateReport(sector, monthlyRevenue, currentEmailPercent, listSize, activeFlows, customSectorLabel, emailFrequency, customAOV, scenarioOverrides, popupParams);
 };
 
 export const calculateAdvancedReport = (
@@ -237,7 +255,7 @@ export const calculateAdvancedReport = (
   const monthlyRevenue = parseRevenueRange(monthlyRevenueRange);
   const currentEmailPercent = parseEmailPercentage(emailPercentRange);
   const listSize = parseListSize(listSizeRange);
-  return _calculateReport(sector, monthlyRevenue, currentEmailPercent, listSize, activeFlows, customSectorLabel, emailFrequency, undefined, undefined);
+  return _calculateReport(sector, monthlyRevenue, currentEmailPercent, listSize, activeFlows, customSectorLabel, emailFrequency, undefined, undefined, undefined);
 };
 
 const _calculateReport = (
@@ -249,7 +267,13 @@ const _calculateReport = (
   customSectorLabel?: string,
   emailFrequency?: string,
   customAOV?: number,
-  scenarioOverrides?: { conservative: number; moderate: number; aggressive: number }
+  scenarioOverrides?: { conservative: number; moderate: number; aggressive: number },
+  popupParams?: {
+    hasPopup: boolean;
+    conversionRate: number;
+    monthlyVisitors: number;
+    monthlyListGrowthRate: number;
+  }
 ): AdvancedReport => {
   
   // Get sector benchmark
@@ -309,6 +333,8 @@ const _calculateReport = (
   const totalFlowGap = missingFlows.reduce((sum, f) => sum + f.impactValue, 0);
   
   // Scenari di crescita (con override opzionali dall'admin)
+  // Base: revenueGap mensile (differenza tra benchmark e attuale)
+  // Le % indicano la quota del gap recuperata, non la crescita sul fatturato attuale
   const conservPct = scenarioOverrides?.conservative ?? 15;
   const moderatePct = scenarioOverrides?.moderate ?? 35;
   const aggressPct = scenarioOverrides?.aggressive ?? 60;
@@ -316,18 +342,18 @@ const _calculateReport = (
   const scenarios = {
     conservative: {
       growthPercent: conservPct,
-      value: currentEmailRevenue * (conservPct / 100),
-      description: 'Ottimizzazione flussi esistenti e campagne'
+      value: revenueGap * (conservPct / 100),
+      description: 'Recupero parziale del gap con ottimizzazioni base'
     },
     moderate: {
       growthPercent: moderatePct,
-      value: currentEmailRevenue * (moderatePct / 100),
+      value: revenueGap * (moderatePct / 100),
       description: 'Implementazione flussi chiave + ottimizzazione'
     },
     aggressive: {
       growthPercent: aggressPct,
-      value: currentEmailRevenue * (aggressPct / 100),
-      description: 'Strategia completa email marketing'
+      value: revenueGap * (aggressPct / 100),
+      description: 'Recupero significativo con strategia email completa'
     }
   };
   
@@ -462,6 +488,39 @@ const _calculateReport = (
     benchmark: calcScenario(benchmarkSends)
   };
 
+  // Calcolo popupData (opzionale — solo se forniti dati popup)
+  let popupData: AdvancedReport['popupData'] = undefined;
+  if (popupParams && popupParams.hasPopup && popupParams.monthlyVisitors > 0) {
+    const cr = popupParams.conversionRate / 100;
+    const growthRate = popupParams.monthlyListGrowthRate / 100;
+    const newSubscribersPerMonth = Math.round(popupParams.monthlyVisitors * cr);
+    const projectedListSize6m = Math.round(listSize * Math.pow(1 + growthRate, 6));
+    const projectedListSize12m = Math.round(listSize * Math.pow(1 + growthRate, 12));
+    // Revenue aggiuntiva stimata: nuovi iscritti × AOV × 2% CR automazioni × 12 mesi
+    const projectedRevenue12m = Math.round(newSubscribersPerMonth * aov * 0.02 * 12);
+    popupData = {
+      hasPopup: true,
+      conversionRate: popupParams.conversionRate,
+      monthlyVisitors: popupParams.monthlyVisitors,
+      newSubscribersPerMonth,
+      projectedListSize6m,
+      projectedListSize12m,
+      projectedRevenue12m,
+      monthlyListGrowthRate: popupParams.monthlyListGrowthRate,
+    };
+  } else if (popupParams && !popupParams.hasPopup) {
+    popupData = {
+      hasPopup: false,
+      conversionRate: 0,
+      monthlyVisitors: 0,
+      newSubscribersPerMonth: 0,
+      projectedListSize6m: listSize,
+      projectedListSize12m: listSize,
+      projectedRevenue12m: 0,
+      monthlyListGrowthRate: 0,
+    };
+  }
+
   return {
     currentEmailRevenue,
     currentEmailPercent,
@@ -485,7 +544,8 @@ const _calculateReport = (
     strategicAnalysis,
     emailHealthScore,
     yearlyPotential,
-    listForecast
+    listForecast,
+    popupData,
   };
 };
 

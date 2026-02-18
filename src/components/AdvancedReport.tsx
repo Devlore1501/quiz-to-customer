@@ -316,9 +316,10 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
         <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 animate-fade-in" style={{
         animationDelay: '500ms'
       }}>
-          <h2 className="text-xl font-bold text-orange mb-6 flex items-center gap-2">
+          <h2 className="text-xl font-bold text-orange mb-2 flex items-center gap-2">
             🚀 Scenari di Crescita
           </h2>
+          <p className="text-slate-500 text-xs mb-6">I valori mostrano il <strong className="text-slate-400">recupero mensile aggiuntivo stimato</strong> sulla base del gap tra email attuale e benchmark (€{Math.round(report.revenueGap).toLocaleString('it-IT')}/mese).</p>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Conservativo */}
@@ -327,7 +328,8 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
                 <span className="w-3 h-3 rounded-full bg-green-500"></span>
                 <h3 className="text-green-400 font-semibold">Conservativo</h3>
               </div>
-              <p className="text-3xl font-bold text-white mb-2">+{report.scenarios.conservative.growthPercent}%</p>
+              <p className="text-3xl font-bold text-white mb-1">+{report.scenarios.conservative.growthPercent}%</p>
+              <p className="text-green-400/70 text-xs mb-3">del gap recuperato</p>
               <p className="text-2xl font-semibold text-green-400">{formatCurrency(report.scenarios.conservative.value)}<span className="text-sm">/mese</span></p>
               <p className="text-slate-400 text-sm mt-3">{report.scenarios.conservative.description}</p>
             </div>
@@ -341,7 +343,8 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
                 <span className="w-3 h-3 rounded-full bg-orange"></span>
                 <h3 className="text-orange font-semibold">Moderato</h3>
               </div>
-              <p className="text-3xl font-bold text-white mb-2">+{report.scenarios.moderate.growthPercent}%</p>
+              <p className="text-3xl font-bold text-white mb-1">+{report.scenarios.moderate.growthPercent}%</p>
+              <p className="text-orange/70 text-xs mb-3">del gap recuperato</p>
               <p className="text-2xl font-semibold text-orange">{formatCurrency(report.scenarios.moderate.value)}<span className="text-sm">/mese</span></p>
               <p className="text-slate-400 text-sm mt-3">{report.scenarios.moderate.description}</p>
             </div>
@@ -352,7 +355,8 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
                 <span className="w-3 h-3 rounded-full bg-purple-500"></span>
                 <h3 className="text-purple-400 font-semibold">Aggressivo</h3>
               </div>
-              <p className="text-3xl font-bold text-white mb-2">+{report.scenarios.aggressive.growthPercent}%</p>
+              <p className="text-3xl font-bold text-white mb-1">+{report.scenarios.aggressive.growthPercent}%</p>
+              <p className="text-purple-400/70 text-xs mb-3">del gap recuperato</p>
               <p className="text-2xl font-semibold text-purple-400">{formatCurrency(report.scenarios.aggressive.value)}<span className="text-sm">/mese</span></p>
               <p className="text-slate-400 text-sm mt-3">{report.scenarios.aggressive.description}</p>
             </div>
@@ -491,6 +495,98 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
             </div>
           </div>
       }
+
+        {/* ── Sezione Popup & Crescita Lista (condizionale) ─────────────────── */}
+        {report.popupData && report.popupData.hasPopup && (
+          <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 animate-fade-in" style={{ animationDelay: '570ms' }}>
+            <h2 className="text-xl font-bold text-teal-400 mb-2 flex items-center gap-2">
+              📬 Popup & Crescita Lista
+            </h2>
+            <p className="text-slate-500 text-xs mb-6">
+              Proiezione basata sul popup attivo — tasso di conversione {report.popupData.conversionRate}% su {report.popupData.monthlyVisitors.toLocaleString('it-IT')} visitatori/mese.
+            </p>
+
+            {/* 3 card principali */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <div className="bg-gradient-to-br from-teal-600/20 to-teal-500/5 p-5 rounded-xl border border-teal-500/30 text-center">
+                <p className="text-teal-400 text-sm mb-1">📩 Nuovi iscritti/mese</p>
+                <p className="text-3xl font-bold text-white">{report.popupData.newSubscribersPerMonth.toLocaleString('it-IT')}</p>
+                <p className="text-teal-400/70 text-xs mt-1">dal popup attivo</p>
+              </div>
+              <div className="bg-gradient-to-br from-blue-600/20 to-blue-500/5 p-5 rounded-xl border border-blue-500/30 text-center">
+                <p className="text-blue-300 text-sm mb-1">📈 Lista a 12 mesi</p>
+                <p className="text-3xl font-bold text-white">{report.popupData.projectedListSize12m.toLocaleString('it-IT')}</p>
+                <p className="text-blue-300/70 text-xs mt-1">
+                  +{report.popupData.monthlyListGrowthRate}%/mese → {report.popupData.projectedListSize6m.toLocaleString('it-IT')} a 6 mesi
+                </p>
+              </div>
+              <div className="bg-gradient-to-br from-green-600/20 to-green-500/5 p-5 rounded-xl border border-green-500/30 text-center">
+                <p className="text-green-400 text-sm mb-1">💰 Revenue aggiuntiva</p>
+                <p className="text-3xl font-bold text-white">{formatCurrency(report.popupData.projectedRevenue12m)}</p>
+                <p className="text-green-400/70 text-xs mt-1">dai nuovi iscritti (12 mesi)</p>
+              </div>
+            </div>
+
+            {/* Tabella proiezione crescita lista */}
+            <div className="overflow-x-auto rounded-lg border border-slate-700 mb-4">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-slate-700">
+                    <th className="text-left p-3 text-slate-400 font-medium">Momento</th>
+                    <th className="text-center p-3 text-teal-400 font-semibold">Oggi</th>
+                    <th className="text-center p-3 text-blue-300 font-semibold">3 mesi</th>
+                    <th className="text-center p-3 text-orange font-semibold">6 mesi</th>
+                    <th className="text-center p-3 text-green-400 font-semibold">12 mesi</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b border-slate-700/50">
+                    <td className="p-3 text-slate-400">Iscritti lista</td>
+                    <td className="p-3 text-center text-teal-400 font-bold">
+                      {report.listForecast.listSize.toLocaleString('it-IT')}
+                    </td>
+                    <td className="p-3 text-center text-blue-300 font-medium">
+                      {Math.round(report.listForecast.listSize * Math.pow(1 + report.popupData.monthlyListGrowthRate / 100, 3)).toLocaleString('it-IT')}
+                    </td>
+                    <td className="p-3 text-center text-orange font-medium">
+                      {report.popupData.projectedListSize6m.toLocaleString('it-IT')}
+                    </td>
+                    <td className="p-3 text-center text-green-400 font-bold">
+                      {report.popupData.projectedListSize12m.toLocaleString('it-IT')}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="p-3 text-slate-400">Nuovi iscritti aggiunti</td>
+                    <td className="p-3 text-center text-teal-400">—</td>
+                    <td className="p-3 text-center text-blue-300">
+                      +{(report.popupData.newSubscribersPerMonth * 3).toLocaleString('it-IT')}
+                    </td>
+                    <td className="p-3 text-center text-orange">
+                      +{(report.popupData.newSubscribersPerMonth * 6).toLocaleString('it-IT')}
+                    </td>
+                    <td className="p-3 text-center text-green-400 font-bold">
+                      +{(report.popupData.newSubscribersPerMonth * 12).toLocaleString('it-IT')}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            {/* Nota benchmark */}
+            <div className="bg-teal-900/20 border border-teal-500/20 rounded-lg p-4">
+              <p className="text-teal-400/80 text-xs leading-relaxed">
+                <strong className="text-teal-400">📊 Benchmark e-commerce popup:</strong>{' '}
+                Un buon tasso di conversione popup è tra il <strong className="text-white">3% e il 5%</strong>.
+                {report.popupData.conversionRate < 3
+                  ? ` Il tuo ${report.popupData.conversionRate}% è sotto la media — ottimizzare il copy e l'offerta popup può portare a 2-3× più iscritti.`
+                  : report.popupData.conversionRate >= 5
+                    ? ` Il tuo ${report.popupData.conversionRate}% è eccellente — sei già nella top tier e-commerce!`
+                    : ` Il tuo ${report.popupData.conversionRate}% è nella norma, con margine per migliorare ulteriormente.`
+                }
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Sezione 4: Top 3 Azioni Prioritarie */}
         <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 animate-fade-in" style={{
