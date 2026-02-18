@@ -26,6 +26,10 @@ interface AdminFormData {
   scenarioConservative: string;   // default '15'
   scenarioModerate: string;       // default '35'
   scenarioAggressive: string;     // default '60'
+  showInvestment: boolean;        // mostrare sezione investimento nel report?
+  setupFee: string;               // € una-tantum (opzionale)
+  monthlyFixed: string;           // € fisso mensile (opzionale)
+  monthlyPercent: string;         // % del fatturato email mensile (opzionale)
 }
 
 // ─── Animation variants ───────────────────────────────────────────────────────
@@ -113,6 +117,10 @@ export const AdminSurvey: React.FC = () => {
     scenarioConservative: '15',
     scenarioModerate: '35',
     scenarioAggressive: '60',
+    showInvestment: false,
+    setupFee: '',
+    monthlyFixed: '',
+    monthlyPercent: '',
   });
 
   // ── Helpers ────────────────────────────────────────────────────────────────
@@ -216,6 +224,10 @@ export const AdminSurvey: React.FC = () => {
       scenarioConservative: '15',
       scenarioModerate: '35',
       scenarioAggressive: '60',
+      showInvestment: false,
+      setupFee: '',
+      monthlyFixed: '',
+      monthlyPercent: '',
     });
   };
 
@@ -609,10 +621,168 @@ export const AdminSurvey: React.FC = () => {
         </div>
       ),
     },
+
+    // 12 — Investimento & ROI (NUOVO)
+    {
+      title: '💼 Investimento & ROI',
+      canProceed: true,
+      content: (() => {
+        const emailRevMensile = formData.monthlyRevenue && formData.emailRevenuePercentage
+          ? parseFloat(formData.monthlyRevenue) * (parseFloat(formData.emailRevenuePercentage) / 100)
+          : 0;
+        const setupFeeN = parseFloat(formData.setupFee) || 0;
+        const monthlyFixedN = parseFloat(formData.monthlyFixed) || 0;
+        const monthlyPercentN = parseFloat(formData.monthlyPercent) || 0;
+        const monthlyPercentFee = emailRevMensile * (monthlyPercentN / 100);
+        const totalMonthlyFee = monthlyFixedN + monthlyPercentFee;
+        const moderatePct = parseFloat(formData.scenarioModerate) || 35;
+        const moderateMonthlyRev = emailRevMensile * (moderatePct / 100);
+        const netMonthlyGain = moderateMonthlyRev - totalMonthlyFee;
+        const breakEvenMonths = setupFeeN > 0 && netMonthlyGain > 0
+          ? Math.ceil(setupFeeN / netMonthlyGain)
+          : null;
+
+        return (
+          <div className="space-y-5">
+            {/* Toggle ON/OFF */}
+            <div className="flex items-center justify-between bg-slate-700/40 px-4 py-3 rounded-xl border border-slate-600/50">
+              <div>
+                <p className="text-white font-semibold text-sm">Mostrare sezione investimento nel report?</p>
+                <p className="text-slate-400 text-xs mt-0.5">Visibile solo se attivato</p>
+              </div>
+              <button
+                onClick={() => setFormData(p => ({ ...p, showInvestment: !p.showInvestment }))}
+                className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors duration-200 ${
+                  formData.showInvestment ? 'bg-orange' : 'bg-slate-600'
+                }`}
+              >
+                <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform duration-200 ${
+                  formData.showInvestment ? 'translate-x-6' : 'translate-x-1'
+                }`} />
+              </button>
+            </div>
+
+            {formData.showInvestment && (
+              <div className="space-y-4">
+                <p className="text-slate-400 text-xs">Tutti i campi sono facoltativi e combinabili liberamente.</p>
+
+                {/* Setup una-tantum */}
+                <div>
+                  <Label className="text-slate-300 mb-1.5 block">💰 Setup una-tantum (€)</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-semibold text-sm">€</span>
+                    <Input
+                      type="number"
+                      placeholder="es. 1500"
+                      min={0}
+                      value={formData.setupFee}
+                      onChange={e => setFormData(p => ({ ...p, setupFee: e.target.value }))}
+                      className="bg-slate-700 border-slate-600 text-white placeholder:text-slate-400 pl-8"
+                    />
+                  </div>
+                </div>
+
+                {/* Fisso mensile */}
+                <div>
+                  <Label className="text-slate-300 mb-1.5 block">📅 Fee fissa mensile (€)</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-semibold text-sm">€</span>
+                    <Input
+                      type="number"
+                      placeholder="es. 800"
+                      min={0}
+                      value={formData.monthlyFixed}
+                      onChange={e => setFormData(p => ({ ...p, monthlyFixed: e.target.value }))}
+                      className="bg-slate-700 border-slate-600 text-white placeholder:text-slate-400 pl-8"
+                    />
+                  </div>
+                </div>
+
+                {/* % mensile su fatturato email */}
+                <div>
+                  <Label className="text-slate-300 mb-1.5 block">📊 Commissione % sul fatturato email (mensile)</Label>
+                  <div className="relative">
+                    <Input
+                      type="number"
+                      placeholder="es. 10"
+                      min={0}
+                      max={100}
+                      value={formData.monthlyPercent}
+                      onChange={e => setFormData(p => ({ ...p, monthlyPercent: e.target.value }))}
+                      className="bg-slate-700 border-slate-600 text-white placeholder:text-slate-400 pr-8"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 font-semibold text-sm">%</span>
+                  </div>
+                  {monthlyPercentN > 0 && emailRevMensile > 0 && (
+                    <p className="text-slate-400 text-xs mt-1">
+                      = €{Math.round(monthlyPercentFee).toLocaleString('it-IT')}/mese su €{Math.round(emailRevMensile).toLocaleString('it-IT')} di rev. email attuale
+                    </p>
+                  )}
+                </div>
+
+                {/* Preview dinamica */}
+                {(monthlyFixedN > 0 || monthlyPercentN > 0 || setupFeeN > 0) && (
+                  <div className="bg-slate-700/40 rounded-xl border border-teal-500/30 p-4 space-y-3">
+                    <p className="text-teal-400 text-xs font-semibold uppercase tracking-wide">📊 Anteprima Investimento</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      {setupFeeN > 0 && (
+                        <div className="bg-slate-800/60 p-3 rounded-lg">
+                          <p className="text-slate-400 text-xs">Setup una-tantum</p>
+                          <p className="text-white font-bold">€{setupFeeN.toLocaleString('it-IT')}</p>
+                        </div>
+                      )}
+                      {(monthlyFixedN > 0 || monthlyPercentN > 0) && (
+                        <div className="bg-slate-800/60 p-3 rounded-lg">
+                          <p className="text-slate-400 text-xs">Fee mensile totale</p>
+                          <p className="text-teal-400 font-bold">
+                            €{Math.round(totalMonthlyFee).toLocaleString('it-IT')}/mese
+                          </p>
+                          {monthlyFixedN > 0 && monthlyPercentN > 0 && (
+                            <p className="text-slate-500 text-xs">
+                              €{monthlyFixedN.toLocaleString('it-IT')} + {monthlyPercentN}%
+                            </p>
+                          )}
+                        </div>
+                      )}
+                      {breakEvenMonths !== null && (
+                        <div className="bg-slate-800/60 p-3 rounded-lg">
+                          <p className="text-slate-400 text-xs">Break-even setup</p>
+                          <p className="text-green-400 font-bold">{breakEvenMonths} mesi</p>
+                        </div>
+                      )}
+                      {breakEvenMonths === null && setupFeeN > 0 && netMonthlyGain <= 0 && (
+                        <div className="bg-slate-800/60 p-3 rounded-lg">
+                          <p className="text-slate-400 text-xs">Break-even setup</p>
+                          <p className="text-red-400 font-bold text-sm">Fee &gt; Revenue</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })(),
+    },
   ];
 
   const currentStepData = STEPS[step];
   const totalSteps = STEPS.length;
+
+  // ── Dati investimento da passare al report ─────────────────────────────────
+
+  const emailRevMensile = formData.monthlyRevenue && formData.emailRevenuePercentage
+    ? parseFloat(formData.monthlyRevenue) * (parseFloat(formData.emailRevenuePercentage) / 100)
+    : 0;
+
+  const investmentData = {
+    show: formData.showInvestment,
+    setupFee: parseFloat(formData.setupFee) || 0,
+    monthlyFixed: parseFloat(formData.monthlyFixed) || 0,
+    monthlyPercent: parseFloat(formData.monthlyPercent) || 0,
+    monthlyEmailRevenue: emailRevMensile,
+  };
 
   // ── Report view ────────────────────────────────────────────────────────────
 
@@ -651,6 +821,8 @@ export const AdminSurvey: React.FC = () => {
           userName={formData.clientName || 'Cliente'}
           website={formData.website}
           onRestart={handleRestart}
+          investmentData={investmentData}
+
         />
       </div>
     );
