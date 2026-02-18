@@ -524,10 +524,17 @@ export const AdminSurvey: React.FC = () => {
                 </div>
               </div>
               {/* Preview nuovi iscritti */}
-              {formData.monthlyVisitors && formData.popupConversionRate && (
+              {((formData.monthlyVisitors && formData.popupConversionRate) || formData.monthlyListGrowthRate) && (
                 <div className="bg-teal-900/20 border border-teal-500/30 rounded-xl p-3">
                   <p className="text-teal-400 text-sm font-semibold">
-                    ≈ {Math.round(parseFloat(formData.monthlyVisitors) * (parseFloat(formData.popupConversionRate) / 100)).toLocaleString('it-IT')} nuovi iscritti/mese dal popup
+                    ≈ {
+                      formData.monthlyVisitors && formData.popupConversionRate
+                        ? Math.round(parseFloat(formData.monthlyVisitors) * (parseFloat(formData.popupConversionRate) / 100)).toLocaleString('it-IT')
+                        : Math.round(parseFloat(formData.listSize || '3000') * (parseFloat(formData.monthlyListGrowthRate) / 100)).toLocaleString('it-IT')
+                    } nuovi iscritti/mese
+                  </p>
+                  <p className="text-teal-400/60 text-xs mt-0.5">
+                    {!formData.popupConversionRate ? 'stimati da tasso crescita lista' : 'dal popup'}
                   </p>
                 </div>
               )}
