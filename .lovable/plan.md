@@ -1,108 +1,100 @@
 
-# Verifica: Sezioni mancanti nel Report Condivisibile URL
+# Fix: Sezione Popup & Crescita Lista mancante nel report condivisibile
 
-## Problema identificato
+## Diagnosi completa
 
-Dopo un'analisi completa del codice, ho trovato **due gap distinti** tra il report admin e il report condivisibile via URL.
+Analizzando il database e il codice, ho identificato **due bug distinti** che si combinano:
 
-### Gap 1 — Sezione "Investimento & ROI" non appare mai nel link
+### Bug 1 — `newSubscribersPerMonth = 0` quando `conversionRate` non è inserito
 
-Il componente `AdvancedReportComponent` accetta la prop `investmentData` che controlla se mostrare la sezione Investimento & ROI (con tabella ROI 3 anni, break-even, fee input).
+Nel form admin, l'admin può selezionare solo il `monthlyListGrowthRate` (es. 5%) senza necessariamente inserire `monthlyVisitors` e `popupConversionRate`. In questo caso:
 
-- In `AdminSurvey.tsx` (riga 853-860): `investmentData` viene passato correttamente con `show: true/false`
-- In `Report.tsx` (riga 110-113): `investmentData` **non viene passato** → la sezione non appare mai
-
-Il dato `showInvestment` però non è nemmeno salvato nel DB — viene salvato solo il risultato dei calcoli (`AdvancedReport`), non le impostazioni del form admin.
-
-### Gap 2 — Nome cliente e sito web non appaiono nel link condivisibile
-
-- `userName` e `website` non vengono passati a `AdvancedReportComponent` in `Report.tsx`
-- Tuttavia `website` è già salvato nel DB nella colonna `website` della tabella `survey_submissions`, ma il campo `clientName` non è mai salvato nel DB separatamente (solo come `full_name`)
-
-### Gap 3 — La nota esplicativa CR 2% nella tabella Forecast non è aggiornata
-
-La nota sotto la tabella Forecast (riga 493 in `AdvancedReport.tsx`) dice ancora:
 ```
-"CR 2% per automazioni"
+newSubscribersPerMonth = Math.round(0 * 0) = 0
 ```
-Mentre la formula reale aggiornata usa il CR dinamico (0.3%–1.0%). Non è un gap del link, ma un'incoerenza testuale visibile sia nel link che nell'admin.
+
+Quindi tutta la revenue popup è zero, ma il dato salvato nel DB mostra `hasPopup: true` con `conversionRate: 0`. Nel report condivisibile la sezione viene renderizzata (perché `hasPopup: true`), ma con tutti i numeri a zero — completamente inutile.
+
+**Soluzione**: quando `conversionRate = 0` ma `monthlyListGrowthRate > 0`, calcolare i `newSubscribersPerMonth` direttamente dal tasso di crescita sulla lista:
+```
+newSubscribersPerMonth = Math.round(listSize * (monthlyListGrowthRate / 100))
+```
+
+Questo è il comportamento corretto: se il tasso di crescita è 5%, su una lista da 12.000 iscritti → 600 nuovi/mese.
+
+### Bug 2 — Nel link condivisibile, il Forecast Lista mostra dati del vecchio CR 2%
+
+I report salvati nel DB prima del fix del CR dinamico hanno ancora `automationRevenue` calcolato con CR 2% (es. `55.200€/mese` per lista da 12.000 e AOV 230€ → `12.000 × 0.02 × 230 = 55.200€`). Il link condivisibile mostra questi valori salvati, non ricalcola.
+
+Questo non è risolvibile senza rigenerare i report (il calcolo è già stato fixato per i nuovi report generati).
 
 ---
 
-## Soluzione
+## Soluzione: Fix nel calcolo dei `newSubscribersPerMonth`
 
-### Fix 1 — Salvare `showInvestment`, `clientName` e `website` nell'oggetto `report_data`
+### File 1: `src/lib/reportCalculations.ts`
 
-Attualmente `report_data` nel DB contiene solo `{ clientReport: AdvancedReport }`. Bisogna estenderlo per includere le impostazioni admin:
-
-```typescript
-report_data: {
-  clientReport: result,
-  meta: {
-    showInvestment: formData.showInvestment,
-    clientName: formData.clientName || '',
-    website: formData.website || '',
-  }
-}
-```
-
-Questo modo è retrocompatibile — i record vecchi semplicemente non hanno `meta`, e il link li visualizzerà senza quelle sezioni (comportamento già esistente).
-
-### Fix 2 — Leggere i metadati in `Report.tsx` e passarli al componente
-
-Aggiornare l'interfaccia `ReportData` per includere `meta` (opzionale):
+**Riga 509** — Aggiornare il calcolo dei `newSubscribersPerMonth`:
 
 ```typescript
-interface ReportData {
-  clientReport: AdvancedReport;
-  meta?: {
-    showInvestment?: boolean;
-    clientName?: string;
-    website?: string;
-  };
-}
+// Calcola nuovi iscritti da popup:
+// - Se conversionRate > 0: da visitatori × CR
+// - Se conversionRate = 0 ma growthRate > 0: stima da lista × tasso crescita
+const fromVisitors = Math.round(popupParams.monthlyVisitors * cr);
+const fromGrowthRate = Math.round(listSize * growthRate);
+const newSubscribersPerMonth = cr > 0 ? fromVisitors : fromGrowthRate;
 ```
 
-E nel render del componente:
+Questo garantisce che se l'admin inserisce solo il tasso di crescita (es. 5%) senza i visitatori, il sistema stima comunque i nuovi iscritti in modo realistico.
 
-```typescript
-<AdvancedReportComponent
-  report={reportData.clientReport}
-  userName={reportData.meta?.clientName || ''}
-  website={reportData.meta?.website || ''}
-  investmentData={
-    reportData.meta?.showInvestment
-      ? { show: true, currentEmailRevenue: reportData.clientReport.currentEmailRevenue }
-      : undefined
-  }
-  onRestart={() => window.location.href = '/'}
-/>
+### File 2: `src/components/AdminSurvey.tsx`
+
+**Preview "nuovi iscritti/mese"** (riga 527-530): aggiornare il calcolo del preview inline per mostrare anche la stima da growth rate quando CR = 0:
+
+```tsx
+{formData.monthlyListGrowthRate && (
+  <div className="bg-teal-900/20 border border-teal-500/30 rounded-xl p-3">
+    <p className="text-teal-400 text-sm font-semibold">
+      ≈ {
+        formData.monthlyVisitors && formData.popupConversionRate
+          ? Math.round(parseFloat(formData.monthlyVisitors) * (parseFloat(formData.popupConversionRate) / 100)).toLocaleString('it-IT')
+          : Math.round(parseFloat(formData.listSize || '3000') * (parseFloat(formData.monthlyListGrowthRate) / 100)).toLocaleString('it-IT')
+      } nuovi iscritti/mese
+    </p>
+    <p className="text-teal-400/60 text-xs mt-0.5">
+      {!formData.popupConversionRate ? 'stimati da tasso crescita lista' : 'dal popup'}
+    </p>
+  </div>
+)}
 ```
 
-### Fix 3 — Aggiornare la nota CR nella tabella Forecast
+### File 3: `src/components/AdminSurvey.tsx` — fix condizione preview
 
-Cambiare il testo fisso "CR 2% per automazioni" con il testo corretto che riflette il CR dinamico.
+Attualmente il preview (riga 527) mostra solo se **entrambi** `monthlyVisitors` e `popupConversionRate` sono inseriti. Cambiare la condizione per mostrarlo anche con solo il growth rate:
+
+```tsx
+// Prima:
+{formData.monthlyVisitors && formData.popupConversionRate && (
+
+// Dopo:
+{(formData.monthlyVisitors && formData.popupConversionRate) || formData.monthlyListGrowthRate ? (
+```
 
 ---
 
-## Riepilogo delle sezioni del report e stato attuale
+## Flusso dati corretto dopo il fix
 
-| Sezione | Admin | Link condivisibile | Dopo fix |
-|---|---|---|---|
-| Email Health Score | ✅ | ✅ | ✅ |
-| Analisi Strategica | ✅ | ✅ | ✅ |
-| Situazione Attuale vs Benchmark | ✅ | ✅ | ✅ |
-| Analisi Automazioni | ✅ | ✅ | ✅ |
-| Scenari di Crescita | ✅ | ✅ | ✅ |
-| Forecast Lista (tabella) | ✅ | ✅ | ✅ |
-| Popup & Crescita Lista | ✅ (se attivo) | ✅ (se attivo) | ✅ |
-| Roadmap 3 Azioni Prioritarie | ✅ | ✅ | ✅ |
-| Potenziale Annuo (banner) | ✅ | ✅ | ✅ |
-| **Investimento & ROI** | ✅ (se attivato) | ❌ manca sempre | ✅ dopo fix |
-| **Nome cliente nell'header** | ✅ | ❌ non visualizzato | ✅ dopo fix |
-| **Sito web nell'header** | ✅ | ❌ non visualizzato | ✅ dopo fix |
-| Download PDF | ✅ | ✅ | ✅ |
-| Calendario prenotazione | ✅ | ✅ | ✅ |
+```text
+Admin inserisce popup attivo + growth rate 5% (senza visitatori/CR)
+       ↓
+newSubscribersPerMonth = listSize × 5% = 12.000 × 5% = 600/mese
+       ↓
+revenueWelcome12m  = 600 × AOV × 5% × 12  = Welcome flow
+revenueRecovery12m = 600 × AOV × 3% × 12  = Recuperi carrello
+revenueAutomation12m = 600 × AOV × CR_dinamico × 12 = Automazioni
+       ↓
+Sezione Popup nel link condivisibile mostra numeri reali, non zero
+```
 
 ---
 
@@ -110,8 +102,7 @@ Cambiare il testo fisso "CR 2% per automazioni" con il testo corretto che riflet
 
 | File | Modifica |
 |---|---|
-| `src/components/AdminSurvey.tsx` | Aggiunta `meta` nell'oggetto `report_data` salvato su DB |
-| `src/pages/Report.tsx` | Lettura `meta` e passaggio corretto di tutte le props al componente |
-| `src/components/AdvancedReport.tsx` | Fix testo nota CR nella tabella Forecast (da "2%" a "CR dinamico") |
+| `src/lib/reportCalculations.ts` | Fix calcolo `newSubscribersPerMonth`: fallback su `listSize × growthRate` quando `conversionRate = 0` |
+| `src/components/AdminSurvey.tsx` | Aggiorna condizione e testo preview "nuovi iscritti" nel form popup |
 
-Nessuna migrazione DB — l'aggiunta di `meta` è un campo JSON opzionale, retrocompatibile con i record già esistenti.
+Nessuna migrazione DB. I nuovi report salvati dopo il fix avranno i dati corretti. I record vecchi con `newSubscribersPerMonth: 0` non vengono toccati (sono già stati generati con i parametri che l'admin aveva inserito).
