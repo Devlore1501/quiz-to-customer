@@ -529,7 +529,9 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
           <div className="text-center">
             <p className="text-white/80 text-lg mb-2">💰 Potenziale Economico Annuo Recuperabile</p>
             <p className="text-4xl md:text-5xl font-bold text-white">{formatCurrency(report.yearlyPotential)}</p>
-            <p className="text-white/70 mt-2">Implementando tutte le strategie suggerite</p>
+            <p className="text-white/70 mt-2">
+              Gap annuale tra email attuale ({formatCurrency(report.currentEmailRevenue)}/mese) e benchmark di settore ({formatCurrency(report.benchmarkEmailRevenue)}/mese)
+            </p>
           </div>
         </div>
 
@@ -740,7 +742,7 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
             </div>
 
             <p className="text-slate-500 text-xs mt-3">
-              * Revenue aggiunto = scenario moderato annualizzato ({formatCurrency(annualRevAdded/12)}/mese × 12). Anno 1 include setup una-tantum. Anno 2 e 3 solo fee ricorrenti.
+              * Revenue aggiunto = gap annuale tra fatturato email attuale e benchmark di settore ({formatCurrency(annualRevAdded/12)}/mese × 12). Anno 1 include setup una-tantum. Anno 2 e 3 solo fee ricorrenti.
             </p>
           </div>
         )}
