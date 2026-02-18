@@ -707,7 +707,8 @@ const ConversationalSurvey = () => {
         formData.emailRevenuePercentage,
         formData.listSize,
         formData.activeFlows,
-        formData.sector === 'other' ? formData.customSector : undefined
+        formData.sector === 'other' ? formData.customSector : undefined,
+        formData.emailFrequency
       );
       const adminReport = generateAdminReport(formData, advancedReport);
       const reportUrl = leadId ? `https://quiz-to-customer.lovable.app/report/${leadId}` : null;

@@ -1129,7 +1129,7 @@ const EmailMarketingSurvey: React.FC = () => {
     }
     setIsSubmitting(true);
     try {
-      const advancedReport = calculateAdvancedReport(formData.sector, formData.monthlyRevenue, formData.emailRevenuePercentage, formData.listSize, formData.activeFlows, formData.sector === 'other' ? formData.customSector : undefined);
+      const advancedReport = calculateAdvancedReport(formData.sector, formData.monthlyRevenue, formData.emailRevenuePercentage, formData.listSize, formData.activeFlows, formData.sector === 'other' ? formData.customSector : undefined, formData.emailFrequency);
       const adminReport = generateAdminReport(formData, advancedReport);
 
       // Generate shareable report URL - use passed currentLeadId to avoid race condition
