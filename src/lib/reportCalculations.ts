@@ -75,6 +75,30 @@ export const flowImpact: Record<string, {
   }
 };
 
+// AOV stimato per settore (benchmark)
+export const sectorAOV: Record<string, number> = {
+  beauty: 55,
+  fashion: 80,
+  food: 45,
+  digital: 35,
+  jewelry: 150,
+  home: 90,
+  health: 50,
+  other: 65
+};
+
+// Conversione frequenza email → invii per mese
+export const parseEmailFrequency = (freq: string): number => {
+  const freqMap: Record<string, number> = {
+    'none': 0,
+    '1-2': 5,
+    '3-4': 14,
+    '5-7': 24,
+    'daily+': 30
+  };
+  return freqMap[freq] ?? 5;
+};
+
 // Parse dei valori dai range
 export const parseRevenueRange = (range: string): number => {
   const rangeMap: Record<string, number> = {
@@ -172,6 +196,16 @@ export interface AdvancedReport {
   // Score complessivo
   emailHealthScore: number;
   yearlyPotential: number;
+
+  // Forecast basato sulla lista
+  listForecast: {
+    listSize: number;
+    sendsPerMonth: number;
+    sectorAOV: number;
+    current: { sends: number; newsletterRevenue: number; automationRevenue: number; total: number };
+    optimized: { sends: number; newsletterRevenue: number; automationRevenue: number; total: number };
+    benchmark: { sends: number; newsletterRevenue: number; automationRevenue: number; total: number };
+  };
 }
 
 export const calculateAdvancedReport = (
@@ -180,7 +214,8 @@ export const calculateAdvancedReport = (
   emailPercentRange: string,
   listSizeRange: string,
   activeFlows: string[],
-  customSectorLabel?: string
+  customSectorLabel?: string,
+  emailFrequency?: string
 ): AdvancedReport => {
   // Parse input values
   const monthlyRevenue = parseRevenueRange(monthlyRevenueRange);
@@ -362,6 +397,35 @@ export const calculateAdvancedReport = (
     potentialObstacles: potentialObstacles.slice(0, 4)
   };
   
+  // Calcolo Forecast Lista
+  const aov = sectorAOV[sector] || sectorAOV.other;
+  const sendsPerMonth = parseEmailFrequency(emailFrequency || 'none');
+  
+  // Calcola revenue per uno scenario dato
+  const calcScenario = (sends: number) => {
+    const newsletterRevenue = aov * (listSize * sends * 0.002); // 0.2% CR
+    const automationRevenue = aov * (listSize * 0.02);          // 2% CR
+    return {
+      sends,
+      newsletterRevenue,
+      automationRevenue,
+      total: newsletterRevenue + automationRevenue
+    };
+  };
+
+  // Scenari: Attuale (freq dichiarata), Ottimizzato (x2.5), Benchmark (20 invii)
+  const optimizedSends = Math.max(12, Math.round(sendsPerMonth * 2.5));
+  const benchmarkSends = 20;
+
+  const listForecast = {
+    listSize,
+    sendsPerMonth,
+    sectorAOV: aov,
+    current: calcScenario(sendsPerMonth),
+    optimized: calcScenario(optimizedSends),
+    benchmark: calcScenario(benchmarkSends)
+  };
+
   return {
     currentEmailRevenue,
     currentEmailPercent,
@@ -384,6 +448,8 @@ export const calculateAdvancedReport = (
     topActions,
     strategicAnalysis,
     emailHealthScore,
-    yearlyPotential
+    yearlyPotential,
+    listForecast
   };
 };
+
