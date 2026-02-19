@@ -1,108 +1,110 @@
 
-# Fix: Sezione Popup & Crescita Lista mancante nel report condivisibile
+# Aggiunta sezione "Report Salvati" nell'area admin
 
-## Diagnosi completa
+## Obiettivo
 
-Analizzando il database e il codice, ho identificato **due bug distinti** che si combinano:
-
-### Bug 1 — `newSubscribersPerMonth = 0` quando `conversionRate` non è inserito
-
-Nel form admin, l'admin può selezionare solo il `monthlyListGrowthRate` (es. 5%) senza necessariamente inserire `monthlyVisitors` e `popupConversionRate`. In questo caso:
-
-```
-newSubscribersPerMonth = Math.round(0 * 0) = 0
-```
-
-Quindi tutta la revenue popup è zero, ma il dato salvato nel DB mostra `hasPopup: true` con `conversionRate: 0`. Nel report condivisibile la sezione viene renderizzata (perché `hasPopup: true`), ma con tutti i numeri a zero — completamente inutile.
-
-**Soluzione**: quando `conversionRate = 0` ma `monthlyListGrowthRate > 0`, calcolare i `newSubscribersPerMonth` direttamente dal tasso di crescita sulla lista:
-```
-newSubscribersPerMonth = Math.round(listSize * (monthlyListGrowthRate / 100))
-```
-
-Questo è il comportamento corretto: se il tasso di crescita è 5%, su una lista da 12.000 iscritti → 600 nuovi/mese.
-
-### Bug 2 — Nel link condivisibile, il Forecast Lista mostra dati del vecchio CR 2%
-
-I report salvati nel DB prima del fix del CR dinamico hanno ancora `automationRevenue` calcolato con CR 2% (es. `55.200€/mese` per lista da 12.000 e AOV 230€ → `12.000 × 0.02 × 230 = 55.200€`). Il link condivisibile mostra questi valori salvati, non ricalcola.
-
-Questo non è risolvibile senza rigenerare i report (il calcolo è già stato fixato per i nuovi report generati).
+Aggiungere nella pagina `/admin/report` (dopo il login) una sezione che mostra la lista dei report generati in precedenza, con data, nome cliente/sito, punteggio email health score e potenziale annuo. Ogni report ha un pulsante per riaprirlo o copiare il link.
 
 ---
 
-## Soluzione: Fix nel calcolo dei `newSubscribersPerMonth`
+## Struttura attuale
 
-### File 1: `src/lib/reportCalculations.ts`
+Il flusso attuale è:
+- Login con password → `AdminReport.tsx` mostra `<AdminSurvey />`
+- `AdminSurvey` ha due viste: il form multi-step OR il report generato
 
-**Riga 509** — Aggiornare il calcolo dei `newSubscribersPerMonth`:
-
-```typescript
-// Calcola nuovi iscritti da popup:
-// - Se conversionRate > 0: da visitatori × CR
-// - Se conversionRate = 0 ma growthRate > 0: stima da lista × tasso crescita
-const fromVisitors = Math.round(popupParams.monthlyVisitors * cr);
-const fromGrowthRate = Math.round(listSize * growthRate);
-const newSubscribersPerMonth = cr > 0 ? fromVisitors : fromGrowthRate;
-```
-
-Questo garantisce che se l'admin inserisce solo il tasso di crescita (es. 5%) senza i visitatori, il sistema stima comunque i nuovi iscritti in modo realistico.
-
-### File 2: `src/components/AdminSurvey.tsx`
-
-**Preview "nuovi iscritti/mese"** (riga 527-530): aggiornare il calcolo del preview inline per mostrare anche la stima da growth rate quando CR = 0:
-
-```tsx
-{formData.monthlyListGrowthRate && (
-  <div className="bg-teal-900/20 border border-teal-500/30 rounded-xl p-3">
-    <p className="text-teal-400 text-sm font-semibold">
-      ≈ {
-        formData.monthlyVisitors && formData.popupConversionRate
-          ? Math.round(parseFloat(formData.monthlyVisitors) * (parseFloat(formData.popupConversionRate) / 100)).toLocaleString('it-IT')
-          : Math.round(parseFloat(formData.listSize || '3000') * (parseFloat(formData.monthlyListGrowthRate) / 100)).toLocaleString('it-IT')
-      } nuovi iscritti/mese
-    </p>
-    <p className="text-teal-400/60 text-xs mt-0.5">
-      {!formData.popupConversionRate ? 'stimati da tasso crescita lista' : 'dal popup'}
-    </p>
-  </div>
-)}
-```
-
-### File 3: `src/components/AdminSurvey.tsx` — fix condizione preview
-
-Attualmente il preview (riga 527) mostra solo se **entrambi** `monthlyVisitors` e `popupConversionRate` sono inseriti. Cambiare la condizione per mostrarlo anche con solo il growth rate:
-
-```tsx
-// Prima:
-{formData.monthlyVisitors && formData.popupConversionRate && (
-
-// Dopo:
-{(formData.monthlyVisitors && formData.popupConversionRate) || formData.monthlyListGrowthRate ? (
-```
+La lista salvati si inserisce nella vista home del form (quando `step = 0` e nessun report è stato ancora generato), come pannello separato sotto/accanto al wizard.
 
 ---
 
-## Flusso dati corretto dopo il fix
+## Design della sezione
+
+La sezione "Report Salvati" apparirà **sopra il form wizard** ogni volta che l'admin accede, mostrando gli ultimi report generati in ordine cronologico inverso.
 
 ```text
-Admin inserisce popup attivo + growth rate 5% (senza visitatori/CR)
-       ↓
-newSubscribersPerMonth = listSize × 5% = 12.000 × 5% = 600/mese
-       ↓
-revenueWelcome12m  = 600 × AOV × 5% × 12  = Welcome flow
-revenueRecovery12m = 600 × AOV × 3% × 12  = Recuperi carrello
-revenueAutomation12m = 600 × AOV × CR_dinamico × 12 = Automazioni
-       ↓
-Sezione Popup nel link condivisibile mostra numeri reali, non zero
+┌────────────────────────────────────────────┐
+│ 🔒 Admin Mode                              │
+├────────────────────────────────────────────┤
+│ 📋 REPORT SALVATI (3)                      │
+│ ┌──────────────────────────────────────┐   │
+│ │ Perinelli Forniture   18 feb 2026   │   │
+│ │ Score: 8/100  •  €693.600/anno      │   │
+│ │ [Apri report]  [Copia link]         │   │
+│ └──────────────────────────────────────┘   │
+│ ┌──────────────────────────────────────┐   │
+│ │ Report Admin          18 feb 2026   │   │
+│ │ Score: 33/100  •  €90.000/anno      │   │
+│ │ [Apri report]  [Copia link]         │   │
+│ └──────────────────────────────────────┘   │
+├────────────────────────────────────────────┤
+│ ➕ Crea nuovo report                       │
+│   Step 1 di 8: Settore e-commerce ...     │
+└────────────────────────────────────────────┘
 ```
 
 ---
 
-## File modificati
+## Dati disponibili nel DB
+
+La query per recuperare i report salvati è:
+```sql
+SELECT id, full_name, website, email_health_score, yearly_potential, created_at, sector, report_data
+FROM survey_submissions
+WHERE status = 'admin_report'
+ORDER BY created_at DESC
+LIMIT 50
+```
+
+I campi da mostrare per ogni card:
+- **Nome cliente**: `report_data->'meta'->>'clientName'` (se vuoto → `website` → "Report Admin")
+- **Sito web**: `report_data->'meta'->>'website'` o `website`
+- **Settore**: `sector` (mappato a label human-readable)
+- **Data**: `created_at` formattata (es. "18 feb 2026, 15:41")
+- **Score**: `email_health_score` con colore (rosso < 40, giallo 40-70, verde > 70)
+- **Potenziale annuo**: `yearly_potential` formattato in euro
+- **Link**: `/report/:id`
+
+---
+
+## Implementazione tecnica
+
+### Nuovo componente: `src/components/AdminReportHistory.tsx`
+
+Componente dedicato che:
+1. Fa fetch dei report al mount con `supabase.from('survey_submissions').select(...)` 
+2. Mostra uno skeleton loader durante il caricamento
+3. Renderizza la lista di card con i dati
+4. Ogni card ha due pulsanti: "Apri report" (link → `/report/:id`) e "Copia link" (copia URL negli appunti)
+5. Supporta refresh dopo la generazione di un nuovo report
+
+### Modifiche a `src/components/AdminSurvey.tsx`
+
+Aggiungere il componente `AdminReportHistory` in testa alla vista quiz (quando non c'è ancora un `report` generato), con un `refreshKey` che si aggiorna dopo ogni `handleGenerate` per ricaricare la lista.
+
+### Nota RLS
+
+La RLS esistente (`Public can read admin report rows: status = 'admin_report'`) permette già la lettura pubblica, quindi il fetch funziona senza autenticazione. Nessuna modifica al DB necessaria.
+
+---
+
+## File modificati/creati
 
 | File | Modifica |
 |---|---|
-| `src/lib/reportCalculations.ts` | Fix calcolo `newSubscribersPerMonth`: fallback su `listSize × growthRate` quando `conversionRate = 0` |
-| `src/components/AdminSurvey.tsx` | Aggiorna condizione e testo preview "nuovi iscritti" nel form popup |
+| `src/components/AdminReportHistory.tsx` | **Nuovo** — componente lista report salvati con fetch, skeleton, card e azioni |
+| `src/components/AdminSurvey.tsx` | Aggiunta `AdminReportHistory` in testa alla vista quiz, con `refreshKey` aggiornato dopo ogni generazione |
 
-Nessuna migrazione DB. I nuovi report salvati dopo il fix avranno i dati corretti. I record vecchi con `newSubscribersPerMonth: 0` non vengono toccati (sono già stati generati con i parametri che l'admin aveva inserito).
+Nessuna migrazione DB, nessuna modifica RLS — i dati sono già accessibili.
+
+---
+
+## Dettagli card report
+
+Ogni card mostrerà:
+- **Badge settore** (es. "Beauty", "Fashion", "Altro")  
+- **Nome display** = clientName dal meta OR website OR "Report Admin"  
+- **Data** formattata in italiano (es. "18 feb 2026 · 15:41")  
+- **Score** con colore dinamico: rosso (< 40) / arancione (40–69) / verde (≥ 70)  
+- **Potenziale annuo** in formato €XX.XXX  
+- **Pulsante "Apri report"** → naviga a `/report/:id` in nuova tab  
+- **Pulsante "Copia link"** → copia URL negli appunti con feedback visivo
