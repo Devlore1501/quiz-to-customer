@@ -226,6 +226,9 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
   // Alias per template — usa il report simulato se presente, altrimenti quello originale
   const r = activeReport;
 
+  // ── Pannello Simula: lista flussi disponibili ─────────────────────────────
+  const ALL_FLOWS = Object.entries(flowImpact).map(([key, val]) => ({ key, label: val.label }));
+
   return <div className="min-h-screen bg-slate-50 py-8 px-4 relative">
       {/* ── Banner simulazione attiva ───────────────────────────────────────── */}
       {simulatedReport && (
@@ -500,16 +503,16 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
                 <span className="w-3 h-3 rounded-full bg-purple-500"></span>
                 <h3 className="text-purple-400 font-semibold">Aggressivo</h3>
               </div>
-              <p className="text-3xl font-bold text-white mb-1">+{report.scenarios.aggressive.growthPercent}%</p>
+              <p className="text-3xl font-bold text-white mb-1">+{r.scenarios.aggressive.growthPercent}%</p>
               <p className="text-purple-400/70 text-xs mb-3">del gap recuperato</p>
-              <p className="text-2xl font-semibold text-purple-400">{formatCurrency(report.scenarios.aggressive.value)}<span className="text-sm">/mese</span></p>
-              <p className="text-slate-400 text-sm mt-3">{report.scenarios.aggressive.description}</p>
+              <p className="text-2xl font-semibold text-purple-400">{formatCurrency(r.scenarios.aggressive.value)}<span className="text-sm">/mese</span></p>
+              <p className="text-slate-400 text-sm mt-3">{r.scenarios.aggressive.description}</p>
             </div>
         </div>
         </div>
 
         {/* Sezione Forecast: Il Potenziale della Tua Lista */}
-        {report.listForecast &&
+        {r.listForecast &&
       <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 animate-fade-in" style={{ animationDelay: '550ms' }}>
             <h2 className="text-xl font-bold text-orange mb-6 flex items-center gap-2">
               📬 Forecast: Il Potenziale della Tua Lista
@@ -520,7 +523,7 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
               {/* Lista Attuale — statica */}
               <div className="bg-slate-700/50 p-4 rounded-lg text-center">
                 <p className="text-slate-400 text-sm mb-1">Lista Attuale</p>
-                <p className="text-2xl font-bold text-white">{report.listForecast.listSize.toLocaleString('it-IT')}</p>
+                <p className="text-2xl font-bold text-white">{r.listForecast.listSize.toLocaleString('it-IT')}</p>
                 <p className="text-slate-400 text-sm">iscritti</p>
               </div>
 
@@ -547,19 +550,19 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
                 </div>
               </div>
 
-              {/* AOV — statico */}
+              {/* AOV */}
               <div className={`p-4 rounded-lg text-center border ${
-          report.listForecast.isCustomAov ?
+          r.listForecast.isCustomAov ?
           'bg-gradient-to-br from-green-600/20 to-green-500/5 border-green-500/30' :
           'bg-gradient-to-br from-orange/20 to-orange/5 border-orange/30'}`
           }>
-                <p className={`text-sm mb-1 ${report.listForecast.isCustomAov ? 'text-green-400' : 'text-orange'}`}>
-                  {report.listForecast.isCustomAov ? '✅ AOV Reale Cliente' : 'AOV Stimato Settore'}
+                <p className={`text-sm mb-1 ${r.listForecast.isCustomAov ? 'text-green-400' : 'text-orange'}`}>
+                  {r.listForecast.isCustomAov ? '✅ AOV Reale Cliente' : 'AOV Stimato Settore'}
                 </p>
-                <p className={`text-2xl font-bold ${report.listForecast.isCustomAov ? 'text-green-400' : 'text-orange'}`}>
-                  €{report.listForecast.sectorAOV}
+                <p className={`text-2xl font-bold ${r.listForecast.isCustomAov ? 'text-green-400' : 'text-orange'}`}>
+                  €{r.listForecast.sectorAOV}
                 </p>
-                <p className={`text-sm ${report.listForecast.isCustomAov ? 'text-green-400/70' : 'text-orange/70'}`}>
+                <p className={`text-sm ${r.listForecast.isCustomAov ? 'text-green-400/70' : 'text-orange/70'}`}>
                   valore medio ordine
                 </p>
               </div>
@@ -586,8 +589,8 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
                   <tr className="border-b border-slate-700/50">
                     <td className="p-4 text-slate-400">Invii/mese</td>
                     <td className="p-4 text-center text-blue-300 font-bold bg-blue-500/5 border-x border-blue-500/10">{customSends}</td>
-                    <td className="p-4 text-center text-orange font-medium bg-orange/5 border-x border-orange/20">{report.listForecast.optimized.sends}</td>
-                    <td className="p-4 text-center text-green-400 font-medium bg-green-500/5">{report.listForecast.benchmark.sends}</td>
+                    <td className="p-4 text-center text-orange font-medium bg-orange/5 border-x border-orange/20">{r.listForecast.optimized.sends}</td>
+                    <td className="p-4 text-center text-green-400 font-medium bg-green-500/5">{r.listForecast.benchmark.sends}</td>
                   </tr>
                   <tr className="border-b border-slate-700/50">
                     <td className="p-4 text-slate-400">CR newsletter</td>
@@ -598,20 +601,20 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
                   <tr className="border-b border-slate-700/50">
                     <td className="p-4 text-slate-400">Ordini stimati</td>
                     <td className="p-4 text-center text-blue-300 font-medium bg-blue-500/5 border-x border-blue-500/10">{liveOrders.toLocaleString('it-IT')}</td>
-                    <td className="p-4 text-center text-orange bg-orange/5 border-x border-orange/20">{Math.round(report.listForecast.listSize * report.listForecast.optimized.sends * 0.002).toLocaleString('it-IT')}</td>
-                    <td className="p-4 text-center text-green-400 bg-green-500/5">{Math.round(report.listForecast.listSize * report.listForecast.benchmark.sends * 0.002).toLocaleString('it-IT')}</td>
+                    <td className="p-4 text-center text-orange bg-orange/5 border-x border-orange/20">{Math.round(r.listForecast.listSize * r.listForecast.optimized.sends * 0.002).toLocaleString('it-IT')}</td>
+                    <td className="p-4 text-center text-green-400 bg-green-500/5">{Math.round(r.listForecast.listSize * r.listForecast.benchmark.sends * 0.002).toLocaleString('it-IT')}</td>
                   </tr>
                   <tr className="border-b border-slate-700/50">
                     <td className="p-4 text-slate-400">Revenue Newsletter</td>
                     <td className="p-4 text-center text-blue-300 font-medium bg-blue-500/5 border-x border-blue-500/10">{formatCurrency(liveNewsletterRev)}</td>
-                    <td className="p-4 text-center text-orange font-medium bg-orange/5 border-x border-orange/20">{formatCurrency(report.listForecast.optimized.newsletterRevenue)}</td>
-                    <td className="p-4 text-center text-green-400 font-medium bg-green-500/5">{formatCurrency(report.listForecast.benchmark.newsletterRevenue)}</td>
+                    <td className="p-4 text-center text-orange font-medium bg-orange/5 border-x border-orange/20">{formatCurrency(r.listForecast.optimized.newsletterRevenue)}</td>
+                    <td className="p-4 text-center text-green-400 font-medium bg-green-500/5">{formatCurrency(r.listForecast.benchmark.newsletterRevenue)}</td>
                   </tr>
                   <tr className="border-b border-slate-700/50">
                     <td className="p-4 text-slate-400">Revenue Automazioni</td>
                     <td className="p-4 text-center text-blue-300 font-medium bg-blue-500/5 border-x border-blue-500/10">{formatCurrency(liveAutomationRev)}</td>
-                    <td className="p-4 text-center text-orange font-medium bg-orange/5 border-x border-orange/20">{formatCurrency(report.listForecast.optimized.automationRevenue)}</td>
-                    <td className="p-4 text-center text-green-400 font-medium bg-green-500/5">{formatCurrency(report.listForecast.benchmark.automationRevenue)}</td>
+                    <td className="p-4 text-center text-orange font-medium bg-orange/5 border-x border-orange/20">{formatCurrency(r.listForecast.optimized.automationRevenue)}</td>
+                    <td className="p-4 text-center text-green-400 font-medium bg-green-500/5">{formatCurrency(r.listForecast.benchmark.automationRevenue)}</td>
                   </tr>
                   <tr>
                     <td className="p-4 text-white font-bold">💰 Totale stimato</td>
@@ -620,11 +623,11 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
                       <span className="text-blue-300/60 text-xs block">/mese</span>
                     </td>
                     <td className="p-4 text-center bg-orange/10 border-x border-orange/20">
-                      <span className="text-orange font-bold text-base">{formatCurrency(report.listForecast.optimized.total)}</span>
+                      <span className="text-orange font-bold text-base">{formatCurrency(r.listForecast.optimized.total)}</span>
                       <span className="text-orange/60 text-xs block">/mese</span>
                     </td>
                     <td className="p-4 text-center bg-green-500/10">
-                      <span className="text-green-400 font-bold text-base">{formatCurrency(report.listForecast.benchmark.total)}</span>
+                      <span className="text-green-400 font-bold text-base">{formatCurrency(r.listForecast.benchmark.total)}</span>
                       <span className="text-green-400/60 text-xs block">/mese</span>
                     </td>
                   </tr>
@@ -635,53 +638,53 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
             {/* Nota esplicativa */}
             <div className="mt-4 p-4 bg-slate-700/30 rounded-lg border border-slate-600/50">
               <p className="text-slate-400 text-xs leading-relaxed">
-                ⚠️ <strong className="text-slate-300">Stima indicativa</strong> basata su benchmark di settore. Formula: CR 0.2% per newsletter, CR dinamico 0.3%–1.0% per automazioni (in base al numero di flussi attivi), AOV {report.listForecast.isCustomAov ? 'reale cliente' : 'stimato da dati di mercato'} {report.sectorBenchmark.label}. La colonna <span className="text-blue-300">Corrente</span> è modificabile tramite lo slider per simulare diversi scenari di invio.
+                ⚠️ <strong className="text-slate-300">Stima indicativa</strong> basata su benchmark di settore. Formula: CR 0.2% per newsletter, CR dinamico 0.3%–1.0% per automazioni (in base al numero di flussi attivi), AOV {r.listForecast.isCustomAov ? 'reale cliente' : 'stimato da dati di mercato'} {r.sectorBenchmark.label}. La colonna <span className="text-blue-300">Corrente</span> è modificabile tramite lo slider per simulare diversi scenari di invio.
               </p>
             </div>
           </div>
       }
 
         {/* ── Sezione Popup & Crescita Lista (condizionale) ─────────────────── */}
-        {report.popupData && report.popupData.hasPopup && (
+        {r.popupData && r.popupData.hasPopup && (
           <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 animate-fade-in" style={{ animationDelay: '570ms' }}>
             <h2 className="text-xl font-bold text-teal-400 mb-2 flex items-center gap-2">
               📬 Popup & Crescita Lista
             </h2>
             <p className="text-slate-500 text-xs mb-6">
-              Proiezione basata sul popup attivo — tasso di conversione {report.popupData.conversionRate}% su {report.popupData.monthlyVisitors.toLocaleString('it-IT')} visitatori/mese.
+              Proiezione basata sul popup attivo — tasso di conversione {r.popupData.conversionRate}% su {r.popupData.monthlyVisitors.toLocaleString('it-IT')} visitatori/mese.
             </p>
 
             {/* 3 card principali */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
               <div className="bg-gradient-to-br from-teal-600/20 to-teal-500/5 p-5 rounded-xl border border-teal-500/30 text-center">
                 <p className="text-teal-400 text-sm mb-1">📩 Nuovi iscritti/mese</p>
-                <p className="text-3xl font-bold text-white">{report.popupData.newSubscribersPerMonth.toLocaleString('it-IT')}</p>
+                <p className="text-3xl font-bold text-white">{r.popupData.newSubscribersPerMonth.toLocaleString('it-IT')}</p>
                 <p className="text-teal-400/70 text-xs mt-1">dal popup attivo</p>
               </div>
               <div className="bg-gradient-to-br from-blue-600/20 to-blue-500/5 p-5 rounded-xl border border-blue-500/30 text-center">
                 <p className="text-blue-300 text-sm mb-1">📈 Lista a 12 mesi</p>
-                <p className="text-3xl font-bold text-white">{report.popupData.projectedListSize12m.toLocaleString('it-IT')}</p>
+                <p className="text-3xl font-bold text-white">{r.popupData.projectedListSize12m.toLocaleString('it-IT')}</p>
                 <p className="text-blue-300/70 text-xs mt-1">
-                  +{report.popupData.monthlyListGrowthRate}%/mese → {report.popupData.projectedListSize6m.toLocaleString('it-IT')} a 6 mesi
+                  +{r.popupData.monthlyListGrowthRate}%/mese → {r.popupData.projectedListSize6m.toLocaleString('it-IT')} a 6 mesi
                 </p>
               </div>
               <div className="bg-gradient-to-br from-green-600/20 to-green-500/5 p-5 rounded-xl border border-green-500/30 text-center">
                 <p className="text-green-400 text-sm mb-1">💰 Revenue aggiuntiva</p>
-                <p className="text-3xl font-bold text-white">{formatCurrency(report.popupData.projectedRevenue12m)}</p>
+                <p className="text-3xl font-bold text-white">{formatCurrency(r.popupData.projectedRevenue12m)}</p>
                 <p className="text-green-400/70 text-xs mt-1">dai nuovi iscritti (12 mesi)</p>
                 {/* Breakdown tre layer */}
                 <div className="mt-3 pt-3 border-t border-green-500/20 space-y-1 text-left">
                   <div className="flex justify-between text-xs">
                     <span className="text-slate-400">🎁 Welcome (5% CR)</span>
-                    <span className="text-green-300">{formatCurrency(report.popupData.revenueWelcome12m)}</span>
+                    <span className="text-green-300">{formatCurrency(r.popupData.revenueWelcome12m)}</span>
                   </div>
                   <div className="flex justify-between text-xs">
                     <span className="text-slate-400">🛒 Recuperi (3% CR)</span>
-                    <span className="text-green-300">{formatCurrency(report.popupData.revenueRecovery12m)}</span>
+                    <span className="text-green-300">{formatCurrency(r.popupData.revenueRecovery12m)}</span>
                   </div>
                   <div className="flex justify-between text-xs">
                     <span className="text-slate-400">⚡ Automazioni</span>
-                    <span className="text-green-300">{formatCurrency(report.popupData.revenueAutomation12m)}</span>
+                    <span className="text-green-300">{formatCurrency(r.popupData.revenueAutomation12m)}</span>
                   </div>
                 </div>
               </div>
@@ -703,29 +706,29 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
                   <tr className="border-b border-slate-700/50">
                     <td className="p-3 text-slate-400">Iscritti lista</td>
                     <td className="p-3 text-center text-teal-400 font-bold">
-                      {report.listForecast.listSize.toLocaleString('it-IT')}
+                      {r.listForecast?.listSize.toLocaleString('it-IT')}
                     </td>
                     <td className="p-3 text-center text-blue-300 font-medium">
-                      {Math.round(report.listForecast.listSize * Math.pow(1 + report.popupData.monthlyListGrowthRate / 100, 3)).toLocaleString('it-IT')}
+                      {r.listForecast ? Math.round(r.listForecast.listSize * Math.pow(1 + r.popupData.monthlyListGrowthRate / 100, 3)).toLocaleString('it-IT') : '—'}
                     </td>
                     <td className="p-3 text-center text-orange font-medium">
-                      {report.popupData.projectedListSize6m.toLocaleString('it-IT')}
+                      {r.popupData.projectedListSize6m.toLocaleString('it-IT')}
                     </td>
                     <td className="p-3 text-center text-green-400 font-bold">
-                      {report.popupData.projectedListSize12m.toLocaleString('it-IT')}
+                      {r.popupData.projectedListSize12m.toLocaleString('it-IT')}
                     </td>
                   </tr>
                   <tr>
                     <td className="p-3 text-slate-400">Nuovi iscritti aggiunti</td>
                     <td className="p-3 text-center text-teal-400">—</td>
                     <td className="p-3 text-center text-blue-300">
-                      +{(report.popupData.newSubscribersPerMonth * 3).toLocaleString('it-IT')}
+                      +{(r.popupData.newSubscribersPerMonth * 3).toLocaleString('it-IT')}
                     </td>
                     <td className="p-3 text-center text-orange">
-                      +{(report.popupData.newSubscribersPerMonth * 6).toLocaleString('it-IT')}
+                      +{(r.popupData.newSubscribersPerMonth * 6).toLocaleString('it-IT')}
                     </td>
                     <td className="p-3 text-center text-green-400 font-bold">
-                      +{(report.popupData.newSubscribersPerMonth * 12).toLocaleString('it-IT')}
+                      +{(r.popupData.newSubscribersPerMonth * 12).toLocaleString('it-IT')}
                     </td>
                   </tr>
                 </tbody>
@@ -737,11 +740,11 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
               <p className="text-teal-400/80 text-xs leading-relaxed">
                 <strong className="text-teal-400">📊 Benchmark e-commerce popup:</strong>{' '}
                 Un buon tasso di conversione popup è tra il <strong className="text-white">3% e il 5%</strong>.
-                {report.popupData.conversionRate < 3
-                  ? ` Il tuo ${report.popupData.conversionRate}% è sotto la media — ottimizzare il copy e l'offerta popup può portare a 2-3× più iscritti.`
-                  : report.popupData.conversionRate >= 5
-                    ? ` Il tuo ${report.popupData.conversionRate}% è eccellente — sei già nella top tier e-commerce!`
-                    : ` Il tuo ${report.popupData.conversionRate}% è nella norma, con margine per migliorare ulteriormente.`
+                {r.popupData.conversionRate < 3
+                  ? ` Il tuo ${r.popupData.conversionRate}% è sotto la media — ottimizzare il copy e l'offerta popup può portare a 2-3× più iscritti.`
+                  : r.popupData.conversionRate >= 5
+                    ? ` Il tuo ${r.popupData.conversionRate}% è eccellente — sei già nella top tier e-commerce!`
+                    : ` Il tuo ${r.popupData.conversionRate}% è nella norma, con margine per migliorare ulteriormente.`
                 }
               </p>
             </div>
@@ -757,7 +760,7 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
           </h2>
           
           <div className="space-y-4">
-            {report.topActions.map((action, index) => <div key={index} className="flex flex-col md:flex-row md:items-center gap-4 bg-slate-700/50 p-4 rounded-lg animate-fade-in" style={{
+            {r.topActions.map((action, index) => <div key={index} className="flex flex-col md:flex-row md:items-center gap-4 bg-slate-700/50 p-4 rounded-lg animate-fade-in" style={{
             animationDelay: `${700 + index * 100}ms`
           }}>
                 <div className="flex items-center gap-4 flex-1">
@@ -784,9 +787,9 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
       }}>
           <div className="text-center">
             <p className="text-white/80 text-lg mb-2">💰 Potenziale Economico Annuo Recuperabile</p>
-            <p className="text-4xl md:text-5xl font-bold text-white">{formatCurrency(report.yearlyPotential)}</p>
+            <p className="text-4xl md:text-5xl font-bold text-white">{formatCurrency(r.yearlyPotential)}</p>
             <p className="text-white/70 mt-2">
-              Gap annuale tra email attuale ({formatCurrency(report.currentEmailRevenue)}/mese) e benchmark di settore ({formatCurrency(report.benchmarkEmailRevenue)}/mese)
+              Gap annuale tra email attuale ({formatCurrency(r.currentEmailRevenue)}/mese) e benchmark di settore ({formatCurrency(r.benchmarkEmailRevenue)}/mese)
             </p>
           </div>
         </div>
@@ -1059,6 +1062,255 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
         </div>
 
       </div>
+
+      {/* ── Pulsante flottante "Simula" ──────────────────────────────────────── */}
+      {isAdminMode && (
+        <button
+          onClick={() => setShowSimPanel(true)}
+          className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-full shadow-2xl text-sm font-semibold transition-all hover:scale-105 active:scale-95"
+          style={{ background: simulatedReport ? '#7c3aed' : '#1e293b', border: '2px solid', borderColor: simulatedReport ? '#a78bfa' : '#475569', color: simulatedReport ? '#e9d5ff' : '#94a3b8' }}
+          title="Simula modifiche ai dati"
+        >
+          <Settings className="w-4 h-4" />
+          {simulatedReport ? '✦ Sim. attiva' : 'Simula dati'}
+        </button>
+      )}
+
+      {/* ── Pannello laterale "Simula modifiche" ─────────────────────────────── */}
+      {isAdminMode && showSimPanel && (
+        <>
+          {/* Overlay scuro */}
+          <div
+            className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
+            onClick={() => setShowSimPanel(false)}
+          />
+          {/* Drawer laterale destra */}
+          <div className="fixed top-0 right-0 h-full w-full max-w-md z-50 bg-slate-900 border-l border-slate-700 shadow-2xl flex flex-col overflow-hidden">
+            {/* Header pannello */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-700 bg-slate-800 flex-shrink-0">
+              <div className="flex items-center gap-2">
+                <Settings className="w-5 h-5 text-purple-400" />
+                <h3 className="text-white font-bold text-base">Simula modifiche</h3>
+                {simulatedReport && (
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-purple-600/30 text-purple-300 border border-purple-500/40">
+                    ATTIVA
+                  </span>
+                )}
+              </div>
+              <button
+                onClick={() => setShowSimPanel(false)}
+                className="text-slate-400 hover:text-white transition-colors p-1 rounded-lg hover:bg-slate-700"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Corpo scrollabile */}
+            <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
+
+              {/* Fatturato mensile */}
+              <div>
+                <label className="block text-slate-300 text-sm font-semibold mb-1.5">💶 Fatturato mensile totale</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-bold">€</span>
+                  <input
+                    type="number"
+                    min={0}
+                    value={simInputs.monthlyRevenue}
+                    onChange={e => setSimInputs(p => ({ ...p, monthlyRevenue: parseFloat(e.target.value) || 0 }))}
+                    className="w-full bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-2 pl-8 text-sm focus:outline-none focus:border-purple-500"
+                  />
+                </div>
+              </div>
+
+              {/* % da email */}
+              <div>
+                <label className="block text-slate-300 text-sm font-semibold mb-1.5">📧 % fatturato da email attuale</label>
+                <div className="flex items-center gap-3">
+                  <Slider
+                    min={0}
+                    max={80}
+                    step={1}
+                    value={[simInputs.emailPct]}
+                    onValueChange={v => setSimInputs(p => ({ ...p, emailPct: v[0] }))}
+                    className="flex-1"
+                  />
+                  <span className="text-white font-bold w-12 text-right">{simInputs.emailPct}%</span>
+                </div>
+              </div>
+
+              {/* Lista iscritti */}
+              <div>
+                <label className="block text-slate-300 text-sm font-semibold mb-1.5">👥 Dimensione lista</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={simInputs.listSize}
+                  onChange={e => setSimInputs(p => ({ ...p, listSize: parseFloat(e.target.value) || 0 }))}
+                  className="w-full bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-500"
+                />
+              </div>
+
+              {/* AOV */}
+              <div>
+                <label className="block text-slate-300 text-sm font-semibold mb-1.5">🏷️ AOV personalizzato (lascia vuoto per benchmark)</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-bold">€</span>
+                  <input
+                    type="number"
+                    min={0}
+                    placeholder="es. 65"
+                    value={simInputs.aov}
+                    onChange={e => setSimInputs(p => ({ ...p, aov: e.target.value }))}
+                    className="w-full bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-2 pl-8 text-sm focus:outline-none focus:border-purple-500 placeholder:text-slate-600"
+                  />
+                </div>
+              </div>
+
+              {/* Frequenza email */}
+              <div>
+                <label className="block text-slate-300 text-sm font-semibold mb-1.5">📨 Frequenza invio newsletter</label>
+                <select
+                  value={simInputs.emailFrequency}
+                  onChange={e => setSimInputs(p => ({ ...p, emailFrequency: e.target.value }))}
+                  className="w-full bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-500"
+                >
+                  <option value="none">Nessuna (0/mese)</option>
+                  <option value="1-2">1-2/settimana (~5/mese)</option>
+                  <option value="3-4">3-4/settimana (~14/mese)</option>
+                  <option value="5-7">5-7/settimana (~24/mese)</option>
+                  <option value="daily+">Daily+ (~30/mese)</option>
+                </select>
+              </div>
+
+              {/* Flussi attivi */}
+              <div>
+                <label className="block text-slate-300 text-sm font-semibold mb-2">⚙️ Flussi automazione attivi</label>
+                <div className="grid grid-cols-1 gap-2">
+                  {ALL_FLOWS.map(({ key, label }) => {
+                    const isActive = simInputs.activeFlows.includes(key);
+                    return (
+                      <button
+                        key={key}
+                        onClick={() => setSimInputs(p => ({
+                          ...p,
+                          activeFlows: isActive
+                            ? p.activeFlows.filter(f => f !== key)
+                            : [...p.activeFlows, key]
+                        }))}
+                        className={`flex items-center justify-between px-3 py-2 rounded-lg border text-sm text-left transition-all ${
+                          isActive
+                            ? 'bg-purple-600/20 border-purple-500/50 text-purple-200'
+                            : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-500'
+                        }`}
+                      >
+                        <span>{label}</span>
+                        <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${isActive ? 'bg-purple-500 text-white' : 'bg-slate-700 text-slate-500'}`}>
+                          {isActive ? '✓' : '+'}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Scenari */}
+              <div>
+                <label className="block text-slate-300 text-sm font-semibold mb-2">🚀 Scenari crescita (% del gap recuperato)</label>
+                <div className="space-y-3">
+                  <div>
+                    <div className="flex justify-between mb-1">
+                      <span className="text-green-400 text-xs">Conservativo</span>
+                      <span className="text-white text-xs font-bold">{simInputs.scenarioConservative}%</span>
+                    </div>
+                    <Slider min={5} max={40} step={1} value={[simInputs.scenarioConservative]}
+                      onValueChange={v => setSimInputs(p => ({ ...p, scenarioConservative: v[0] }))} className="w-full" />
+                  </div>
+                  <div>
+                    <div className="flex justify-between mb-1">
+                      <span className="text-orange text-xs">Moderato</span>
+                      <span className="text-white text-xs font-bold">{simInputs.scenarioModerate}%</span>
+                    </div>
+                    <Slider min={10} max={70} step={1} value={[simInputs.scenarioModerate]}
+                      onValueChange={v => setSimInputs(p => ({ ...p, scenarioModerate: v[0] }))} className="w-full" />
+                  </div>
+                  <div>
+                    <div className="flex justify-between mb-1">
+                      <span className="text-purple-400 text-xs">Aggressivo</span>
+                      <span className="text-white text-xs font-bold">{simInputs.scenarioAggressive}%</span>
+                    </div>
+                    <Slider min={20} max={100} step={1} value={[simInputs.scenarioAggressive]}
+                      onValueChange={v => setSimInputs(p => ({ ...p, scenarioAggressive: v[0] }))} className="w-full" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Popup */}
+              <div>
+                <label className="block text-slate-300 text-sm font-semibold mb-2">🪟 Popup optin</label>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between bg-slate-800 border border-slate-700 rounded-lg px-3 py-2">
+                    <span className="text-slate-300 text-sm">Popup attivo</span>
+                    <button
+                      onClick={() => setSimInputs(p => ({ ...p, hasPopup: !p.hasPopup }))}
+                      className={`w-10 h-5 rounded-full transition-all relative ${simInputs.hasPopup ? 'bg-purple-500' : 'bg-slate-600'}`}
+                    >
+                      <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${simInputs.hasPopup ? 'left-5' : 'left-0.5'}`} />
+                    </button>
+                  </div>
+                  {simInputs.hasPopup && (
+                    <>
+                      <div>
+                        <div className="flex justify-between mb-1">
+                          <span className="text-slate-400 text-xs">Tasso conversione</span>
+                          <span className="text-white text-xs font-bold">{simInputs.popupConversionRate}%</span>
+                        </div>
+                        <Slider min={0.5} max={15} step={0.5} value={[simInputs.popupConversionRate]}
+                          onValueChange={v => setSimInputs(p => ({ ...p, popupConversionRate: v[0] }))} className="w-full" />
+                      </div>
+                      <div>
+                        <label className="block text-slate-400 text-xs mb-1">Visitatori/mese</label>
+                        <input type="number" min={0} value={simInputs.monthlyVisitors}
+                          onChange={e => setSimInputs(p => ({ ...p, monthlyVisitors: parseFloat(e.target.value) || 0 }))}
+                          className="w-full bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-500" />
+                      </div>
+                      <div>
+                        <div className="flex justify-between mb-1">
+                          <span className="text-slate-400 text-xs">Crescita lista mensile</span>
+                          <span className="text-white text-xs font-bold">{simInputs.monthlyListGrowthRate}%</span>
+                        </div>
+                        <Slider min={0.5} max={20} step={0.5} value={[simInputs.monthlyListGrowthRate]}
+                          onValueChange={v => setSimInputs(p => ({ ...p, monthlyListGrowthRate: v[0] }))} className="w-full" />
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Footer azioni */}
+            <div className="px-5 py-4 border-t border-slate-700 bg-slate-800/80 flex-shrink-0 space-y-2">
+              <Button
+                onClick={() => { handleSimulate(); setShowSimPanel(false); }}
+                className="w-full bg-purple-600 hover:bg-purple-500 text-white font-semibold py-2.5"
+              >
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Applica simulazione
+              </Button>
+              {simulatedReport && (
+                <Button
+                  onClick={() => { handleResetSimulation(); setShowSimPanel(false); }}
+                  variant="outline"
+                  className="w-full border-slate-600 text-slate-300 hover:bg-slate-700"
+                >
+                  <RotateCcw className="w-4 h-4 mr-2" />
+                  Ripristina dati originali
+                </Button>
+              )}
+            </div>
+          </div>
+        </>
+      )}
     </div>;
 };
 export default AdvancedReportComponent;

@@ -122,6 +122,7 @@ const ReportPage = () => {
           : undefined
       }
       onRestart={() => window.location.href = '/'}
+      isAdminMode={true}
     />
   );
 };
