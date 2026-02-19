@@ -2,13 +2,30 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Slider } from '@/components/ui/slider';
-import { Download, Loader2 } from 'lucide-react';
+import { Download, Loader2, Settings, X, RotateCcw, RefreshCw } from 'lucide-react';
 import type { AdvancedReport } from '@/lib/reportCalculations';
+import { calculateAdvancedReportFromValues, flowImpact, sectorAOV } from '@/lib/reportCalculations';
 import { generatePdfReport } from '@/lib/pdfGenerator';
 
 interface InvestmentData {
   show: boolean;
   currentEmailRevenue?: number;
+}
+
+interface SimInputs {
+  monthlyRevenue: number;
+  emailPct: number;
+  listSize: number;
+  activeFlows: string[];
+  aov: string;
+  emailFrequency: string;
+  hasPopup: boolean;
+  popupConversionRate: number;
+  monthlyVisitors: number;
+  monthlyListGrowthRate: number;
+  scenarioConservative: number;
+  scenarioModerate: number;
+  scenarioAggressive: number;
 }
 
 interface AdvancedReportProps {
@@ -19,6 +36,7 @@ interface AdvancedReportProps {
   website?: string;
   onRestart: () => void;
   investmentData?: InvestmentData;
+  isAdminMode?: boolean;
 }
 const formatCurrency = (value: number) => `€${Math.round(value).toLocaleString('it-IT')}`;
 const getRatingColor = (rating: 'A' | 'B' | 'C' | 'D') => {
@@ -46,12 +64,117 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
   userEmail = '',
   website = '',
   onRestart,
-  investmentData
+  investmentData,
+  isAdminMode = false,
 }) => {
   const [isDownloading, setIsDownloading] = useState(false);
   const [customSends, setCustomSends] = useState<number>(
     report.listForecast ? report.listForecast.sendsPerMonth : 4
   );
+
+  // ── Stato pannello "Simula modifiche" ────────────────────────────────────
+  const [showSimPanel, setShowSimPanel] = useState(false);
+  const [simulatedReport, setSimulatedReport] = useState<AdvancedReport | null>(null);
+  const [simInputs, setSimInputs] = useState<SimInputs>({
+    monthlyRevenue: report.monthlyRevenue,
+    emailPct: report.currentEmailPercent,
+    listSize: report.listSize,
+    activeFlows: Object.keys(flowImpact).filter(k =>
+      !report.missingFlows.find(f => f.key === k)
+    ),
+    aov: report.listForecast?.isCustomAov ? String(report.listForecast.sectorAOV) : '',
+    emailFrequency: report.listForecast ? 
+      (() => {
+        const s = report.listForecast.sendsPerMonth;
+        if (s === 0) return 'none';
+        if (s <= 8) return '1-2';
+        if (s <= 16) return '3-4';
+        if (s <= 28) return '5-7';
+        return 'daily+';
+      })() : 'none',
+    hasPopup: report.popupData?.hasPopup || false,
+    popupConversionRate: report.popupData?.conversionRate || 3,
+    monthlyVisitors: report.popupData?.monthlyVisitors || 0,
+    monthlyListGrowthRate: report.popupData?.monthlyListGrowthRate || 2,
+    scenarioConservative: report.scenarios.conservative.growthPercent,
+    scenarioModerate: report.scenarios.moderate.growthPercent,
+    scenarioAggressive: report.scenarios.aggressive.growthPercent,
+  });
+
+  // Report attivo: simulato se presente, altrimenti originale
+  const activeReport = simulatedReport ?? report;
+
+  const handleSimulate = () => {
+    const aovNum = simInputs.aov ? parseFloat(simInputs.aov) : undefined;
+    const popupParams = simInputs.hasPopup ? {
+      hasPopup: true,
+      conversionRate: simInputs.popupConversionRate,
+      monthlyVisitors: simInputs.monthlyVisitors,
+      monthlyListGrowthRate: simInputs.monthlyListGrowthRate,
+    } : { hasPopup: false, conversionRate: 0, monthlyVisitors: 0, monthlyListGrowthRate: 0 };
+
+    // Deriva la chiave del settore dalla label del benchmark
+    const SECTOR_LABEL_MAP: Record<string, string> = {
+      'Beauty & Personal Care': 'beauty',
+      'Abbigliamento': 'fashion',
+      'Food & Beverage': 'food',
+      'Prodotti Digitali': 'digital',
+      'Gioielli': 'jewelry',
+      'Articoli Casa': 'home',
+      'Salute & Integrazione': 'health',
+      'Altro Settore': 'other',
+    };
+    const sectorKey = SECTOR_LABEL_MAP[report.sectorBenchmark.label] ?? 'other';
+
+    const result = calculateAdvancedReportFromValues(
+      sectorKey,
+      simInputs.monthlyRevenue,
+      simInputs.emailPct,
+      simInputs.listSize,
+      simInputs.activeFlows,
+      undefined,
+      simInputs.emailFrequency,
+      aovNum,
+      {
+        conservative: simInputs.scenarioConservative,
+        moderate: simInputs.scenarioModerate,
+        aggressive: simInputs.scenarioAggressive,
+      },
+      popupParams,
+    );
+    setSimulatedReport(result);
+    setCustomSends(result.listForecast?.sendsPerMonth ?? 4);
+  };
+
+  const handleResetSimulation = () => {
+    setSimulatedReport(null);
+    setSimInputs({
+      monthlyRevenue: report.monthlyRevenue,
+      emailPct: report.currentEmailPercent,
+      listSize: report.listSize,
+      activeFlows: Object.keys(flowImpact).filter(k =>
+        !report.missingFlows.find(f => f.key === k)
+      ),
+      aov: report.listForecast?.isCustomAov ? String(report.listForecast.sectorAOV) : '',
+      emailFrequency: report.listForecast ?
+        (() => {
+          const s = report.listForecast.sendsPerMonth;
+          if (s === 0) return 'none';
+          if (s <= 8) return '1-2';
+          if (s <= 16) return '3-4';
+          if (s <= 28) return '5-7';
+          return 'daily+';
+        })() : 'none',
+      hasPopup: report.popupData?.hasPopup || false,
+      popupConversionRate: report.popupData?.conversionRate || 3,
+      monthlyVisitors: report.popupData?.monthlyVisitors || 0,
+      monthlyListGrowthRate: report.popupData?.monthlyListGrowthRate || 2,
+      scenarioConservative: report.scenarios.conservative.growthPercent,
+      scenarioModerate: report.scenarios.moderate.growthPercent,
+      scenarioAggressive: report.scenarios.aggressive.growthPercent,
+    });
+    setCustomSends(report.listForecast?.sendsPerMonth ?? 4);
+  };
 
   // ── Stati locali fee (form inline nella sezione investimento) ─────────────
   const [setupFee, setSetupFee] = useState<string>('');
@@ -59,22 +182,22 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
   const [monthlyPercent, setMonthlyPercent] = useState<string>('');
 
   // ── Ricalcolo colonna Attuale con invii personalizzati ────────────────────
-  const liveAov = report.listForecast?.sectorAOV ?? 0;
-  const liveListSize = report.listForecast?.listSize ?? 0;
+  const liveAov = activeReport.listForecast?.sectorAOV ?? 0;
+  const liveListSize = activeReport.listForecast?.listSize ?? 0;
   const liveNewsletterRev = liveAov * (liveListSize * customSends * 0.002);
-  const liveAutomationRev = report.listForecast?.current.automationRevenue ?? 0;
+  const liveAutomationRev = activeReport.listForecast?.current.automationRevenue ?? 0;
   const liveTotal = liveNewsletterRev + liveAutomationRev;
   const liveOrders = Math.round(liveListSize * customSends * 0.002);
 
   // ── Calcoli ROI investimento (live dagli input locali) ────────────────────
   const showInvestment = investmentData?.show === true;
-  const baseEmailRevenue = investmentData?.currentEmailRevenue ?? report.currentEmailRevenue;
+  const baseEmailRevenue = investmentData?.currentEmailRevenue ?? activeReport.currentEmailRevenue;
   const setupFeeN = parseFloat(setupFee) || 0;
   const monthlyFixedN = parseFloat(monthlyFixed) || 0;
   const monthlyPercentN = parseFloat(monthlyPercent) || 0;
   const monthlyPercentFee = baseEmailRevenue * (monthlyPercentN / 100);
   const totalMonthlyFee = monthlyFixedN + monthlyPercentFee;
-  const annualRevAdded = report.yearlyPotential;
+  const annualRevAdded = activeReport.yearlyPotential;
   const annualCostY1 = setupFeeN + totalMonthlyFee * 12;
   const annualCostY2 = totalMonthlyFee * 12;
   const annualCostY3 = totalMonthlyFee * 12;
@@ -92,15 +215,37 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
   const handleDownloadPdf = async () => {
     setIsDownloading(true);
     try {
-      await generatePdfReport(report, userName, userEmail, website);
+      await generatePdfReport(activeReport, userName, userEmail, website);
     } catch (error) {
       console.error('Error generating PDF:', error);
     } finally {
       setIsDownloading(false);
     }
   };
-  return <div className="min-h-screen bg-slate-50 py-8 px-4">
-      <div className="w-full max-w-5xl mx-auto space-y-8">
+
+  // Alias per template — usa il report simulato se presente, altrimenti quello originale
+  const r = activeReport;
+
+  return <div className="min-h-screen bg-slate-50 py-8 px-4 relative">
+      {/* ── Banner simulazione attiva ───────────────────────────────────────── */}
+      {simulatedReport && (
+        <div className="fixed top-0 left-0 right-0 z-40 bg-purple-900/95 border-b border-purple-500/50 px-4 py-2 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-sm">
+            <Settings className="w-4 h-4 text-purple-300 animate-pulse" />
+            <span className="text-purple-200 font-semibold">Simulazione attiva</span>
+            <span className="text-purple-400 text-xs">— i dati mostrati sono simulati, non salvati</span>
+          </div>
+          <button
+            onClick={handleResetSimulation}
+            className="flex items-center gap-1.5 text-xs px-3 py-1 rounded-lg bg-purple-700/60 border border-purple-500/40 text-purple-200 hover:bg-purple-700 transition-all"
+          >
+            <RotateCcw className="w-3 h-3" />
+            Ripristina originale
+          </button>
+        </div>
+      )}
+
+      <div className="w-full max-w-5xl mx-auto space-y-8" style={{ paddingTop: simulatedReport ? '48px' : '0' }}>
         
         {/* Header */}
         <div className="text-center animate-fade-in">
@@ -108,7 +253,7 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
             📊 Il Tuo Report Email Marketing
           </h1>
           <p className="text-lg text-[#1d283a]">
-            Analisi personalizzata per il settore <span className="text-orange font-semibold">{report.sectorBenchmark.label}</span>
+            Analisi personalizzata per il settore <span className="text-orange font-semibold">{activeReport.sectorBenchmark.label}</span>
           </p>
           {website &&
         <p className="text-sm text-slate-500 mt-1">
@@ -133,26 +278,26 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
             <div className="relative w-32 h-32 flex-shrink-0">
               <svg className="w-full h-full transform -rotate-90">
                 <circle cx="64" cy="64" r="56" stroke="currentColor" strokeWidth="12" fill="none" className="text-slate-700" />
-                <circle cx="64" cy="64" r="56" stroke="currentColor" strokeWidth="12" fill="none" strokeDasharray={`${report.emailHealthScore * 3.52} 352`} className={getScoreColor(report.emailHealthScore)} strokeLinecap="round" />
+                <circle cx="64" cy="64" r="56" stroke="currentColor" strokeWidth="12" fill="none" strokeDasharray={`${r.emailHealthScore * 3.52} 352`} className={getScoreColor(r.emailHealthScore)} strokeLinecap="round" />
               </svg>
               <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-3xl font-bold text-white">{report.emailHealthScore}</span>
+                <span className="text-3xl font-bold text-white">{r.emailHealthScore}</span>
               </div>
             </div>
             <div className="text-center md:text-left">
               <h2 className="text-xl font-bold text-white mb-2">Email Health Score</h2>
               <p className="text-slate-400">
-                {report.emailHealthScore >= 80 && "Eccellente! Stai sfruttando bene l'email marketing."}
-                {report.emailHealthScore >= 60 && report.emailHealthScore < 80 && "Buono, ma c'è margine di miglioramento."}
-                {report.emailHealthScore >= 40 && report.emailHealthScore < 60 && "Discreto. Hai opportunità significative da cogliere."}
-                {report.emailHealthScore < 40 && "Critico. Stai perdendo molto potenziale economico."}
+                {r.emailHealthScore >= 80 && "Eccellente! Stai sfruttando bene l'email marketing."}
+                {r.emailHealthScore >= 60 && r.emailHealthScore < 80 && "Buono, ma c'è margine di miglioramento."}
+                {r.emailHealthScore >= 40 && r.emailHealthScore < 60 && "Discreto. Hai opportunità significative da cogliere."}
+                {r.emailHealthScore < 40 && "Critico. Stai perdendo molto potenziale economico."}
               </p>
             </div>
           </div>
         </div>
 
         {/* Sezione: Analisi Strategica */}
-        {report.strategicAnalysis && <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 animate-fade-in" style={{
+        {r.strategicAnalysis && <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 animate-fade-in" style={{
         animationDelay: '150ms'
       }}>
             <h2 className="text-xl font-bold text-orange mb-6 flex items-center gap-2">
@@ -166,7 +311,7 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
                   <span className="text-slate-400">📍</span> Situazione Attuale
                 </h3>
                 <p className="text-slate-300 leading-relaxed text-sm">
-                  {report.strategicAnalysis.currentSituation}
+                  {r.strategicAnalysis.currentSituation}
                 </p>
               </div>
               
@@ -176,7 +321,7 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
                   <span className="text-green-400">🎯</span> Situazione Desiderata
                 </h3>
                 <p className="text-slate-300 leading-relaxed text-sm">
-                  {report.strategicAnalysis.desiredSituation}
+                  {r.strategicAnalysis.desiredSituation}
                 </p>
               </div>
               
@@ -186,7 +331,7 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
                   <span className="text-red-400">⚠️</span> Potenziali Impedimenti
                 </h3>
                 <ul className="space-y-2">
-                  {report.strategicAnalysis.potentialObstacles.map((obstacle, i) => <li key={i} className="text-slate-300 text-sm flex items-start gap-2">
+                  {r.strategicAnalysis.potentialObstacles.map((obstacle, i) => <li key={i} className="text-slate-300 text-sm flex items-start gap-2">
                       <span className="text-red-400 mt-0.5">•</span>
                       {obstacle}
                     </li>)}
@@ -207,27 +352,27 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
             {/* Fatturato Totale */}
             <div className="bg-slate-700/50 p-4 rounded-lg border-l-4 border-slate-500">
               <p className="text-slate-400 text-sm mb-1">Fatturato Mensile Totale</p>
-              <p className="text-2xl font-bold text-white">{formatCurrency(report.monthlyRevenue)}<span className="text-sm text-slate-400">/mese</span></p>
-              <p className="text-slate-400 text-sm">{formatCurrency(report.monthlyRevenue * 12)}/anno</p>
+              <p className="text-2xl font-bold text-white">{formatCurrency(r.monthlyRevenue)}<span className="text-sm text-slate-400">/mese</span></p>
+              <p className="text-slate-400 text-sm">{formatCurrency(r.monthlyRevenue * 12)}/anno</p>
             </div>
             {/* Fatturato Email Attuale */}
             <div className="bg-slate-700/50 p-4 rounded-lg border-l-4 border-orange/50">
               <p className="text-slate-400 text-sm mb-1">Fatturato da Email</p>
-              <p className="text-2xl font-bold text-white">{formatCurrency(report.currentEmailRevenue)}<span className="text-sm text-slate-400">/mese</span></p>
-              <p className="text-slate-400 text-sm">{report.currentEmailPercent}% del fatturato totale</p>
+              <p className="text-2xl font-bold text-white">{formatCurrency(r.currentEmailRevenue)}<span className="text-sm text-slate-400">/mese</span></p>
+              <p className="text-slate-400 text-sm">{r.currentEmailPercent}% del fatturato totale</p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div className="bg-gradient-to-br from-orange/20 to-orange/5 p-4 rounded-lg border border-orange/30">
               <p className="text-orange text-sm mb-1">Benchmark Settore</p>
-              <p className="text-2xl font-bold text-orange">{formatCurrency(report.benchmarkEmailRevenue)}<span className="text-sm text-orange/70">/mese</span></p>
+              <p className="text-2xl font-bold text-orange">{formatCurrency(r.benchmarkEmailRevenue)}<span className="text-sm text-orange/70">/mese</span></p>
               <p className="text-orange/70 text-sm">35% del fatturato (standard di mercato)</p>
             </div>
             <div className="bg-gradient-to-br from-red-600/30 to-red-500/10 p-4 rounded-lg border border-red-500/30">
               <p className="text-red-300 text-sm mb-1">Gap Economico</p>
-              <p className="text-2xl font-bold text-red-400">{formatCurrency(report.revenueGap)}<span className="text-sm text-red-300">/mese</span></p>
-              <p className="text-red-300 text-sm">{formatCurrency(report.revenueGap * 12)}/anno persi</p>
+              <p className="text-2xl font-bold text-red-400">{formatCurrency(r.revenueGap)}<span className="text-sm text-red-300">/mese</span></p>
+              <p className="text-red-300 text-sm">{formatCurrency(r.revenueGap * 12)}/anno persi</p>
             </div>
           </div>
 
@@ -235,11 +380,11 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-slate-400">Il tuo risultato</span>
-              <span className="text-slate-400">Benchmark {report.sectorBenchmark.label}</span>
+              <span className="text-slate-400">Benchmark {r.sectorBenchmark.label}</span>
             </div>
             <div className="relative h-4 bg-slate-700 rounded-full overflow-hidden">
               <div className="absolute h-full bg-orange rounded-full transition-all duration-1000" style={{
-              width: `${Math.min(100, report.currentEmailPercent / report.sectorBenchmark.emailShare * 100)}%`
+              width: `${Math.min(100, r.currentEmailPercent / r.sectorBenchmark.emailShare * 100)}%`
             }} />
               <div className="absolute h-full w-1 bg-white top-0" style={{
               left: '100%',
@@ -247,8 +392,8 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
             }} />
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-white font-medium">{report.currentEmailPercent}%</span>
-              <span className="text-orange font-medium">{report.sectorBenchmark.emailShare}%</span>
+              <span className="text-white font-medium">{r.currentEmailPercent}%</span>
+              <span className="text-orange font-medium">{r.sectorBenchmark.emailShare}%</span>
             </div>
           </div>
         </div>
@@ -261,8 +406,8 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
             <h2 className="text-xl font-bold text-orange flex items-center gap-2">
               ⚙️ Analisi Automazioni
             </h2>
-            <div className={`px-4 py-2 rounded-lg font-bold text-lg ${getRatingColor(report.automationRating)}`}>
-              Rating: {report.automationRating}
+            <div className={`px-4 py-2 rounded-lg font-bold text-lg ${getRatingColor(r.automationRating)}`}>
+              Rating: {r.automationRating}
             </div>
           </div>
 
@@ -271,27 +416,27 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
             <div className="space-y-3">
               <div className="flex justify-between">
                 <span className="text-slate-300">Copertura Automazioni</span>
-                <span className="text-white font-medium">{report.activeFlowsCount}/{report.totalFlowsCount} flussi attivi</span>
+                <span className="text-white font-medium">{r.activeFlowsCount}/{r.totalFlowsCount} flussi attivi</span>
               </div>
-              <Progress value={report.automationCoverage} className="h-3" />
+              <Progress value={r.automationCoverage} className="h-3" />
               <p className="text-slate-400 text-sm">
-                {report.automationCoverage < 50 ? "⚠️ Stai perdendo vendite automatiche significative" : report.automationCoverage < 80 ? "📈 Buon punto di partenza, ma c'è ancora margine" : "✅ Ottima copertura delle automazioni!"}
+                {r.automationCoverage < 50 ? "⚠️ Stai perdendo vendite automatiche significative" : r.automationCoverage < 80 ? "📈 Buon punto di partenza, ma c'è ancora margine" : "✅ Ottima copertura delle automazioni!"}
               </p>
             </div>
 
             {/* Potenziale flussi mancanti */}
             <div className="bg-gradient-to-br from-orange/20 to-orange/5 p-4 rounded-lg border border-orange/30">
               <p className="text-orange text-sm mb-1">Potenziale Flussi Mancanti</p>
-              <p className="text-3xl font-bold text-white">{formatCurrency(report.totalFlowGap)}<span className="text-base text-slate-300">/mese</span></p>
-              <p className="text-slate-300 text-sm mt-1">{formatCurrency(report.totalFlowGap * 12)}/anno recuperabili</p>
+              <p className="text-3xl font-bold text-white">{formatCurrency(r.totalFlowGap)}<span className="text-base text-slate-300">/mese</span></p>
+              <p className="text-slate-300 text-sm mt-1">{formatCurrency(r.totalFlowGap * 12)}/anno recuperabili</p>
             </div>
           </div>
 
           {/* Lista flussi mancanti */}
-          {report.missingFlows.length > 0 && <div className="mt-6">
+          {r.missingFlows.length > 0 && <div className="mt-6">
               <h3 className="text-white font-semibold mb-3">Flussi Mancanti (ordinati per impatto):</h3>
               <div className="space-y-2">
-                {report.missingFlows.slice(0, 4).map((flow, index) => <div key={flow.key} className="flex items-center justify-between bg-slate-700/50 p-3 rounded-lg animate-fade-in" style={{
+                {r.missingFlows.slice(0, 4).map((flow, index) => <div key={flow.key} className="flex items-center justify-between bg-slate-700/50 p-3 rounded-lg animate-fade-in" style={{
               animationDelay: `${400 + index * 100}ms`
             }}>
                     <div className="flex items-center gap-3">
@@ -319,7 +464,7 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
           <h2 className="text-xl font-bold text-orange mb-2 flex items-center gap-2">
             🚀 Scenari di Crescita
           </h2>
-          <p className="text-slate-500 text-xs mb-6">I valori mostrano il <strong className="text-slate-400">recupero mensile aggiuntivo stimato</strong> sulla base del gap tra email attuale e benchmark (€{Math.round(report.revenueGap).toLocaleString('it-IT')}/mese).</p>
+          <p className="text-slate-500 text-xs mb-6">I valori mostrano il <strong className="text-slate-400">recupero mensile aggiuntivo stimato</strong> sulla base del gap tra email attuale e benchmark (€{Math.round(r.revenueGap).toLocaleString('it-IT')}/mese).</p>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Conservativo */}
@@ -328,10 +473,10 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
                 <span className="w-3 h-3 rounded-full bg-green-500"></span>
                 <h3 className="text-green-400 font-semibold">Conservativo</h3>
               </div>
-              <p className="text-3xl font-bold text-white mb-1">+{report.scenarios.conservative.growthPercent}%</p>
+              <p className="text-3xl font-bold text-white mb-1">+{r.scenarios.conservative.growthPercent}%</p>
               <p className="text-green-400/70 text-xs mb-3">del gap recuperato</p>
-              <p className="text-2xl font-semibold text-green-400">{formatCurrency(report.scenarios.conservative.value)}<span className="text-sm">/mese</span></p>
-              <p className="text-slate-400 text-sm mt-3">{report.scenarios.conservative.description}</p>
+              <p className="text-2xl font-semibold text-green-400">{formatCurrency(r.scenarios.conservative.value)}<span className="text-sm">/mese</span></p>
+              <p className="text-slate-400 text-sm mt-3">{r.scenarios.conservative.description}</p>
             </div>
 
             {/* Moderato */}
@@ -343,10 +488,10 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
                 <span className="w-3 h-3 rounded-full bg-orange"></span>
                 <h3 className="text-orange font-semibold">Moderato</h3>
               </div>
-              <p className="text-3xl font-bold text-white mb-1">+{report.scenarios.moderate.growthPercent}%</p>
+              <p className="text-3xl font-bold text-white mb-1">+{r.scenarios.moderate.growthPercent}%</p>
               <p className="text-orange/70 text-xs mb-3">del gap recuperato</p>
-              <p className="text-2xl font-semibold text-orange">{formatCurrency(report.scenarios.moderate.value)}<span className="text-sm">/mese</span></p>
-              <p className="text-slate-400 text-sm mt-3">{report.scenarios.moderate.description}</p>
+              <p className="text-2xl font-semibold text-orange">{formatCurrency(r.scenarios.moderate.value)}<span className="text-sm">/mese</span></p>
+              <p className="text-slate-400 text-sm mt-3">{r.scenarios.moderate.description}</p>
             </div>
 
             {/* Aggressivo */}

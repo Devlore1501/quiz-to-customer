@@ -146,6 +146,21 @@ export const AdminSurvey: React.FC = () => {
               showInvestment: fd.showInvestment ?? false,
               clientName: fd.clientName || '',
               website: fd.website || '',
+              // Dati di input per ricostruzione simulazione what-if
+              sector: fd.sector,
+              monthlyRevenue: parseFloat(fd.monthlyRevenue) || 0,
+              emailPct: parseFloat(fd.emailRevenuePercentage) || 0,
+              listSize: parseFloat(fd.listSize) || 0,
+              activeFlows: fd.activeFlows,
+              aov: fd.aov ? parseFloat(fd.aov) : undefined,
+              emailFrequency: fd.emailFrequency,
+              scenarioConservative: parseFloat(fd.scenarioConservative) || 15,
+              scenarioModerate: parseFloat(fd.scenarioModerate) || 35,
+              scenarioAggressive: parseFloat(fd.scenarioAggressive) || 60,
+              hasPopup: fd.hasPopup,
+              popupConversionRate: parseFloat(fd.popupConversionRate) || 0,
+              monthlyVisitors: parseFloat(fd.monthlyVisitors) || 0,
+              monthlyListGrowthRate: parseFloat(fd.monthlyListGrowthRate) || 2,
             },
           } as any,
           email_health_score: result.emailHealthScore,
@@ -165,6 +180,41 @@ export const AdminSurvey: React.FC = () => {
     } catch (e) {
       console.error('DB save exception:', e);
       setReportId(null);
+    }
+  };
+
+  const handleOpenSavedReport = async (id: string) => {
+    try {
+      const { data } = await supabase.rpc('get_report_by_id', { report_id: id });
+      if (data && (data as any).clientReport) {
+        const parsed = data as any;
+        setReport(parsed.clientReport);
+        setReportId(id);
+        if (parsed.meta) {
+          setFormData(prev => ({
+            ...prev,
+            clientName: parsed.meta.clientName || '',
+            website: parsed.meta.website || '',
+            showInvestment: parsed.meta.showInvestment || false,
+            sector: parsed.meta.sector || prev.sector,
+            monthlyRevenue: parsed.meta.monthlyRevenue ? String(parsed.meta.monthlyRevenue) : prev.monthlyRevenue,
+            emailRevenuePercentage: parsed.meta.emailPct ? String(parsed.meta.emailPct) : prev.emailRevenuePercentage,
+            listSize: parsed.meta.listSize ? String(parsed.meta.listSize) : prev.listSize,
+            activeFlows: parsed.meta.activeFlows || prev.activeFlows,
+            aov: parsed.meta.aov ? String(parsed.meta.aov) : prev.aov,
+            emailFrequency: parsed.meta.emailFrequency || prev.emailFrequency,
+            scenarioConservative: parsed.meta.scenarioConservative ? String(parsed.meta.scenarioConservative) : '15',
+            scenarioModerate: parsed.meta.scenarioModerate ? String(parsed.meta.scenarioModerate) : '35',
+            scenarioAggressive: parsed.meta.scenarioAggressive ? String(parsed.meta.scenarioAggressive) : '60',
+            hasPopup: parsed.meta.hasPopup || false,
+            popupConversionRate: parsed.meta.popupConversionRate ? String(parsed.meta.popupConversionRate) : '',
+            monthlyVisitors: parsed.meta.monthlyVisitors ? String(parsed.meta.monthlyVisitors) : '',
+            monthlyListGrowthRate: parsed.meta.monthlyListGrowthRate ? String(parsed.meta.monthlyListGrowthRate) : '2',
+          }));
+        }
+      }
+    } catch (e) {
+      console.error('Error opening saved report:', e);
     }
   };
 
@@ -883,7 +933,7 @@ export const AdminSurvey: React.FC = () => {
     <div className="min-h-screen bg-slate-900 flex flex-col">
       {/* Report Salvati — visibile sempre sopra il wizard */}
       <div className="w-full px-4 pt-6">
-        <AdminReportHistory refreshKey={refreshKey} />
+        <AdminReportHistory refreshKey={refreshKey} onOpenReport={handleOpenSavedReport} />
       </div>
 
       {/* Progress bar */}

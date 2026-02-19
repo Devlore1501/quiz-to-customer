@@ -75,7 +75,10 @@ function getScoreBg(score: number | null): string {
 
 // ─── Card ─────────────────────────────────────────────────────────────────────
 
-const ReportCard: React.FC<{ report: SavedReport }> = ({ report }) => {
+const ReportCard: React.FC<{
+  report: SavedReport;
+  onOpenReport?: (id: string) => void;
+}> = ({ report, onOpenReport }) => {
   const [copied, setCopied] = useState(false);
 
   const reportUrl = `https://quiz-to-customer.lovable.app/report/${report.id}`;
@@ -121,15 +124,25 @@ const ReportCard: React.FC<{ report: SavedReport }> = ({ report }) => {
 
         {/* Actions */}
         <div className="flex flex-col gap-1.5 shrink-0">
-          <a
-            href={reportUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-orange/10 border border-orange/30 text-orange hover:bg-orange/20 hover:border-orange/50 transition-all duration-200 font-medium"
-          >
-            <ExternalLink className="w-3.5 h-3.5" />
-            Apri
-          </a>
+          {onOpenReport ? (
+            <button
+              onClick={() => onOpenReport(report.id)}
+              className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-orange/10 border border-orange/30 text-orange hover:bg-orange/20 hover:border-orange/50 transition-all duration-200 font-medium"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              Apri in Admin
+            </button>
+          ) : (
+            <a
+              href={reportUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-orange/10 border border-orange/30 text-orange hover:bg-orange/20 hover:border-orange/50 transition-all duration-200 font-medium"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              Apri
+            </a>
+          )}
           <button
             onClick={handleCopy}
             className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-slate-700/60 border border-slate-600 text-slate-300 hover:border-slate-400 hover:text-white transition-all duration-200 font-medium"
@@ -163,9 +176,10 @@ const SkeletonCard: React.FC = () => (
 
 interface AdminReportHistoryProps {
   refreshKey?: number;
+  onOpenReport?: (id: string) => void;
 }
 
-export const AdminReportHistory: React.FC<AdminReportHistoryProps> = ({ refreshKey = 0 }) => {
+export const AdminReportHistory: React.FC<AdminReportHistoryProps> = ({ refreshKey = 0, onOpenReport }) => {
   const [reports, setReports] = useState<SavedReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -236,7 +250,7 @@ export const AdminReportHistory: React.FC<AdminReportHistoryProps> = ({ refreshK
       ) : (
         <div className="space-y-3">
           {reports.map(r => (
-            <ReportCard key={r.id} report={r} />
+            <ReportCard key={r.id} report={r} onOpenReport={onOpenReport} />
           ))}
         </div>
       )}
