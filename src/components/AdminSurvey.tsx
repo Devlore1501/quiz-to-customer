@@ -7,6 +7,7 @@ import { calculateAdvancedReportFromValues, sectorAOV, type AdvancedReport } fro
 import AdvancedReportComponent from '@/components/AdvancedReport';
 import { supabase } from '@/integrations/supabase/client';
 import { ChevronLeft, RotateCcw, Copy, Check } from 'lucide-react';
+import AdminReportHistory from '@/components/AdminReportHistory';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -102,6 +103,7 @@ export const AdminSurvey: React.FC = () => {
   const [reportId, setReportId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const [formData, setFormData] = useState<AdminFormData>({
     sector: '',
@@ -226,6 +228,7 @@ export const AdminSurvey: React.FC = () => {
 
     setReport(result);
     setIsGenerating(false);
+    setRefreshKey(k => k + 1); // aggiorna la lista report salvati
   };
 
   const handleCopyLink = () => {
@@ -878,6 +881,11 @@ export const AdminSurvey: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-900 flex flex-col">
+      {/* Report Salvati — visibile sempre sopra il wizard */}
+      <div className="w-full px-4 pt-6">
+        <AdminReportHistory refreshKey={refreshKey} />
+      </div>
+
       {/* Progress bar */}
       <div className="w-full bg-slate-800 px-4 py-5">
         <div className="max-w-xl mx-auto">
