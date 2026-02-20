@@ -184,10 +184,11 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
   // ── Ricalcolo colonna Attuale con invii personalizzati ────────────────────
   const liveAov = activeReport.listForecast?.sectorAOV ?? 0;
   const liveListSize = activeReport.listForecast?.listSize ?? 0;
-  const liveNewsletterRev = liveAov * (liveListSize * customSends * 0.002);
+  const REACH_RATE = 0.30;
+  const liveNewsletterRev = liveAov * (liveListSize * REACH_RATE * customSends * 0.002);
   const liveAutomationRev = activeReport.listForecast?.current.automationRevenue ?? 0;
   const liveTotal = liveNewsletterRev + liveAutomationRev;
-  const liveOrders = Math.round(liveListSize * customSends * 0.002);
+  const liveOrders = Math.round(liveListSize * REACH_RATE * customSends * 0.002);
 
   // ── Calcoli ROI investimento (live dagli input locali) ────────────────────
   const showInvestment = investmentData?.show === true;
@@ -602,8 +603,8 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
                   <tr className="border-b border-slate-700/50">
                     <td className="p-4 text-slate-400">Ordini stimati</td>
                     <td className="p-4 text-center text-blue-300 font-medium bg-blue-500/5 border-x border-blue-500/10">{liveOrders.toLocaleString('it-IT')}</td>
-                    <td className="p-4 text-center text-orange bg-orange/5 border-x border-orange/20">{Math.round(r.listForecast.listSize * r.listForecast.optimized.sends * 0.002).toLocaleString('it-IT')}</td>
-                    <td className="p-4 text-center text-green-400 bg-green-500/5">{Math.round(r.listForecast.listSize * r.listForecast.benchmark.sends * 0.002).toLocaleString('it-IT')}</td>
+                    <td className="p-4 text-center text-orange bg-orange/5 border-x border-orange/20">{Math.round(r.listForecast.listSize * 0.30 * r.listForecast.optimized.sends * 0.002).toLocaleString('it-IT')}</td>
+                    <td className="p-4 text-center text-green-400 bg-green-500/5">{Math.round(r.listForecast.listSize * 0.30 * r.listForecast.benchmark.sends * 0.002).toLocaleString('it-IT')}</td>
                   </tr>
                   <tr className="border-b border-slate-700/50">
                     <td className="p-4 text-slate-400">Revenue Newsletter</td>

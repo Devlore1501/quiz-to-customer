@@ -476,8 +476,10 @@ const _calculateReport = (
   const automationCR = getAutomationCR(activeFlowsCount);
 
   // Calcola revenue per uno scenario dato
+  const REACH_RATE = 0.30; // 30% della lista riceve ciascun invio (segmentazione + engagement)
+
   const calcScenario = (sends: number) => {
-    const newsletterRevenue = aov * (listSize * sends * 0.002); // 0.2% CR newsletter
+    const newsletterRevenue = aov * (listSize * REACH_RATE * sends * 0.002); // 0.2% CR newsletter
     const automationRevenue = aov * (listSize * automationCR);  // CR dinamico automazioni
     return {
       sends,
