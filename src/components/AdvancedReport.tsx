@@ -1066,7 +1066,7 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
       </div>
 
       {/* ── Pulsante flottante "Simula" ──────────────────────────────────────── */}
-      {isAdminMode && (
+      {(
         <button
           onClick={() => setShowSimPanel(true)}
           className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-full shadow-2xl text-sm font-semibold transition-all hover:scale-105 active:scale-95"
@@ -1079,7 +1079,7 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
       )}
 
       {/* ── Pannello laterale "Simula modifiche" ─────────────────────────────── */}
-      {isAdminMode && showSimPanel && (
+      {showSimPanel && (
         <>
           {/* Overlay scuro */}
           <div
