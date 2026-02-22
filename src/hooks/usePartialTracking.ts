@@ -1,5 +1,7 @@
 import { useEffect, useRef, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 interface UsePartialTrackingOptions {
   surveyType: 'email_marketing' | 'conversational';
@@ -8,6 +10,32 @@ interface UsePartialTrackingOptions {
   stepName: string;
   totalSteps: number;
   enabled?: boolean;
+}
+
+/**
+ * Helper: all partial_submissions requests pass x-session-id header
+ * so the RLS policy can restrict access to the caller's own session.
+ */
+function partialFetch(
+  sessionId: string,
+  method: 'POST' | 'PATCH',
+  body: Record<string, unknown>,
+  filter?: string,
+  keepalive = false,
+) {
+  const url = `${SUPABASE_URL}/rest/v1/partial_submissions${filter || ''}`;
+  return fetch(url, {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      apikey: SUPABASE_KEY,
+      Authorization: `Bearer ${SUPABASE_KEY}`,
+      Prefer: 'return=minimal',
+      'x-session-id': sessionId,
+    },
+    body: JSON.stringify(body),
+    keepalive,
+  });
 }
 
 export function usePartialTracking({
@@ -33,19 +61,14 @@ export function usePartialTracking({
     if (!enabled || recordCreatedRef.current) return;
     recordCreatedRef.current = true;
 
-    supabase
-      .from('partial_submissions' as never)
-      .insert({
-        session_id: sessionIdRef.current,
-        survey_type: surveyType,
-        current_step: 0,
-        current_step_name: stepName,
-        total_steps: totalSteps,
-        form_data: {},
-      } as never)
-      .then(({ error }) => {
-        if (error) console.error('Partial tracking insert error:', error);
-      });
+    partialFetch(sessionIdRef.current, 'POST', {
+      session_id: sessionIdRef.current,
+      survey_type: surveyType,
+      current_step: 0,
+      current_step_name: stepName,
+      total_steps: totalSteps,
+      form_data: {},
+    }).catch((err) => console.error('Partial tracking insert error:', err));
   }, [enabled, surveyType]);
 
   // Debounced update on step OR formData change
@@ -54,63 +77,56 @@ export function usePartialTracking({
 
     if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
     debounceTimerRef.current = setTimeout(() => {
-      supabase
-        .from('partial_submissions' as never)
-        .update({
+      partialFetch(
+        sessionIdRef.current,
+        'PATCH',
+        {
           current_step: currentStep,
           current_step_name: stepName,
           total_steps: totalSteps,
           form_data: formData,
           updated_at: new Date().toISOString(),
-        } as never)
-        .eq('session_id' as never, sessionIdRef.current as never)
-        .then(({ error }) => {
-          if (error) console.error('Partial tracking update error:', error);
-        });
+        },
+        `?session_id=eq.${sessionIdRef.current}`,
+      ).catch((err) => console.error('Partial tracking update error:', err));
     }, 500);
   }, [currentStep, stepName, formData, enabled, totalSteps]);
 
-  // Mark abandoned on beforeunload - use ref for fresh data
+  // Mark abandoned on beforeunload
   useEffect(() => {
     if (!enabled) return;
     const handler = () => {
-      const url = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/partial_submissions?session_id=eq.${sessionIdRef.current}`;
-      fetch(url, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          'Prefer': 'return=minimal',
-        },
-        body: JSON.stringify({
+      partialFetch(
+        sessionIdRef.current,
+        'PATCH',
+        {
           abandoned: true,
           updated_at: new Date().toISOString(),
           form_data: formDataRef.current,
-        }),
-        keepalive: true,
-      }).catch(() => {});
+        },
+        `?session_id=eq.${sessionIdRef.current}`,
+        true, // keepalive
+      ).catch(() => {});
     };
     window.addEventListener('beforeunload', handler);
     return () => window.removeEventListener('beforeunload', handler);
   }, [enabled]);
 
   // Mark completed
-  const markCompleted = useCallback(
-    async (submissionId?: string) => {
-      await supabase
-        .from('partial_submissions' as never)
-        .update({
-          completed: true,
-          abandoned: false,
-          submission_id: submissionId || null,
-          updated_at: new Date().toISOString(),
-          form_data: formDataRef.current,
-        } as never)
-        .eq('session_id' as never, sessionIdRef.current as never);
-    },
-    []
-  );
+  const markCompleted = useCallback(async (submissionId?: string) => {
+    await partialFetch(
+      sessionIdRef.current,
+      'PATCH',
+      {
+        completed: true,
+        abandoned: false,
+        submission_id: submissionId || null,
+        updated_at: new Date().toISOString(),
+        form_data: formDataRef.current,
+      },
+      `?session_id=eq.${sessionIdRef.current}`,
+    );
+  }, []);
 
   return { markCompleted, sessionId: sessionIdRef.current };
 }
