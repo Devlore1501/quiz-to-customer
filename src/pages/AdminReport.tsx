@@ -13,32 +13,52 @@ const AdminReport: React.FC = () => {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (session) {
+    let mounted = true;
+    const timeout = setTimeout(() => {
+      if (mounted) setLoading(false);
+    }, 5000);
+
+    const checkAdmin = async (userId: string) => {
+      try {
         const { data } = await supabase.rpc('has_role', {
-          _user_id: session.user.id,
+          _user_id: userId,
           _role: 'admin' as const,
         });
-        setAuthenticated(!!data);
-      } else {
-        setAuthenticated(false);
+        return !!data;
+      } catch {
+        return false;
       }
-      setLoading(false);
-    });
+    };
 
-    // Check existing session
     supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!mounted) return;
       if (session) {
-        const { data } = await supabase.rpc('has_role', {
-          _user_id: session.user.id,
-          _role: 'admin' as const,
-        });
-        setAuthenticated(!!data);
+        const isAdmin = await checkAdmin(session.user.id);
+        if (mounted) setAuthenticated(isAdmin);
       }
-      setLoading(false);
+      if (mounted) { setLoading(false); clearTimeout(timeout); }
+    }).catch(() => {
+      if (mounted) { setLoading(false); clearTimeout(timeout); }
     });
 
-    return () => subscription.unsubscribe();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        if (!mounted) return;
+        if (session) {
+          const isAdmin = await checkAdmin(session.user.id);
+          if (mounted) setAuthenticated(isAdmin);
+        } else {
+          if (mounted) setAuthenticated(false);
+        }
+        if (mounted) { setLoading(false); clearTimeout(timeout); }
+      }
+    );
+
+    return () => {
+      mounted = false;
+      clearTimeout(timeout);
+      subscription.unsubscribe();
+    };
   }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
