@@ -192,12 +192,12 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
 
   // ── Calcoli ROI investimento (live dagli input locali) ────────────────────
   const showInvestment = investmentData?.show === true;
-  // Base commissione = gap mensile netto IVA (ciò che Mailift porta, al netto del 22% IVA)
-  const revenueGapNetVAT = activeReport.revenueGap / 1.22;
+  // Base commissione = fatturato email mensile attuale, netto IVA 22%
+  const emailRevenueNetVAT = activeReport.currentEmailRevenue / 1.22;
   const setupFeeN = parseFloat(setupFee) || 0;
   const monthlyFixedN = parseFloat(monthlyFixed) || 0;
   const monthlyPercentN = parseFloat(monthlyPercent) || 0;
-  const monthlyPercentFee = revenueGapNetVAT * (monthlyPercentN / 100);
+  const monthlyPercentFee = emailRevenueNetVAT * (monthlyPercentN / 100);
   const totalMonthlyFee = monthlyFixedN + monthlyPercentFee;
   const annualRevAdded = activeReport.yearlyPotential;
   const annualCostY1 = setupFeeN + totalMonthlyFee * 12;
@@ -931,7 +931,7 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
               </div>
               {/* Commissione % */}
               <div>
-                <label className="block text-slate-400 text-xs font-medium mb-1.5">📊 Commissione % su gap netto IVA</label>
+                <label className="block text-slate-400 text-xs font-medium mb-1.5">📊 Commissione % su fatturato email netto IVA</label>
                 <div className="relative">
                   <input
                 type="number"
@@ -944,9 +944,9 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
 
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 font-semibold text-sm">%</span>
                 </div>
-                {monthlyPercentN > 0 && revenueGapNetVAT > 0 &&
+                {monthlyPercentN > 0 && emailRevenueNetVAT > 0 &&
             <p className="text-slate-500 text-xs mt-1">
-                    = {formatCurrency(monthlyPercentFee)}/mese su {formatCurrency(revenueGapNetVAT)} gap netto IVA
+                    = {formatCurrency(monthlyPercentFee)}/mese su {formatCurrency(emailRevenueNetVAT)} fatturato email netto IVA
                   </p>
             }
               </div>
@@ -975,7 +975,7 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
                     <p className="text-2xl font-bold text-teal-400">{formatCurrency(totalMonthlyFee)}/mese</p>
                     {monthlyFixedN > 0 && monthlyPercentN > 0 &&
               <p className="text-slate-500 text-xs mt-1">
-                        {formatCurrency(monthlyFixedN)} fisso + {monthlyPercentN}% su gap netto IVA
+                        {formatCurrency(monthlyFixedN)} fisso + {monthlyPercentN}% su fatturato email netto IVA
                       </p>
               }
                     {monthlyFixedN > 0 && monthlyPercentN === 0 &&
