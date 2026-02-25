@@ -1,38 +1,39 @@
 
 
-## Correzione: Commissione % calcolata sul fatturato email mensile attuale (non sul gap)
+## Correzione: Commissione % calcolata sul fatturato email generato (benchmark), non sull'attuale
 
-### Problema attuale
-La commissione percentuale è calcolata su `revenueGap / 1.22` (gap benchmark vs attuale, netto IVA). Il cliente vuole che sia calcolata sul **fatturato email mensile corrente** (`currentEmailRevenue`) netto IVA.
+### Comprensione della richiesta
+Il cliente spiega chiaramente: "se fattura ecommerce è 100k e dopo il lavoro email genera 30k, noi prendiamo 5% da quei 30k". Quindi la base della commissione è il **fatturato email che verrà generato dopo le implementazioni** — cioè il valore benchmark (`benchmarkEmailRevenue` = 35% del fatturato e-commerce), non il fatturato email attuale pre-lavoro.
+
+### Stato attuale
+Riga 196: `const emailRevenueNetVAT = activeReport.currentEmailRevenue / 1.22;` — usa il fatturato email **attuale** (pre-lavoro).
 
 ### Nuova logica
-Base = `currentEmailRevenue / 1.22` (fatturato email mensile attuale, netto IVA 22%).
+Base = `benchmarkEmailRevenue / 1.22` — il fatturato email **dopo** le implementazioni di Mailift, netto IVA.
+
+**Esempio**: fatturato e-commerce = €100.000 → benchmark email 35% = €35.000 → netto IVA = €28.689 → 5% = €1.434/mese
 
 ### Modifiche tecniche
 
 **File: `src/components/AdvancedReport.tsx`**
 
-1. **Riga 195-196** — Cambiare base di calcolo:
+1. **Riga 195-196** — Cambiare base:
    ```typescript
    // Prima:
-   const revenueGapNetVAT = activeReport.revenueGap / 1.22;
-   // Dopo:
    const emailRevenueNetVAT = activeReport.currentEmailRevenue / 1.22;
+   // Dopo:
+   const emailRevenueNetVAT = activeReport.benchmarkEmailRevenue / 1.22;
    ```
 
-2. **Riga 200** — Aggiornare calcolo fee:
+2. **Riga 195** — Aggiornare commento:
    ```typescript
-   const monthlyPercentFee = emailRevenueNetVAT * (monthlyPercentN / 100);
+   // Base commissione = fatturato email generato post-implementazione (benchmark), netto IVA 22%
    ```
 
-3. **Riga 934** — Label: `"📊 Commissione % su fatturato email netto IVA"`
-
-4. **Righe 947-950** — Testo sotto input:
+3. **Riga 949** — Aggiornare testo descrittivo sotto l'input:
    ```
-   = €X/mese su €Y fatturato email netto IVA
+   = €X/mese su €Y fatturato email generato netto IVA
    ```
 
-5. **Riga 978** — Riepilogo: `"fisso + X% su fatturato email netto IVA"`
-
-6. Rinominare la variabile `revenueGapNetVAT` → `emailRevenueNetVAT` in tutte le occorrenze nel file.
+Nessun'altra modifica necessaria — la variabile `emailRevenueNetVAT` è già usata correttamente in tutto il file.
 
