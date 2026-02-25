@@ -789,7 +789,7 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
             📈 Proiezione Fatturato E-commerce nel Tempo
           </h2>
           <p className="text-slate-500 text-xs mb-6">
-            Come potrebbe variare il fatturato mensile totale del tuo e-commerce dopo l'implementazione delle attività consigliate (scenario moderato +{r.scenarios.moderate.growthPercent}% sul fatturato email).
+            Come potrebbe variare il fatturato mensile totale del tuo e-commerce dopo l'implementazione delle attività consigliate (scenario moderato +{r.scenarios.moderate.growthPercent}% sul fatturato e-commerce).
           </p>
 
           {(() => {
@@ -982,7 +982,7 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
               <p className="text-slate-500 text-xs mt-1">fee fissa mensile</p>
               }
                     {monthlyFixedN === 0 && monthlyPercentN > 0 &&
-              <p className="text-slate-500 text-xs mt-1">{monthlyPercentN}% sul fatturato email</p>
+              <p className="text-slate-500 text-xs mt-1">{monthlyPercentN}% sul fatturato e-commerce</p>
               }
                   </> :
 
