@@ -192,8 +192,8 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
 
   // ── Calcoli ROI investimento (live dagli input locali) ────────────────────
   const showInvestment = investmentData?.show === true;
-  // Base commissione = fatturato email mensile attuale, netto IVA 22%
-  const emailRevenueNetVAT = activeReport.currentEmailRevenue / 1.22;
+  // Base commissione = fatturato email generato post-implementazione (benchmark), netto IVA 22%
+  const emailRevenueNetVAT = activeReport.benchmarkEmailRevenue / 1.22;
   const setupFeeN = parseFloat(setupFee) || 0;
   const monthlyFixedN = parseFloat(monthlyFixed) || 0;
   const monthlyPercentN = parseFloat(monthlyPercent) || 0;
@@ -946,7 +946,7 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
                 </div>
                 {monthlyPercentN > 0 && emailRevenueNetVAT > 0 &&
             <p className="text-slate-500 text-xs mt-1">
-                    = {formatCurrency(monthlyPercentFee)}/mese su {formatCurrency(emailRevenueNetVAT)} fatturato email netto IVA
+                    = {formatCurrency(monthlyPercentFee)}/mese su {formatCurrency(emailRevenueNetVAT)} fatturato email generato netto IVA
                   </p>
             }
               </div>
