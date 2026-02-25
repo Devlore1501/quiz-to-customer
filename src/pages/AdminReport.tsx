@@ -66,31 +66,33 @@ const AdminReport: React.FC = () => {
     setLoading(true);
     setError('');
 
-    const { data, error: authError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      const { error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    if (authError) {
-      setError('Credenziali non valide. Riprova.');
+      if (authError) {
+        setError('Credenziali non valide. Riprova.');
+        setLoading(false);
+        return;
+      }
+
+      // onAuthStateChange gestirà la verifica admin e setAuthenticated/setLoading
+      setTimeout(() => {
+        setLoading(prev => {
+          if (prev) {
+            console.warn('Admin login: timeout after signIn, forcing loading=false');
+            return false;
+          }
+          return prev;
+        });
+      }, 8000);
+    } catch (err) {
+      console.error('Admin login error:', err);
+      setError('Errore durante il login. Riprova.');
       setLoading(false);
-      return;
     }
-
-    const { data: isAdmin } = await supabase.rpc('has_role', {
-      _user_id: data.user.id,
-      _role: 'admin' as const,
-    });
-
-    if (!isAdmin) {
-      await supabase.auth.signOut();
-      setError('Accesso riservato agli amministratori.');
-      setLoading(false);
-      return;
-    }
-
-    setAuthenticated(true);
-    setLoading(false);
   };
 
   if (loading) {
