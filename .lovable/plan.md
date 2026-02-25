@@ -1,77 +1,61 @@
 
 
-## Diagnosi: Pagina admin bloccata su loading spinner
+## Diagnosi: Login admin resta bloccato sullo spinner
 
-### Problema identificato
-La pagina `/admin/report` resta bloccata sullo spinner di caricamento e non mostra mai il form di login. Ho verificato che:
-- L'account admin **esiste** nel database (info@mailift.com con ruolo admin)
-- Non ci sono errori JavaScript in console
-- Non vengono effettuate chiamate di rete dal componente admin (nessuna richiesta auth o RPC visibile)
+### Problema
+Dopo aver inserito le credenziali e cliccato "Accedi", la pagina resta sullo spinner infinito. Il login ha successo (status 200) ma l'app non procede mai alla dashboard admin.
 
-### Causa probabile
-Il `useEffect` in `AdminReport.tsx` attende che `onAuthStateChange` o `getSession` si risolvano, ma se il client Supabase ha una sessione scaduta in localStorage, potrebbe tentare un refresh del token che non si completa, bloccando l'emissione dell'evento `INITIAL_SESSION`. Se la chiamata RPC `has_role` fallisce con un'eccezione non gestita, `setLoading(false)` non viene mai raggiunto.
+### Causa identificata
+La funzione `handleLogin` non ha un blocco `try/catch` globale. Se la chiamata RPC `has_role` fallisce con un'eccezione (invece di restituire un errore nel campo `error`), `setLoading(false)` non viene mai eseguito e lo spinner resta per sempre.
+
+Inoltre c'e una race condition: quando `signInWithPassword` ha successo, `onAuthStateChange` scatta e chiama `checkAdmin`. Contemporaneamente `handleLogin` chiama anche RPC. Le due operazioni possono interferire tra loro.
 
 ### Piano di fix
 
-1. **Aggiungere try/catch** attorno a tutte le chiamate `has_role` RPC nel `useEffect`, assicurando che `setLoading(false)` venga SEMPRE eseguito
-2. **Invertire l'ordine**: chiamare `getSession()` prima e usare `onAuthStateChange` solo per aggiornamenti successivi, evitando la race condition attuale
-3. **Aggiungere un timeout di sicurezza** (es. 5 secondi) che forza `setLoading(false)` nel caso tutto resti bloccato
+1. **Wrappare `handleLogin` in try/catch globale** per garantire che `setLoading(false)` venga SEMPRE eseguito
+2. **Semplificare il flusso**: dopo `signInWithPassword`, lasciare che sia `onAuthStateChange` a gestire la verifica admin, invece di duplicare la logica in `handleLogin`
+3. **Aggiungere console.log diagnostici** per capire dove si blocca, nel caso il problema persista
 
 ### Dettagli tecnici
 
-Il codice attuale in `AdminReport.tsx` (righe 17-43) sarà riscritto in questo modo:
+Il `handleLogin` (righe 64-94) sarà riscritto così:
 
 ```typescript
-useEffect(() => {
-  let mounted = true;
-  const timeout = setTimeout(() => {
-    if (mounted) setLoading(false);
-  }, 5000);
+const handleLogin = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setLoading(true);
+  setError('');
 
-  const checkAdmin = async (userId: string) => {
-    try {
-      const { data } = await supabase.rpc('has_role', {
-        _user_id: userId,
-        _role: 'admin' as const,
+  try {
+    const { error: authError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (authError) {
+      setError('Credenziali non valide. Riprova.');
+      setLoading(false);
+      return;
+    }
+
+    // onAuthStateChange gestirà la verifica admin e setAuthenticated/setLoading
+    // Aggiungiamo un timeout di sicurezza nel caso onAuthStateChange non risponda
+    setTimeout(() => {
+      setLoading(prev => {
+        if (prev) {
+          console.warn('Admin login: timeout after signIn, forcing loading=false');
+          return false;
+        }
+        return prev;
       });
-      return !!data;
-    } catch {
-      return false;
-    }
-  };
-
-  supabase.auth.getSession().then(async ({ data: { session } }) => {
-    if (!mounted) return;
-    if (session) {
-      const isAdmin = await checkAdmin(session.user.id);
-      if (mounted) setAuthenticated(isAdmin);
-    }
-    if (mounted) { setLoading(false); clearTimeout(timeout); }
-  });
-
-  const { data: { subscription } } = supabase.auth.onAuthStateChange(
-    async (_event, session) => {
-      if (!mounted) return;
-      if (session) {
-        const isAdmin = await checkAdmin(session.user.id);
-        if (mounted) setAuthenticated(isAdmin);
-      } else {
-        if (mounted) setAuthenticated(false);
-      }
-      if (mounted) { setLoading(false); clearTimeout(timeout); }
-    }
-  );
-
-  return () => {
-    mounted = false;
-    clearTimeout(timeout);
-    subscription.unsubscribe();
-  };
-}, []);
+    }, 8000);
+  } catch (err) {
+    console.error('Admin login error:', err);
+    setError('Errore durante il login. Riprova.');
+    setLoading(false);
+  }
+};
 ```
 
-Questo garantisce che:
-- La pagina non resti mai bloccata (timeout di sicurezza)
-- Errori RPC non impediscano il rendering
-- Lo stato `mounted` previene aggiornamenti su componenti smontati
+Questo elimina la chiamata RPC duplicata da `handleLogin` e lascia che `onAuthStateChange` (che ha gia il try/catch) gestisca tutto. In piu aggiunge un timeout di sicurezza e un try/catch globale.
 
