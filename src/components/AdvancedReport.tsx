@@ -783,25 +783,31 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
           </div>
         </div>
 
-        {/* ── Proiezione Fatturato Email nel Tempo ────────────────────── */}
+        {/* ── Proiezione Fatturato E-commerce nel Tempo ────────────────────── */}
         <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 animate-fade-in" style={{ animationDelay: '810ms' }}>
           <h2 className="text-xl font-bold text-orange mb-2 flex items-center gap-2">
-            📈 Proiezione Fatturato Email nel Tempo
+            📈 Proiezione Fatturato E-commerce nel Tempo
           </h2>
           <p className="text-slate-500 text-xs mb-6">
-            Come potrebbe variare il tuo fatturato email mensile dopo l'implementazione delle attività consigliate (scenario moderato +{r.scenarios.moderate.growthPercent}%).
+            Come potrebbe variare il fatturato mensile totale del tuo e-commerce dopo l'implementazione delle attività consigliate (scenario moderato +{r.scenarios.moderate.growthPercent}% sul fatturato email).
           </p>
 
           {(() => {
-            const base = r.currentEmailRevenue;
-            const moderateGrowth = r.scenarios.moderate.value; // incremento mensile a regime
+            const totalRevenue = r.monthlyRevenue;
+            const emailBase = r.currentEmailRevenue;
+            const moderateGrowth = r.scenarios.moderate.value; // incremento email mensile a regime
             // Ramp-up progressivo: a 3 mesi 40%, a 6 mesi 75%, a 12 mesi 100%
-            const at3m = base + moderateGrowth * 0.4;
-            const at6m = base + moderateGrowth * 0.75;
-            const at12m = base + moderateGrowth;
-            const growth3 = ((at3m - base) / base * 100);
-            const growth6 = ((at6m - base) / base * 100);
-            const growth12 = ((at12m - base) / base * 100);
+            const emailAt3m = emailBase + moderateGrowth * 0.4;
+            const emailAt6m = emailBase + moderateGrowth * 0.75;
+            const emailAt12m = emailBase + moderateGrowth;
+            // Fatturato totale ecommerce = (fatturato totale - email attuale) + email proiettata
+            const nonEmailRevenue = totalRevenue - emailBase;
+            const totalAt3m = nonEmailRevenue + emailAt3m;
+            const totalAt6m = nonEmailRevenue + emailAt6m;
+            const totalAt12m = nonEmailRevenue + emailAt12m;
+            const growth3 = ((totalAt3m - totalRevenue) / totalRevenue * 100);
+            const growth6 = ((totalAt6m - totalRevenue) / totalRevenue * 100);
+            const growth12 = ((totalAt12m - totalRevenue) / totalRevenue * 100);
 
             return (
               <>
@@ -809,24 +815,27 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
                   {/* Oggi */}
                   <div className="bg-slate-700/50 p-5 rounded-xl border border-slate-600 text-center">
                     <p className="text-slate-400 text-sm mb-1">📍 Oggi</p>
-                    <p className="text-2xl font-bold text-white">{formatCurrency(base)}</p>
-                    <p className="text-slate-500 text-xs mt-1">/mese da email</p>
+                    <p className="text-2xl font-bold text-white">{formatCurrency(totalRevenue)}</p>
+                    <p className="text-slate-500 text-xs mt-1">/mese totale</p>
+                    <p className="text-slate-500 text-xs">di cui {formatCurrency(emailBase)} da email</p>
                   </div>
 
                   {/* 3 mesi */}
                   <div className="bg-gradient-to-br from-blue-600/20 to-blue-500/5 p-5 rounded-xl border border-blue-500/30 text-center">
                     <p className="text-blue-300 text-sm mb-1">🗓️ 3 Mesi</p>
-                    <p className="text-2xl font-bold text-white">{formatCurrency(at3m)}</p>
-                    <p className="text-blue-400 text-xs mt-1 font-semibold">+{formatCurrency(at3m - base)} (+{growth3.toFixed(0)}%)</p>
-                    <p className="text-slate-500 text-xs mt-1">Fase di setup e primi flussi</p>
+                    <p className="text-2xl font-bold text-white">{formatCurrency(totalAt3m)}</p>
+                    <p className="text-blue-400 text-xs mt-1 font-semibold">+{formatCurrency(totalAt3m - totalRevenue)} (+{growth3.toFixed(1)}%)</p>
+                    <p className="text-slate-500 text-xs mt-1">Email: {formatCurrency(emailAt3m)}</p>
+                    <p className="text-slate-500 text-xs">Fase di setup e primi flussi</p>
                   </div>
 
                   {/* 6 mesi */}
                   <div className="bg-gradient-to-br from-orange/20 to-orange/5 p-5 rounded-xl border border-orange/30 text-center">
                     <p className="text-orange text-sm mb-1">🗓️ 6 Mesi</p>
-                    <p className="text-2xl font-bold text-white">{formatCurrency(at6m)}</p>
-                    <p className="text-orange text-xs mt-1 font-semibold">+{formatCurrency(at6m - base)} (+{growth6.toFixed(0)}%)</p>
-                    <p className="text-slate-500 text-xs mt-1">Ottimizzazione e scaling</p>
+                    <p className="text-2xl font-bold text-white">{formatCurrency(totalAt6m)}</p>
+                    <p className="text-orange text-xs mt-1 font-semibold">+{formatCurrency(totalAt6m - totalRevenue)} (+{growth6.toFixed(1)}%)</p>
+                    <p className="text-slate-500 text-xs mt-1">Email: {formatCurrency(emailAt6m)}</p>
+                    <p className="text-slate-500 text-xs">Ottimizzazione e scaling</p>
                   </div>
 
                   {/* 12 mesi */}
@@ -835,28 +844,29 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
                       <span className="bg-green-500 text-white text-xs px-3 py-1 rounded-full font-semibold">OBIETTIVO</span>
                     </div>
                     <p className="text-green-400 text-sm mb-1 mt-2">🗓️ 12 Mesi</p>
-                    <p className="text-2xl font-bold text-white">{formatCurrency(at12m)}</p>
-                    <p className="text-green-400 text-xs mt-1 font-semibold">+{formatCurrency(at12m - base)} (+{growth12.toFixed(0)}%)</p>
-                    <p className="text-slate-500 text-xs mt-1">Performance a regime</p>
+                    <p className="text-2xl font-bold text-white">{formatCurrency(totalAt12m)}</p>
+                    <p className="text-green-400 text-xs mt-1 font-semibold">+{formatCurrency(totalAt12m - totalRevenue)} (+{growth12.toFixed(1)}%)</p>
+                    <p className="text-slate-500 text-xs mt-1">Email: {formatCurrency(emailAt12m)}</p>
+                    <p className="text-slate-500 text-xs">Performance a regime</p>
                   </div>
                 </div>
 
                 {/* Barra visuale progressione */}
                 <div className="bg-slate-700/30 p-4 rounded-lg border border-slate-600/50">
                   <div className="flex items-center gap-3 mb-3">
-                    <span className="text-slate-400 text-sm font-medium">Progressione crescita</span>
+                    <span className="text-slate-400 text-sm font-medium">Progressione crescita fatturato</span>
                   </div>
                   <div className="relative h-3 bg-slate-700 rounded-full overflow-hidden">
                     <div className="absolute h-full bg-gradient-to-r from-blue-500 via-orange to-green-500 rounded-full transition-all duration-1000" style={{ width: '100%' }} />
                   </div>
                   <div className="flex justify-between text-xs mt-2">
-                    <span className="text-slate-500">Oggi</span>
-                    <span className="text-blue-300">3 mesi (40%)</span>
-                    <span className="text-orange">6 mesi (75%)</span>
-                    <span className="text-green-400">12 mesi (100%)</span>
+                    <span className="text-slate-500">{formatCurrency(totalRevenue)}</span>
+                    <span className="text-blue-300">{formatCurrency(totalAt3m)}</span>
+                    <span className="text-orange">{formatCurrency(totalAt6m)}</span>
+                    <span className="text-green-400">{formatCurrency(totalAt12m)}</span>
                   </div>
                   <p className="text-slate-500 text-xs mt-3">
-                    ⚠️ <strong className="text-slate-400">Stima indicativa</strong> — la crescita è progressiva: i primi mesi servono per implementare i flussi e ottimizzare le campagne, il pieno potenziale si raggiunge a 12 mesi.
+                    ⚠️ <strong className="text-slate-400">Stima indicativa</strong> — la crescita è progressiva e riguarda l'incremento derivante dall'email marketing ottimizzato sul fatturato totale e-commerce.
                   </p>
                 </div>
               </>

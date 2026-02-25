@@ -420,8 +420,8 @@ const _calculateReport = (
   const automationScore = automationCoverage;
   const emailHealthScore = Math.round((percentScore * 0.6) + (automationScore * 0.4));
   
-  // Potenziale annuo — scenario moderato × 12 mesi
-  const yearlyPotential = scenarios.moderate.value * 12;
+  // Potenziale annuo — gap tra benchmark e attuale × 12 mesi
+  const yearlyPotential = revenueGap * 12;
   
   // Analisi Strategica - Generazione testi dinamici
   const formatCurrencyInternal = (value: number) => `€${Math.round(value).toLocaleString('it-IT')}`;
