@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ExternalLink, Link2, Check, RefreshCw, ClipboardList } from 'lucide-react';
+import { ExternalLink, Link2, Check, RefreshCw, ClipboardList, RotateCcw, Loader2 } from 'lucide-react';
+import { calculateAdvancedReportFromValues } from '@/lib/reportCalculations';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -183,6 +184,8 @@ export const AdminReportHistory: React.FC<AdminReportHistoryProps> = ({ refreshK
   const [reports, setReports] = useState<SavedReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [recalculating, setRecalculating] = useState(false);
+  const [recalcProgress, setRecalcProgress] = useState('');
 
   const fetchReports = useCallback(async () => {
     setLoading(true);
@@ -205,6 +208,96 @@ export const AdminReportHistory: React.FC<AdminReportHistoryProps> = ({ refreshK
     }
   }, []);
 
+  const handleBulkRecalculate = async () => {
+    setRecalculating(true);
+    setRecalcProgress('Caricamento report...');
+    try {
+      // Fetch all admin reports with full report_data
+      const { data: allReports, error: fetchErr } = await supabase
+        .from('survey_submissions')
+        .select('id, report_data')
+        .eq('status', 'admin_report')
+        .limit(200);
+
+      if (fetchErr) throw fetchErr;
+      if (!allReports || allReports.length === 0) {
+        setRecalcProgress('Nessun report da aggiornare.');
+        setTimeout(() => setRecalculating(false), 1500);
+        return;
+      }
+
+      let updated = 0;
+      let skipped = 0;
+
+      for (const row of allReports) {
+        const rd = row.report_data as any;
+        const meta = rd?.meta;
+        if (!meta || !meta.monthlyRevenue || !meta.emailPct) {
+          skipped++;
+          continue;
+        }
+
+        setRecalcProgress(`Ricalcolo ${updated + skipped + 1}/${allReports.length}...`);
+
+        const popupParams = meta.hasPopup
+          ? {
+              hasPopup: true,
+              conversionRate: meta.popupConversionRate || 0,
+              monthlyVisitors: meta.monthlyVisitors || 0,
+              monthlyListGrowthRate: meta.monthlyListGrowthRate || 2,
+            }
+          : { hasPopup: false, conversionRate: 0, monthlyVisitors: 0, monthlyListGrowthRate: 0 };
+
+        const result = calculateAdvancedReportFromValues(
+          meta.sector || 'other',
+          meta.monthlyRevenue,
+          meta.emailPct,
+          meta.listSize || 0,
+          meta.activeFlows || [],
+          undefined,
+          meta.emailFrequency || 'none',
+          meta.aov || undefined,
+          {
+            conservative: meta.scenarioConservative || 15,
+            moderate: meta.scenarioModerate || 35,
+            aggressive: meta.scenarioAggressive || 60,
+          },
+          popupParams,
+        );
+
+        const { error: updateErr } = await supabase
+          .from('survey_submissions')
+          .update({
+            report_data: {
+              clientReport: result,
+              meta,
+            } as any,
+            email_health_score: result.emailHealthScore,
+            yearly_potential: result.yearlyPotential,
+          })
+          .eq('id', row.id);
+
+        if (updateErr) {
+          console.error(`Error updating report ${row.id}:`, updateErr);
+          skipped++;
+        } else {
+          updated++;
+        }
+      }
+
+      setRecalcProgress(`✅ ${updated} aggiornati, ${skipped} saltati`);
+      setTimeout(() => {
+        setRecalculating(false);
+        setRecalcProgress('');
+        fetchReports();
+      }, 2000);
+    } catch (e) {
+      console.error('Bulk recalculate error:', e);
+      setRecalcProgress('❌ Errore durante il ricalcolo');
+      setTimeout(() => setRecalculating(false), 2000);
+    }
+  };
+
   useEffect(() => {
     fetchReports();
   }, [fetchReports, refreshKey]);
@@ -222,14 +315,27 @@ export const AdminReportHistory: React.FC<AdminReportHistoryProps> = ({ refreshK
             )}
           </h3>
         </div>
-        <button
-          onClick={fetchReports}
-          disabled={loading}
-          className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 transition-all duration-200 disabled:opacity-40"
-          title="Aggiorna lista"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-        </button>
+        <div className="flex items-center gap-1.5">
+          {!loading && reports.length > 0 && (
+            <button
+              onClick={handleBulkRecalculate}
+              disabled={recalculating}
+              className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg bg-purple-600/20 border border-purple-500/30 text-purple-300 hover:bg-purple-600/30 hover:border-purple-400/50 transition-all duration-200 disabled:opacity-40 font-medium"
+              title="Ricalcola tutti i report con le formule aggiornate"
+            >
+              {recalculating ? <Loader2 className="w-3 h-3 animate-spin" /> : <RotateCcw className="w-3 h-3" />}
+              {recalculating ? recalcProgress : 'Ricalcola tutti'}
+            </button>
+          )}
+          <button
+            onClick={fetchReports}
+            disabled={loading}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 transition-all duration-200 disabled:opacity-40"
+            title="Aggiorna lista"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
       </div>
 
       {/* Content */}
