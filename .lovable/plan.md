@@ -1,32 +1,38 @@
 
 
-## Correzione: Scenari di crescita basati sul fatturato e-commerce totale
+## Correzione: Commissione % calcolata sul fatturato email mensile attuale (non sul gap)
 
 ### Problema attuale
-Gli scenari (Conservativo 15%, Moderato 35%, Aggressivo 60%) sono calcolati sul **fatturato email mensile** (`currentEmailRevenue`). Se l'email genera solo €550/mese, lo scenario moderato dà €192 — valori troppo bassi e fuorvianti.
+La commissione percentuale è calcolata su `revenueGap / 1.22` (gap benchmark vs attuale, netto IVA). Il cliente vuole che sia calcolata sul **fatturato email mensile corrente** (`currentEmailRevenue`) netto IVA.
 
 ### Nuova logica
-Calcolare gli scenari come percentuale di crescita sul **fatturato e-commerce mensile totale** (`monthlyRevenue`).
-
-**Esempio**: fatturato e-commerce = €37.500/mese
-- Conservativo (15%): +€5.625/mese
-- Moderato (35%): +€13.125/mese  
-- Aggressivo (60%): +€22.500/mese
+Base = `currentEmailRevenue / 1.22` (fatturato email mensile attuale, netto IVA 22%).
 
 ### Modifiche tecniche
 
-**File: `src/lib/reportCalculations.ts`**
+**File: `src/components/AdvancedReport.tsx`**
 
-1. **Righe 345-361** — Scenari di crescita: sostituire `currentEmailRevenue` con `monthlyRevenue` nella formula:
+1. **Riga 195-196** — Cambiare base di calcolo:
    ```typescript
-   value: monthlyRevenue * (conservPct / 100)
-   value: monthlyRevenue * (moderatePct / 100)
-   value: monthlyRevenue * (aggressPct / 100)
+   // Prima:
+   const revenueGapNetVAT = activeReport.revenueGap / 1.22;
+   // Dopo:
+   const emailRevenueNetVAT = activeReport.currentEmailRevenue / 1.22;
    ```
 
-2. **Aggiornare le descrizioni** per riflettere che le % si applicano al fatturato e-commerce totale.
+2. **Riga 200** — Aggiornare calcolo fee:
+   ```typescript
+   const monthlyPercentFee = emailRevenueNetVAT * (monthlyPercentN / 100);
+   ```
 
-3. **Riga 424** — `yearlyPotential`: aggiornare a `scenarios.moderate.value * 12` per coerenza con lo scenario moderato (ora basato su fatturato totale).
+3. **Riga 934** — Label: `"📊 Commissione % su fatturato email netto IVA"`
 
-**File: `src/components/AdvancedReport.tsx`** — Verificare che i testi nella sezione scenari non facciano riferimento a "fatturato email" ma a "fatturato e-commerce".
+4. **Righe 947-950** — Testo sotto input:
+   ```
+   = €X/mese su €Y fatturato email netto IVA
+   ```
+
+5. **Riga 978** — Riepilogo: `"fisso + X% su fatturato email netto IVA"`
+
+6. Rinominare la variabile `revenueGapNetVAT` → `emailRevenueNetVAT` in tutte le occorrenze nel file.
 
