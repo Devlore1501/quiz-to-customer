@@ -345,18 +345,18 @@ const _calculateReport = (
   const scenarios = {
     conservative: {
       growthPercent: conservPct,
-      value: currentEmailRevenue * (conservPct / 100),
-      description: `Crescita del ${conservPct}% sul fatturato email attuale`
+      value: monthlyRevenue * (conservPct / 100),
+      description: `Crescita del ${conservPct}% sul fatturato e-commerce totale`
     },
     moderate: {
       growthPercent: moderatePct,
-      value: currentEmailRevenue * (moderatePct / 100),
-      description: `Crescita del ${moderatePct}% con flussi chiave + ottimizzazione`
+      value: monthlyRevenue * (moderatePct / 100),
+      description: `Crescita del ${moderatePct}% sul fatturato e-commerce totale`
     },
     aggressive: {
       growthPercent: aggressPct,
-      value: currentEmailRevenue * (aggressPct / 100),
-      description: `Crescita del ${aggressPct}% con strategia email completa`
+      value: monthlyRevenue * (aggressPct / 100),
+      description: `Crescita del ${aggressPct}% sul fatturato e-commerce totale`
     }
   };
   
@@ -420,8 +420,8 @@ const _calculateReport = (
   const automationScore = automationCoverage;
   const emailHealthScore = Math.round((percentScore * 0.6) + (automationScore * 0.4));
   
-  // Potenziale annuo — gap tra benchmark e attuale × 12 mesi
-  const yearlyPotential = revenueGap * 12;
+  // Potenziale annuo — scenario moderato × 12 mesi
+  const yearlyPotential = monthlyRevenue * (moderatePct / 100) * 12;
   
   // Analisi Strategica - Generazione testi dinamici
   const formatCurrencyInternal = (value: number) => `€${Math.round(value).toLocaleString('it-IT')}`;
