@@ -150,7 +150,7 @@ const AnalysisScreen = ({ sectorLabel, userName, onComplete }: { sectorLabel: st
       setProgress(prev => Math.min(prev + 1, 100));
     }, totalDuration / 100);
 
-    let stepTimeout: NodeJS.Timeout;
+    let stepTimeout: ReturnType<typeof setTimeout>;
     const advanceStep = (stepIndex: number) => {
       if (stepIndex < analysisSteps.length) {
         stepTimeout = setTimeout(() => {
