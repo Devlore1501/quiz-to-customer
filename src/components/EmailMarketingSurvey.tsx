@@ -191,7 +191,7 @@ const AnalysisScreen = ({
     }, totalDuration / 100);
 
     // Step progression
-    let stepTimeout: NodeJS.Timeout;
+    let stepTimeout: ReturnType<typeof setTimeout>;
     const advanceStep = (stepIndex: number) => {
       if (stepIndex < analysisSteps.length) {
         stepTimeout = setTimeout(() => {
