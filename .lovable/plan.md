@@ -1,48 +1,39 @@
 
 
-## Fix build errors + Verifica completa flusso webhook
+## Correzione: Commissione % calcolata sul fatturato email generato (benchmark), non sull'attuale
 
-### 1. Fix build errors: `NodeJS.Timeout` (5 occorrenze)
+### Comprensione della richiesta
+Il cliente spiega chiaramente: "se fattura ecommerce è 100k e dopo il lavoro email genera 30k, noi prendiamo 5% da quei 30k". Quindi la base della commissione è il **fatturato email che verrà generato dopo le implementazioni** — cioè il valore benchmark (`benchmarkEmailRevenue` = 35% del fatturato e-commerce), non il fatturato email attuale pre-lavoro.
 
-Il tipo `NodeJS.Timeout` non esiste in ambiente Vite/browser. Sostituire con `ReturnType<typeof setTimeout>` in:
+### Stato attuale
+Riga 196: `const emailRevenueNetVAT = activeReport.currentEmailRevenue / 1.22;` — usa il fatturato email **attuale** (pre-lavoro).
 
-**`src/components/ConversationalSurvey.tsx`**
-- Riga 85: `let timeout: NodeJS.Timeout | null` → `let timeout: ReturnType<typeof setTimeout> | null`
-- Riga 153: `let stepTimeout: NodeJS.Timeout` → `let stepTimeout: ReturnType<typeof setTimeout>`
+### Nuova logica
+Base = `benchmarkEmailRevenue / 1.22` — il fatturato email **dopo** le implementazioni di Mailift, netto IVA.
 
-**`src/components/EmailMarketingSurvey.tsx`**
-- Riga 194: `let stepTimeout: NodeJS.Timeout` → `let stepTimeout: ReturnType<typeof setTimeout>`
-- Riga 418: `let timeout: NodeJS.Timeout | null` → `let timeout: ReturnType<typeof setTimeout> | null`
+**Esempio**: fatturato e-commerce = €100.000 → benchmark email 35% = €35.000 → netto IVA = €28.689 → 5% = €1.434/mese
 
-**`src/hooks/usePartialTracking.ts`**
-- Riga 51: `useRef<NodeJS.Timeout | null>` → `useRef<ReturnType<typeof setTimeout> | null>`
+### Modifiche tecniche
 
-### 2. Fix webhook: passare `submissionId` nel body
+**File: `src/components/AdvancedReport.tsx`**
 
-Problema critico: entrambi i survey chiamano `submit-webhook` **senza** passare `submissionId`. L'edge function usa `submissionId` per:
-- Verificare che la submission esista nel DB
-- Generare il `reportUrl` se mancante
-- Validare che l'email corrisponda
+1. **Riga 195-196** — Cambiare base:
+   ```typescript
+   // Prima:
+   const emailRevenueNetVAT = activeReport.currentEmailRevenue / 1.22;
+   // Dopo:
+   const emailRevenueNetVAT = activeReport.benchmarkEmailRevenue / 1.22;
+   ```
 
-**`src/components/EmailMarketingSurvey.tsx`** (riga 1225-1228):
-```typescript
-// Prima:
-body: { submissionData: dataToSend }
-// Dopo:
-body: { submissionData: dataToSend, submissionId: currentLeadId }
-```
+2. **Riga 195** — Aggiornare commento:
+   ```typescript
+   // Base commissione = fatturato email generato post-implementazione (benchmark), netto IVA 22%
+   ```
 
-**`src/components/ConversationalSurvey.tsx`** (riga 782):
-```typescript
-// Prima:
-body: { submissionData: dataToSend }
-// Dopo:
-body: { submissionData: dataToSend, submissionId: leadId }
-```
+3. **Riga 949** — Aggiornare testo descrittivo sotto l'input:
+   ```
+   = €X/mese su €Y fatturato email generato netto IVA
+   ```
 
-Questo fix garantisce che il webhook riceva il `submissionId`, possa validare la submission nel DB e che il `reportUrl` sia sempre presente nel payload inviato a Make.com e GHL.
-
-### Riepilogo
-- 5 fix di tipo TypeScript (build errors)
-- 2 fix webhook (submissionId mancante) — questa era probabilmente la causa del problema di Fabio
+Nessun'altra modifica necessaria — la variabile `emailRevenueNetVAT` è già usata correttamente in tutto il file.
 

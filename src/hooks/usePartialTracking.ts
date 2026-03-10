@@ -48,7 +48,7 @@ export function usePartialTracking({
 }: UsePartialTrackingOptions) {
   const sessionIdRef = useRef<string>(crypto.randomUUID());
   const recordCreatedRef = useRef(false);
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const formDataRef = useRef(formData);
 
   // Always keep formDataRef fresh

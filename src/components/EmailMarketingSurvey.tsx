@@ -191,7 +191,7 @@ const AnalysisScreen = ({
     }, totalDuration / 100);
 
     // Step progression
-    let stepTimeout: NodeJS.Timeout;
+    let stepTimeout: ReturnType<typeof setTimeout>;
     const advanceStep = (stepIndex: number) => {
       if (stepIndex < analysisSteps.length) {
         stepTimeout = setTimeout(() => {
@@ -415,7 +415,7 @@ interface WebsiteVerification {
 
 // Debounce utility
 function debounce<T extends (...args: unknown[]) => unknown>(func: T, wait: number): (...args: Parameters<T>) => void {
-  let timeout: NodeJS.Timeout | null = null;
+  let timeout: ReturnType<typeof setTimeout> | null = null;
   return (...args: Parameters<T>) => {
     if (timeout) clearTimeout(timeout);
     timeout = setTimeout(() => func(...args), wait);
@@ -1224,7 +1224,8 @@ const EmailMarketingSurvey: React.FC = () => {
         console.log('Sending webhook with leadId:', currentLeadId);
         const webhookResponse = await supabase.functions.invoke('submit-webhook', {
           body: {
-            submissionData: dataToSend
+            submissionData: dataToSend,
+            submissionId: currentLeadId
           }
         });
         

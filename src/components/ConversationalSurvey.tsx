@@ -82,7 +82,7 @@ function isValidUrlFormat(url: string): { isValid: boolean; normalized: string; 
 }
 
 function debounce<T extends (...args: unknown[]) => unknown>(func: T, wait: number): (...args: Parameters<T>) => void {
-  let timeout: NodeJS.Timeout | null = null;
+  let timeout: ReturnType<typeof setTimeout> | null = null;
   return (...args: Parameters<T>) => {
     if (timeout) clearTimeout(timeout);
     timeout = setTimeout(() => func(...args), wait);
@@ -150,7 +150,7 @@ const AnalysisScreen = ({ sectorLabel, userName, onComplete }: { sectorLabel: st
       setProgress(prev => Math.min(prev + 1, 100));
     }, totalDuration / 100);
 
-    let stepTimeout: NodeJS.Timeout;
+    let stepTimeout: ReturnType<typeof setTimeout>;
     const advanceStep = (stepIndex: number) => {
       if (stepIndex < analysisSteps.length) {
         stepTimeout = setTimeout(() => {
@@ -779,7 +779,7 @@ const ConversationalSurvey = () => {
       await markCompleted(leadId || undefined);
 
       try {
-        await supabase.functions.invoke('submit-webhook', { body: { submissionData: dataToSend } });
+        await supabase.functions.invoke('submit-webhook', { body: { submissionData: dataToSend, submissionId: leadId } });
       } catch {}
 
       setReport(advancedReport);
