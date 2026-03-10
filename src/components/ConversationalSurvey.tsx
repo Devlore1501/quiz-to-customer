@@ -779,7 +779,7 @@ const ConversationalSurvey = () => {
       await markCompleted(leadId || undefined);
 
       try {
-        await supabase.functions.invoke('submit-webhook', { body: { submissionData: dataToSend } });
+        await supabase.functions.invoke('submit-webhook', { body: { submissionData: dataToSend, submissionId: leadId } });
       } catch {}
 
       setReport(advancedReport);

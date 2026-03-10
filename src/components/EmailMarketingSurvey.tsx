@@ -1224,7 +1224,8 @@ const EmailMarketingSurvey: React.FC = () => {
         console.log('Sending webhook with leadId:', currentLeadId);
         const webhookResponse = await supabase.functions.invoke('submit-webhook', {
           body: {
-            submissionData: dataToSend
+            submissionData: dataToSend,
+            submissionId: currentLeadId
           }
         });
         
