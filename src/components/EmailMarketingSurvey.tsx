@@ -606,14 +606,14 @@ const EmailMarketingSurvey: React.FC = () => {
               </p>
             </div>
 
-            {/* Blurred preview */}
-            <div className="mx-5 mt-5 bg-[rgba(255,59,59,0.1)] border border-[rgba(255,59,59,0.2)] rounded-xl p-4 flex items-center gap-4">
-              <span className="font-['Bebas_Neue',sans-serif] text-4xl text-[#ff3b3b] tracking-wider blur-md select-none flex-shrink-0 min-w-[80px]">
-                00k€
-              </span>
+            {/* Report ready invite */}
+            <div className="mx-5 mt-5 bg-[rgba(200,241,53,0.08)] border border-[rgba(200,241,53,0.2)] rounded-xl p-4 flex items-center gap-4">
+              <div className="flex-shrink-0 w-[52px] h-[52px] rounded-xl bg-[rgba(200,241,53,0.12)] flex items-center justify-center">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#C8F135" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+              </div>
               <div className="text-[13px] text-[#888] leading-relaxed">
-                <strong className="text-[#f0f0eb] block mb-[2px]">Revenue leak mensile stimata</strong>
-                Sblocca il report per vedere il numero esatto e la roadmap di recupero.
+                <strong className="text-[#C8F135] block mb-[2px]">Il tuo report è pronto</strong>
+                Lascia i tuoi dati per accedere al report di analisi completo con roadmap personalizzata e scenari di crescita.
               </div>
             </div>
 
