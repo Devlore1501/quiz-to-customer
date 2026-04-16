@@ -588,6 +588,15 @@ const EmailMarketingSurvey: React.FC = () => {
     const canSubmit = formData.fullName.trim() && validatePhone(formData.phone).valid
       && formData.email.trim() && emailValidation.status !== 'invalid' && formData.acceptTerms && !isSubmitting;
 
+    const previewReport = calculateAdvancedReport(
+      formData.sector, formData.monthlyRevenue, formData.emailRevenuePercentage,
+      formData.listSize, formData.activeFlows,
+      formData.sector === 'other' ? formData.customSector : undefined,
+      formData.emailFrequency
+    );
+    const previewGap = previewReport.revenueGap;
+    const formattedGap = previewGap >= 1000 ? `${(previewGap / 1000).toFixed(previewGap >= 10000 ? 0 : 1)}k` : previewGap.toLocaleString('it-IT');
+
     return (
       <div className="min-h-screen bg-[#080808] flex flex-col items-center justify-center px-4 font-['Syne',sans-serif]">
         <div className="w-full max-w-[680px] mx-auto">
