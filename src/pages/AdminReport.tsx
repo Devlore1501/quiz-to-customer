@@ -16,6 +16,8 @@ const AdminReport: React.FC = () => {
   const [loading, setLoading] = useState(!bypassAuth);
   const [authenticated, setAuthenticated] = useState(bypassAuth);
   const [error, setError] = useState('');
+  const [adminTab, setAdminTab] = useState<'survey' | 'dropoff'>('survey');
+  const [error, setError] = useState('');
 
   useEffect(() => {
     if (bypassAuth) return;
