@@ -615,14 +615,20 @@ const EmailMarketingSurvey: React.FC = () => {
               </p>
             </div>
 
-            {/* Report ready invite */}
-            <div className="mx-5 mt-5 bg-[rgba(200,241,53,0.08)] border border-[rgba(200,241,53,0.2)] rounded-xl p-4 flex items-center gap-4">
-              <div className="flex-shrink-0 w-[52px] h-[52px] rounded-xl bg-[rgba(200,241,53,0.12)] flex items-center justify-center">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#C8F135" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            {/* Revenue gap highlight + unlock invite */}
+            <div className="mx-5 mt-5 bg-[rgba(200,241,53,0.06)] border border-[rgba(200,241,53,0.18)] rounded-xl p-5">
+              <div className="text-center mb-3">
+                <span className="font-['DM_Mono',monospace] text-[10px] tracking-[2px] uppercase text-[#5a5a5a]">revenue leak stimata</span>
+                <div className="font-['Bebas_Neue',sans-serif] text-[42px] tracking-wide text-[#C8F135] leading-tight mt-1">
+                  {formattedGap}€<span className="text-[20px] text-[#888]">/mese</span>
+                </div>
               </div>
-              <div className="text-[13px] text-[#888] leading-relaxed">
-                <strong className="text-[#C8F135] block mb-[2px]">Il tuo report è pronto</strong>
-                Lascia i tuoi dati per accedere al report di analisi completo con roadmap personalizzata e scenari di crescita.
+              <div className="h-px bg-[#242424] my-3" />
+              <div className="flex items-center gap-3">
+                <svg className="flex-shrink-0" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C8F135" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                <p className="text-[13px] text-[#888] leading-relaxed">
+                  <strong className="text-[#C8F135]">Sblocca il report completo</strong> con roadmap personalizzata, scenari di crescita e piano d'azione.
+                </p>
               </div>
             </div>
 
