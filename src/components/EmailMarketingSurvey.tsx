@@ -599,7 +599,7 @@ const EmailMarketingSurvey: React.FC = () => {
                 ✓✓
               </div>
               <h2 className="font-['Bebas_Neue',sans-serif] text-[32px] tracking-wider text-[#f0f0eb] relative z-10">
-                Radar completato.
+                Analisi completata!
               </h2>
               <p className="text-[14px] text-[#888] max-w-[340px] mx-auto relative z-10 mt-2 leading-relaxed">
                 Inserisci i tuoi dati per ricevere il report operativo personalizzato.
@@ -675,7 +675,7 @@ const EmailMarketingSurvey: React.FC = () => {
                 {isSubmitting ? (
                   <><Loader2 className="w-5 h-5 animate-spin" /> Generazione report...</>
                 ) : (
-                  <>Ricevi il Report <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></>
+                  <>Ricevi il Report<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></>
                 )}
               </button>
 
