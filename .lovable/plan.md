@@ -1,54 +1,26 @@
 
 
-## Piano: Redesign completo del Report (AdvancedReport.tsx) con il nuovo tema Mailift
-
-### Problema
-Il componente `AdvancedReport.tsx` usa ancora il vecchio design (sfondo `bg-slate-50` chiaro, accento arancione, font di sistema). Non è stato aggiornato nella fase precedente che ha riguardato solo il quiz e il gate.
+## Piano: Rimuovere blur e aggiungere dicitura invito nel gate
 
 ### Cosa cambia
 
-Il report verrà completamente riscritto per allinearsi al design dell'HTML fornito:
+Nel gate (fase contatti dopo l'analisi), attualmente c'è un box rosso con l'importo della revenue leak **sfocato** (`blur-md`). La richiesta è:
 
-**Tema visivo:**
-- Background `#080808`, card `#141414`, bordi `#242424`
-- Accento lime `#C8F135` al posto dell'arancione
-- Font: Bebas Neue (titoli/numeri), Syne (body), DM Mono (label/tag)
-- Rosso `#ff3b3b` per revenue leak, verde `#2ecc71` per positivi
+1. **Rimuovere il blur** dall'importo — mostrare il numero reale (o un placeholder leggibile)
+2. **Cambiare la dicitura** per invitare a lasciare i dati per vedere il **report di analisi completo**, non per "sbloccare il numero"
 
-**Struttura report (dal HTML):**
+### Modifica
 
-1. **Header profilo** — Tag "Analisi completata", nome utente, settore
-2. **Revenue Leak Hero** — Card rossa con revenue leak mensile grande + annuale
-3. **Score complessivo** — Numero grande /100 + score cards a 5 dimensioni (Email Revenue, Flussi, Segmentazione, Frequenza, Tool) con barre colorate
-4. **Situazione attuale vs benchmark** — Griglia 2×2 (fatturato, email attuale, benchmark, gap) + gauge bar
-5. **Cosa funziona** — Lista verde con numerazione delle cose positive
-6. **Dove si trova il blocco** — Lista rossa con icone dei problemi
-7. **Analisi automazioni** — Flow list con priorità (P1/P2/P3), stato attivo/mancante, importi
-8. **Scenari di crescita** — 3 card (conservativo/moderato/aggressivo) con badge "CONSIGLIATO"
-9. **Roadmap 3 azioni prioritarie** — Card numerate con timeline e gain stimato
-10. **Caso studio** — Card con metriche before/after per settore simile
-11. **Potenziale annuale** — Highlight grande con importo annuale
-12. **Slider forecast interattivo** — Slider invii/mese con tabella dinamica
-13. **Social proof** — Griglia 2×2 con numeri (brand, revenue, ecc.)
-14. **CTA finale** — Scarcity badge + pulsante calendario + agenda consulenza
+**File: `src/components/EmailMarketingSurvey.tsx` (righe 609-618)**
 
-**Funzionalità mantenute:**
-- Pannello simulazione (drawer laterale) — restilizzato nel nuovo tema
-- Download PDF
-- Sezione Investimento & ROI (admin only)
-- Proiezione fatturato nel tempo
-- Popup & crescita lista (condizionale)
+Il box blurred preview diventa un messaggio chiaro senza blur:
 
-### File coinvolti
+- Rimuovere `blur-md` dallo span del numero
+- Cambiare il testo da "Revenue leak mensile stimata / Sblocca il report per vedere il numero esatto e la roadmap di recupero" a una dicitura tipo:
+  - Titolo: **"Il tuo report è pronto"**
+  - Testo: **"Lascia i tuoi dati per accedere al report di analisi completo con roadmap personalizzata e scenari di crescita."**
+- Cambiare lo stile del box da rosso (revenue leak) a lime/neutro (più invitante, meno allarmante)
+- Rimuovere il numero finto `00k€` e sostituire con un'icona documento/report
 
-| File | Azione |
-|------|--------|
-| `src/components/AdvancedReport.tsx` | Riscrittura completa del template JSX e stili |
-
-La logica di calcolo (`reportCalculations.ts`) e i dati restano invariati — cambia solo la presentazione visiva.
-
-### Note
-- Il file è ~1400 righe, verrà riscritto mantenendo tutta la logica stato/simulazione/ROI
-- Le sezioni "Cosa funziona", "Problemi", e "Caso studio" richiedono dati derivati dal report esistente (strategicAnalysis, missingFlows, topActions)
-- Lo score a 5 dimensioni verrà calcolato dal report data esistente (emailHealthScore scomposto)
+Un solo file modificato, ~10 righe.
 
