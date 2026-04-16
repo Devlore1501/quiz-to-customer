@@ -140,7 +140,6 @@ export const parseListSize = (range: string): number => {
     '50k+': 75000,
     // Backward compat
     '100-1k': 500,
-    '1-5k': 3000,
     '3-10k': 6500,
   };
   return rangeMap[range] || 3000;
