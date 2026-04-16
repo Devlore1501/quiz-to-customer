@@ -595,7 +595,9 @@ const EmailMarketingSurvey: React.FC = () => {
       formData.emailFrequency
     );
     const previewGap = previewReport.revenueGap;
-    const formattedGap = previewGap >= 1000 ? `${(previewGap / 1000).toFixed(previewGap >= 10000 ? 0 : 1)}k` : previewGap.toLocaleString('it-IT');
+    const yearlyGap = previewGap * 12;
+    const fmtMonth = previewGap.toLocaleString('it-IT', { maximumFractionDigits: 0 });
+    const fmtYear = yearlyGap.toLocaleString('it-IT', { maximumFractionDigits: 0 });
 
     return (
       <div className="min-h-screen bg-[#080808] flex flex-col items-center justify-center px-4 font-['Syne',sans-serif]">
@@ -616,20 +618,23 @@ const EmailMarketingSurvey: React.FC = () => {
             </div>
 
             {/* Revenue gap highlight + unlock invite */}
-            <div className="mx-5 mt-5 bg-[rgba(200,241,53,0.06)] border border-[rgba(200,241,53,0.18)] rounded-xl p-5">
+            <div className="mx-5 mt-5 bg-[rgba(255,59,59,0.06)] border border-[rgba(255,59,59,0.2)] rounded-xl p-5">
               <div className="text-center mb-3">
-                <span className="font-['DM_Mono',monospace] text-[10px] tracking-[2px] uppercase text-[#5a5a5a]">revenue leak stimata</span>
-                <div className="font-['Bebas_Neue',sans-serif] text-[42px] tracking-wide text-[#C8F135] leading-tight mt-1">
-                  {formattedGap}€<span className="text-[20px] text-[#888]">/mese</span>
+                <span className="font-['DM_Mono',monospace] text-[10px] tracking-[2px] uppercase text-[#888]">Ecco quanto stai perdendo ogni mese</span>
+                <div className="font-['Bebas_Neue',sans-serif] text-[42px] tracking-wide text-[#ff3b3b] leading-tight mt-1">
+                  {fmtMonth}€<span className="text-[20px] text-[#888]">/mese</span>
+                </div>
+                <div className="font-['Bebas_Neue',sans-serif] text-[22px] tracking-wide text-[#ff3b3b]/70 leading-tight">
+                  {fmtYear}€<span className="text-[16px] text-[#888]">/anno</span>
                 </div>
               </div>
               <div className="h-px bg-[#242424] my-3" />
-              <div className="flex items-center gap-3">
-                <svg className="flex-shrink-0" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C8F135" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                <p className="text-[13px] text-[#888] leading-relaxed">
-                  <strong className="text-[#C8F135]">Sblocca il report completo</strong> con roadmap personalizzata, scenari di crescita e piano d'azione.
-                </p>
-              </div>
+              <p className="text-[13px] text-[#C8F135] font-semibold mb-2">Sblocca il report completo:</p>
+              <ul className="text-[13px] text-[#888] leading-relaxed space-y-1.5">
+                <li className="flex items-start gap-2"><span className="text-[#C8F135] mt-0.5">✓</span> Roadmap personalizzata</li>
+                <li className="flex items-start gap-2"><span className="text-[#C8F135] mt-0.5">✓</span> Scenari di crescita a 3-6-12 mesi</li>
+                <li className="flex items-start gap-2"><span className="text-[#C8F135] mt-0.5">✓</span> Piano d'azione con priorità</li>
+              </ul>
             </div>
 
             {/* Form */}
