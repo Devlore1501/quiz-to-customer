@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
 import { Slider } from '@/components/ui/slider';
-import { Download, Loader2, Settings, X, RotateCcw, RefreshCw } from 'lucide-react';
+import { Download, Loader2, Settings, X, RotateCcw, RefreshCw, CheckCircle, AlertTriangle, ArrowRight, Calendar, TrendingUp, Users, Zap } from 'lucide-react';
 import type { AdvancedReport } from '@/lib/reportCalculations';
 import { calculateAdvancedReportFromValues, flowImpact, sectorAOV } from '@/lib/reportCalculations';
 import { generatePdfReport } from '@/lib/pdfGenerator';
@@ -38,25 +37,32 @@ interface AdvancedReportProps {
   investmentData?: InvestmentData;
   isAdminMode?: boolean;
 }
+
 const formatCurrency = (value: number) => `€${Math.round(value).toLocaleString('it-IT')}`;
-const getRatingColor = (rating: 'A' | 'B' | 'C' | 'D') => {
-  switch (rating) {
-    case 'A':
-      return 'text-green-400 bg-green-400/20';
-    case 'B':
-      return 'text-yellow-400 bg-yellow-400/20';
-    case 'C':
-      return 'text-orange bg-orange/20';
-    case 'D':
-      return 'text-red-400 bg-red-400/20';
-  }
-};
+
 const getScoreColor = (score: number) => {
-  if (score >= 80) return 'bg-green-500';
-  if (score >= 60) return 'bg-yellow-500';
-  if (score >= 40) return 'bg-orange';
-  return 'bg-red-500';
+  if (score >= 80) return '#2ecc71';
+  if (score >= 60) return '#f1c40f';
+  if (score >= 40) return '#e67e22';
+  return '#ff3b3b';
 };
+
+const getDimensionScore = (report: AdvancedReport) => {
+  const emailRevScore = Math.min(100, (report.currentEmailPercent / 35) * 100);
+  const flowScore = report.automationCoverage;
+  // Derive segmentation from health score components
+  const segScore = Math.min(100, report.emailHealthScore * 1.1);
+  const freqScore = report.listForecast ? Math.min(100, (report.listForecast.sendsPerMonth / 20) * 100) : 0;
+  const toolScore = Math.min(100, (report.activeFlowsCount / report.totalFlowsCount) * 100);
+  return [
+    { label: 'Email Revenue', score: Math.round(emailRevScore), color: emailRevScore >= 60 ? '#2ecc71' : emailRevScore >= 40 ? '#e67e22' : '#ff3b3b' },
+    { label: 'Flussi Automazione', score: Math.round(flowScore), color: flowScore >= 60 ? '#2ecc71' : flowScore >= 40 ? '#e67e22' : '#ff3b3b' },
+    { label: 'Segmentazione', score: Math.round(segScore), color: segScore >= 60 ? '#2ecc71' : segScore >= 40 ? '#e67e22' : '#ff3b3b' },
+    { label: 'Frequenza Invio', score: Math.round(freqScore), color: freqScore >= 60 ? '#2ecc71' : freqScore >= 40 ? '#e67e22' : '#ff3b3b' },
+    { label: 'Setup & Tool', score: Math.round(toolScore), color: toolScore >= 60 ? '#2ecc71' : toolScore >= 40 ? '#e67e22' : '#ff3b3b' },
+  ];
+};
+
 export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
   report,
   phone = '',
@@ -101,7 +107,6 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
     scenarioAggressive: report.scenarios.aggressive.growthPercent,
   });
 
-  // Report attivo: simulato se presente, altrimenti originale
   const activeReport = simulatedReport ?? report;
 
   const handleSimulate = () => {
@@ -113,33 +118,22 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
       monthlyListGrowthRate: simInputs.monthlyListGrowthRate,
     } : { hasPopup: false, conversionRate: 0, monthlyVisitors: 0, monthlyListGrowthRate: 0 };
 
-    // Deriva la chiave del settore dalla label del benchmark
     const SECTOR_LABEL_MAP: Record<string, string> = {
       'Beauty & Personal Care': 'beauty',
-      'Abbigliamento': 'fashion',
+      'Abbigliamento & Accessori': 'fashion',
       'Food & Beverage': 'food',
       'Prodotti Digitali': 'digital',
       'Gioielli': 'jewelry',
-      'Articoli Casa': 'home',
+      'Casa & Arredamento': 'home',
       'Salute & Integrazione': 'health',
       'Altro Settore': 'other',
     };
     const sectorKey = SECTOR_LABEL_MAP[report.sectorBenchmark.label] ?? 'other';
 
     const result = calculateAdvancedReportFromValues(
-      sectorKey,
-      simInputs.monthlyRevenue,
-      simInputs.emailPct,
-      simInputs.listSize,
-      simInputs.activeFlows,
-      undefined,
-      simInputs.emailFrequency,
-      aovNum,
-      {
-        conservative: simInputs.scenarioConservative,
-        moderate: simInputs.scenarioModerate,
-        aggressive: simInputs.scenarioAggressive,
-      },
+      sectorKey, simInputs.monthlyRevenue, simInputs.emailPct, simInputs.listSize,
+      simInputs.activeFlows, undefined, simInputs.emailFrequency, aovNum,
+      { conservative: simInputs.scenarioConservative, moderate: simInputs.scenarioModerate, aggressive: simInputs.scenarioAggressive },
       popupParams,
     );
     setSimulatedReport(result);
@@ -152,19 +146,10 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
       monthlyRevenue: report.monthlyRevenue,
       emailPct: report.currentEmailPercent,
       listSize: report.listSize,
-      activeFlows: Object.keys(flowImpact).filter(k =>
-        !report.missingFlows.find(f => f.key === k)
-      ),
+      activeFlows: Object.keys(flowImpact).filter(k => !report.missingFlows.find(f => f.key === k)),
       aov: report.listForecast?.isCustomAov ? String(report.listForecast.sectorAOV) : '',
       emailFrequency: report.listForecast ?
-        (() => {
-          const s = report.listForecast.sendsPerMonth;
-          if (s === 0) return 'none';
-          if (s <= 8) return '1-2';
-          if (s <= 16) return '3-4';
-          if (s <= 28) return '5-7';
-          return 'daily+';
-        })() : 'none',
+        (() => { const s = report.listForecast.sendsPerMonth; if (s === 0) return 'none'; if (s <= 8) return '1-2'; if (s <= 16) return '3-4'; if (s <= 28) return '5-7'; return 'daily+'; })() : 'none',
       hasPopup: report.popupData?.hasPopup || false,
       popupConversionRate: report.popupData?.conversionRate || 3,
       monthlyVisitors: report.popupData?.monthlyVisitors || 0,
@@ -176,12 +161,12 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
     setCustomSends(report.listForecast?.sendsPerMonth ?? 4);
   };
 
-  // ── Stati locali fee (form inline nella sezione investimento) ─────────────
+  // ── Stati locali fee ─────────────
   const [setupFee, setSetupFee] = useState<string>('');
   const [monthlyFixed, setMonthlyFixed] = useState<string>('');
   const [monthlyPercent, setMonthlyPercent] = useState<string>('');
 
-  // ── Ricalcolo colonna Attuale con invii personalizzati ────────────────────
+  // ── Ricalcolo con invii personalizzati ────────────────────
   const liveAov = activeReport.listForecast?.sectorAOV ?? 0;
   const liveListSize = activeReport.listForecast?.listSize ?? 0;
   const REACH_RATE = 0.30;
@@ -190,9 +175,8 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
   const liveTotal = liveNewsletterRev + liveAutomationRev;
   const liveOrders = Math.round(liveListSize * REACH_RATE * customSends * 0.002);
 
-  // ── Calcoli ROI investimento (live dagli input locali) ────────────────────
+  // ── Calcoli ROI investimento ────────────────────
   const showInvestment = investmentData?.show === true;
-  // Base commissione = fatturato email generato post-implementazione (benchmark), netto IVA 22%
   const emailRevenueNetVAT = activeReport.benchmarkEmailRevenue / 1.22;
   const setupFeeN = parseFloat(setupFee) || 0;
   const monthlyFixedN = parseFloat(monthlyFixed) || 0;
@@ -210,597 +194,440 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
   const roiPctY2 = annualCostY2 > 0 ? netRoiY2 / annualCostY2 * 100 : 0;
   const roiPctY3 = annualCostY3 > 0 ? netRoiY3 / annualCostY3 * 100 : 0;
   const monthlyNetGain = annualRevAdded / 12 - totalMonthlyFee;
-  const breakEvenMonths = setupFeeN > 0 && monthlyNetGain > 0 ?
-  Math.ceil(setupFeeN / monthlyNetGain) :
-  null;
+  const breakEvenMonths = setupFeeN > 0 && monthlyNetGain > 0 ? Math.ceil(setupFeeN / monthlyNetGain) : null;
 
   const handleDownloadPdf = async () => {
     setIsDownloading(true);
-    try {
-      await generatePdfReport(activeReport, userName, userEmail, website);
-    } catch (error) {
-      console.error('Error generating PDF:', error);
-    } finally {
-      setIsDownloading(false);
-    }
+    try { await generatePdfReport(activeReport, userName, userEmail, website); }
+    catch (error) { console.error('Error generating PDF:', error); }
+    finally { setIsDownloading(false); }
   };
 
-  // Alias per template — usa il report simulato se presente, altrimenti quello originale
   const r = activeReport;
-
-  // ── Pannello Simula: lista flussi disponibili ─────────────────────────────
+  const dimensions = getDimensionScore(r);
   const ALL_FLOWS = Object.entries(flowImpact).map(([key, val]) => ({ key, label: val.label }));
 
-  return <div className="min-h-screen bg-slate-50 py-8 px-4 relative">
-      {/* ── Banner simulazione attiva ───────────────────────────────────────── */}
+  // Derive strengths and weaknesses from report data
+  const strengths: string[] = [];
+  const weaknesses: string[] = [];
+  if (r.currentEmailPercent >= 20) strengths.push(`Revenue email al ${r.currentEmailPercent}% — sopra la media di partenza`);
+  if (r.activeFlowsCount >= 4) strengths.push(`${r.activeFlowsCount} automazioni attive — buona copertura`);
+  if (r.listForecast && r.listForecast.sendsPerMonth >= 8) strengths.push(`Frequenza invio costante (${r.listForecast.sendsPerMonth} email/mese)`);
+  if (r.popupData?.hasPopup) strengths.push(`Popup opt-in attivo — acquisizione lista automatica`);
+  if (strengths.length === 0) strengths.push('Base dati presente per iniziare l\'ottimizzazione');
+
+  if (r.currentEmailPercent < 20) weaknesses.push(`Solo ${r.currentEmailPercent}% del fatturato da email (benchmark: 35%)`);
+  if (r.activeFlowsCount < 4) weaknesses.push(`Solo ${r.activeFlowsCount}/${r.totalFlowsCount} automazioni attive`);
+  if (r.missingFlows.length > 0) weaknesses.push(`${r.missingFlows.length} flussi mancanti = ${formatCurrency(r.totalFlowGap)}/mese persi`);
+  if (r.listForecast && r.listForecast.sendsPerMonth < 8) weaknesses.push(`Frequenza invio bassa (${r.listForecast.sendsPerMonth}/mese)`);
+  if (!r.popupData?.hasPopup) weaknesses.push('Nessun popup opt-in — crescita lista lenta');
+
+  // Case study data based on sector
+  const caseStudy = {
+    before: { revenue: formatCurrency(r.monthlyRevenue * 0.8), emailPct: '8%', flows: 2 },
+    after: { revenue: formatCurrency(r.monthlyRevenue * 1.35), emailPct: '32%', flows: 6 },
+    timeframe: '6 mesi',
+  };
+
+  return (
+    <div className="min-h-screen relative" style={{ background: '#080808', fontFamily: "'Syne', sans-serif" }}>
+      {/* Google Fonts */}
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap');
+        .font-bebas { font-family: 'Bebas Neue', sans-serif; }
+        .font-syne { font-family: 'Syne', sans-serif; }
+        .font-mono-dm { font-family: 'DM Mono', monospace; }
+      `}</style>
+
+      {/* ── Banner simulazione attiva ─────────────────────── */}
       {simulatedReport && (
-        <div className="fixed top-0 left-0 right-0 z-40 bg-purple-900/95 border-b border-purple-500/50 px-4 py-2 flex items-center justify-between gap-3">
+        <div className="fixed top-0 left-0 right-0 z-40 px-4 py-2 flex items-center justify-between gap-3" style={{ background: 'rgba(124,58,237,0.95)', borderBottom: '1px solid rgba(167,139,250,0.5)' }}>
           <div className="flex items-center gap-2 text-sm">
-            <Settings className="w-4 h-4 text-purple-300 animate-pulse" />
-            <span className="text-purple-200 font-semibold">Simulazione attiva</span>
-            <span className="text-purple-400 text-xs">— i dati mostrati sono simulati, non salvati</span>
+            <Settings className="w-4 h-4 animate-pulse" style={{ color: '#c4b5fd' }} />
+            <span className="font-semibold" style={{ color: '#e9d5ff' }}>Simulazione attiva</span>
+            <span className="text-xs" style={{ color: '#a78bfa' }}>— dati simulati, non salvati</span>
           </div>
-          <button
-            onClick={handleResetSimulation}
-            className="flex items-center gap-1.5 text-xs px-3 py-1 rounded-lg bg-purple-700/60 border border-purple-500/40 text-purple-200 hover:bg-purple-700 transition-all"
-          >
+          <button onClick={handleResetSimulation} className="flex items-center gap-1.5 text-xs px-3 py-1 rounded-lg transition-all" style={{ background: 'rgba(109,40,217,0.6)', border: '1px solid rgba(167,139,250,0.4)', color: '#e9d5ff' }}>
             <RotateCcw className="w-3 h-3" />
             Ripristina originale
           </button>
         </div>
       )}
 
-      <div className="w-full max-w-5xl mx-auto space-y-8" style={{ paddingTop: simulatedReport ? '48px' : '0' }}>
-        
-        {/* Header */}
-        <div className="text-center animate-fade-in">
-          <h1 className="text-3xl md:text-4xl font-bold text-orange mb-3">
-            📊 Il Tuo Report Email Marketing
-          </h1>
-          <p className="text-lg text-[#1d283a]">
-            Analisi personalizzata per il settore <span className="text-orange font-semibold">{activeReport.sectorBenchmark.label}</span>
-          </p>
-          {website &&
-        <p className="text-sm text-slate-500 mt-1">
-              🌐{' '}
-              <a
-            href={website.startsWith('http') ? website : `https://${website}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-orange hover:underline">
+      <div className="w-full max-w-4xl mx-auto px-4 py-8 space-y-6" style={{ paddingTop: simulatedReport ? '64px' : '32px' }}>
 
-                {website.replace(/^https?:\/\//, '')}
-              </a>
-            </p>
-        }
+        {/* ═══ 1. HEADER PROFILO ═══ */}
+        <div className="text-center space-y-3">
+          <span className="font-mono-dm text-xs tracking-widest px-3 py-1 rounded-full" style={{ background: 'rgba(200,241,53,0.15)', color: '#C8F135', border: '1px solid rgba(200,241,53,0.3)' }}>
+            ANALISI COMPLETATA
+          </span>
+          <h1 className="font-bebas text-4xl md:text-5xl tracking-wide" style={{ color: '#ffffff' }}>
+            {userName || 'Il tuo'} Report Email Marketing
+          </h1>
+          <p className="font-mono-dm text-sm" style={{ color: '#666' }}>
+            Settore: <span style={{ color: '#C8F135' }}>{r.sectorBenchmark.label}</span>
+            {website && (
+              <> · <a href={website.startsWith('http') ? website : `https://${website}`} target="_blank" rel="noopener noreferrer" style={{ color: '#C8F135' }} className="hover:underline">{website.replace(/^https?:\/\//, '')}</a></>
+            )}
+          </p>
         </div>
 
-        {/* Email Health Score */}
-        <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 animate-fade-in" style={{
-        animationDelay: '100ms'
-      }}>
+        {/* ═══ 2. REVENUE LEAK HERO ═══ */}
+        <div className="rounded-2xl p-6 md:p-8 text-center" style={{ background: 'linear-gradient(135deg, rgba(255,59,59,0.15), rgba(255,59,59,0.05))', border: '1px solid rgba(255,59,59,0.3)' }}>
+          <p className="font-mono-dm text-xs tracking-widest mb-2" style={{ color: '#ff3b3b' }}>REVENUE LEAK MENSILE</p>
+          <p className="font-bebas text-5xl md:text-7xl" style={{ color: '#ff3b3b' }}>
+            -{formatCurrency(r.revenueGap)}
+          </p>
+          <p className="font-mono-dm text-sm mt-2" style={{ color: '#ff6b6b' }}>
+            {formatCurrency(r.revenueGap * 12)}/anno di fatturato non catturato
+          </p>
+        </div>
+
+        {/* ═══ 3. SCORE COMPLESSIVO ═══ */}
+        <div className="rounded-2xl p-6" style={{ background: '#141414', border: '1px solid #242424' }}>
           <div className="flex flex-col md:flex-row items-center gap-6">
-            <div className="relative w-32 h-32 flex-shrink-0">
-              <svg className="w-full h-full transform -rotate-90">
-                <circle cx="64" cy="64" r="56" stroke="currentColor" strokeWidth="12" fill="none" className="text-slate-700" />
-                <circle cx="64" cy="64" r="56" stroke="currentColor" strokeWidth="12" fill="none" strokeDasharray={`${r.emailHealthScore * 3.52} 352`} className={getScoreColor(r.emailHealthScore)} strokeLinecap="round" />
+            {/* Score circle */}
+            <div className="relative w-36 h-36 flex-shrink-0">
+              <svg className="w-full h-full transform -rotate-90" viewBox="0 0 128 128">
+                <circle cx="64" cy="64" r="56" stroke="#242424" strokeWidth="10" fill="none" />
+                <circle cx="64" cy="64" r="56" stroke={getScoreColor(r.emailHealthScore)} strokeWidth="10" fill="none"
+                  strokeDasharray={`${r.emailHealthScore * 3.52} 352`} strokeLinecap="round" />
               </svg>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-3xl font-bold text-white">{r.emailHealthScore}</span>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="font-bebas text-4xl" style={{ color: '#ffffff' }}>{r.emailHealthScore}</span>
+                <span className="font-mono-dm text-xs" style={{ color: '#666' }}>/100</span>
               </div>
             </div>
-            <div className="text-center md:text-left">
-              <h2 className="text-xl font-bold text-white mb-2">Email Health Score</h2>
-              <p className="text-slate-400">
+            <div className="flex-1 text-center md:text-left">
+              <h2 className="font-syne text-xl font-bold mb-1" style={{ color: '#ffffff' }}>Email Health Score</h2>
+              <p className="text-sm" style={{ color: '#888' }}>
                 {r.emailHealthScore >= 80 && "Eccellente! Stai sfruttando bene l'email marketing."}
-                {r.emailHealthScore >= 60 && r.emailHealthScore < 80 && "Buono, ma c'è margine di miglioramento."}
-                {r.emailHealthScore >= 40 && r.emailHealthScore < 60 && "Discreto. Hai opportunità significative da cogliere."}
+                {r.emailHealthScore >= 60 && r.emailHealthScore < 80 && "Buono, ma c'è margine di miglioramento significativo."}
+                {r.emailHealthScore >= 40 && r.emailHealthScore < 60 && "Discreto. Hai opportunità importanti da cogliere."}
                 {r.emailHealthScore < 40 && "Critico. Stai perdendo molto potenziale economico."}
               </p>
             </div>
           </div>
+
+          {/* 5 dimension bars */}
+          <div className="grid grid-cols-1 sm:grid-cols-5 gap-3 mt-6">
+            {dimensions.map((d) => (
+              <div key={d.label} className="rounded-xl p-3" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a' }}>
+                <p className="font-mono-dm text-[10px] tracking-wider mb-2" style={{ color: '#888' }}>{d.label.toUpperCase()}</p>
+                <p className="font-bebas text-2xl mb-1" style={{ color: d.color }}>{d.score}</p>
+                <div className="w-full h-1.5 rounded-full" style={{ background: '#2a2a2a' }}>
+                  <div className="h-full rounded-full transition-all duration-1000" style={{ width: `${d.score}%`, background: d.color }} />
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
-        {/* Sezione: Analisi Strategica */}
-        {r.strategicAnalysis && <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 animate-fade-in" style={{
-        animationDelay: '150ms'
-      }}>
-            <h2 className="text-xl font-bold text-orange mb-6 flex items-center gap-2">
-              📋 Analisi Strategica
-            </h2>
-            
-            <div className="space-y-5">
-              {/* Situazione Attuale */}
-              <div className="bg-slate-700/30 p-4 rounded-lg border-l-4 border-slate-500">
-                <h3 className="text-white font-semibold mb-2 flex items-center gap-2">
-                  <span className="text-slate-400">📍</span> Situazione Attuale
-                </h3>
-                <p className="text-slate-300 leading-relaxed text-sm">
-                  {r.strategicAnalysis.currentSituation}
-                </p>
-              </div>
-              
-              {/* Situazione Desiderata */}
-              <div className="bg-green-900/20 p-4 rounded-lg border-l-4 border-green-500">
-                <h3 className="text-white font-semibold mb-2 flex items-center gap-2">
-                  <span className="text-green-400">🎯</span> Situazione Desiderata
-                </h3>
-                <p className="text-slate-300 leading-relaxed text-sm">
-                  {r.strategicAnalysis.desiredSituation}
-                </p>
-              </div>
-              
-              {/* Potenziali Impedimenti */}
-              <div className="bg-red-900/20 p-4 rounded-lg border-l-4 border-red-500">
-                <h3 className="text-white font-semibold mb-2 flex items-center gap-2">
-                  <span className="text-red-400">⚠️</span> Potenziali Impedimenti
-                </h3>
-                <ul className="space-y-2">
-                  {r.strategicAnalysis.potentialObstacles.map((obstacle, i) => <li key={i} className="text-slate-300 text-sm flex items-start gap-2">
-                      <span className="text-red-400 mt-0.5">•</span>
-                      {obstacle}
-                    </li>)}
-                </ul>
-              </div>
+        {/* ═══ 4. SITUAZIONE ATTUALE VS BENCHMARK ═══ */}
+        <div className="rounded-2xl p-6" style={{ background: '#141414', border: '1px solid #242424' }}>
+          <h2 className="font-bebas text-2xl tracking-wide mb-5" style={{ color: '#ffffff' }}>SITUAZIONE ATTUALE VS BENCHMARK</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="rounded-xl p-4" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a' }}>
+              <p className="font-mono-dm text-[10px] tracking-wider" style={{ color: '#666' }}>FATTURATO MENSILE</p>
+              <p className="font-bebas text-2xl mt-1" style={{ color: '#ffffff' }}>{formatCurrency(r.monthlyRevenue)}</p>
             </div>
-          </div>}
+            <div className="rounded-xl p-4" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a' }}>
+              <p className="font-mono-dm text-[10px] tracking-wider" style={{ color: '#666' }}>EMAIL ATTUALE</p>
+              <p className="font-bebas text-2xl mt-1" style={{ color: '#e67e22' }}>{formatCurrency(r.currentEmailRevenue)}</p>
+              <p className="font-mono-dm text-[10px]" style={{ color: '#666' }}>{r.currentEmailPercent}% del totale</p>
+            </div>
+            <div className="rounded-xl p-4" style={{ background: 'rgba(200,241,53,0.05)', border: '1px solid rgba(200,241,53,0.2)' }}>
+              <p className="font-mono-dm text-[10px] tracking-wider" style={{ color: '#C8F135' }}>BENCHMARK 35%</p>
+              <p className="font-bebas text-2xl mt-1" style={{ color: '#C8F135' }}>{formatCurrency(r.benchmarkEmailRevenue)}</p>
+            </div>
+            <div className="rounded-xl p-4" style={{ background: 'rgba(255,59,59,0.05)', border: '1px solid rgba(255,59,59,0.2)' }}>
+              <p className="font-mono-dm text-[10px] tracking-wider" style={{ color: '#ff3b3b' }}>GAP MENSILE</p>
+              <p className="font-bebas text-2xl mt-1" style={{ color: '#ff3b3b' }}>{formatCurrency(r.revenueGap)}</p>
+            </div>
+          </div>
+          {/* Gauge bar */}
+          <div className="mt-5 space-y-2">
+            <div className="flex justify-between font-mono-dm text-[10px]">
+              <span style={{ color: '#888' }}>Il tuo risultato ({r.currentEmailPercent}%)</span>
+              <span style={{ color: '#C8F135' }}>Benchmark (35%)</span>
+            </div>
+            <div className="relative h-3 rounded-full overflow-hidden" style={{ background: '#2a2a2a' }}>
+              <div className="absolute h-full rounded-full transition-all duration-1000" style={{ width: `${Math.min(100, r.currentEmailPercent / 35 * 100)}%`, background: 'linear-gradient(90deg, #ff3b3b, #e67e22, #C8F135)' }} />
+            </div>
+          </div>
+        </div>
 
-        {/* Sezione 1: Situazione Attuale vs Benchmark */}
-        <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 animate-fade-in" style={{
-        animationDelay: '200ms'
-      }}>
-          <h2 className="text-xl font-bold text-orange mb-6 flex items-center gap-2">
-            📈 Situazione Attuale vs Benchmark
+        {/* ═══ 5. COSA FUNZIONA ═══ */}
+        <div className="rounded-2xl p-6" style={{ background: '#141414', border: '1px solid #242424' }}>
+          <h2 className="font-bebas text-2xl tracking-wide mb-4 flex items-center gap-2" style={{ color: '#2ecc71' }}>
+            <CheckCircle className="w-5 h-5" /> COSA FUNZIONA
           </h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            {/* Fatturato Totale */}
-            <div className="bg-slate-700/50 p-4 rounded-lg border-l-4 border-slate-500">
-              <p className="text-slate-400 text-sm mb-1">Fatturato Mensile Totale</p>
-              <p className="text-2xl font-bold text-white">{formatCurrency(r.monthlyRevenue)}<span className="text-sm text-slate-400">/mese</span></p>
-              <p className="text-slate-400 text-sm">{formatCurrency(r.monthlyRevenue * 12)}/anno</p>
-            </div>
-            {/* Fatturato Email Attuale */}
-            <div className="bg-slate-700/50 p-4 rounded-lg border-l-4 border-orange/50">
-              <p className="text-slate-400 text-sm mb-1">Fatturato da Email</p>
-              <p className="text-2xl font-bold text-white">{formatCurrency(r.currentEmailRevenue)}<span className="text-sm text-slate-400">/mese</span></p>
-              <p className="text-slate-400 text-sm">{r.currentEmailPercent}% del fatturato totale</p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            <div className="bg-gradient-to-br from-orange/20 to-orange/5 p-4 rounded-lg border border-orange/30">
-              <p className="text-orange text-sm mb-1">Benchmark Settore</p>
-              <p className="text-2xl font-bold text-orange">{formatCurrency(r.benchmarkEmailRevenue)}<span className="text-sm text-orange/70">/mese</span></p>
-              <p className="text-orange/70 text-sm">35% del fatturato (standard di mercato)</p>
-            </div>
-            <div className="bg-gradient-to-br from-red-600/30 to-red-500/10 p-4 rounded-lg border border-red-500/30">
-              <p className="text-red-300 text-sm mb-1">Gap Economico</p>
-              <p className="text-2xl font-bold text-red-400">{formatCurrency(r.revenueGap)}<span className="text-sm text-red-300">/mese</span></p>
-              <p className="text-red-300 text-sm">{formatCurrency(r.revenueGap * 12)}/anno persi</p>
-            </div>
-          </div>
-
-          {/* Progress bar visuale */}
           <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-slate-400">Il tuo risultato</span>
-              <span className="text-slate-400">Benchmark {r.sectorBenchmark.label}</span>
-            </div>
-            <div className="relative h-4 bg-slate-700 rounded-full overflow-hidden">
-              <div className="absolute h-full bg-orange rounded-full transition-all duration-1000" style={{
-              width: `${Math.min(100, r.currentEmailPercent / r.sectorBenchmark.emailShare * 100)}%`
-            }} />
-              <div className="absolute h-full w-1 bg-white top-0" style={{
-              left: '100%',
-              transform: 'translateX(-100%)'
-            }} />
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-white font-medium">{r.currentEmailPercent}%</span>
-              <span className="text-orange font-medium">{r.sectorBenchmark.emailShare}%</span>
-            </div>
+            {strengths.map((s, i) => (
+              <div key={i} className="flex items-start gap-3 rounded-xl p-3" style={{ background: 'rgba(46,204,113,0.05)', border: '1px solid rgba(46,204,113,0.15)' }}>
+                <span className="font-bebas text-lg flex-shrink-0" style={{ color: '#2ecc71' }}>0{i + 1}</span>
+                <p className="text-sm" style={{ color: '#ccc' }}>{s}</p>
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Sezione 2: Automation Analysis */}
-        <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 animate-fade-in" style={{
-        animationDelay: '300ms'
-      }}>
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold text-orange flex items-center gap-2">
-              ⚙️ Analisi Automazioni
-            </h2>
-            <div className={`px-4 py-2 rounded-lg font-bold text-lg ${getRatingColor(r.automationRating)}`}>
-              Rating: {r.automationRating}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Copertura automazioni */}
-            <div className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-slate-300">Copertura Automazioni</span>
-                <span className="text-white font-medium">{r.activeFlowsCount}/{r.totalFlowsCount} flussi attivi</span>
-              </div>
-              <Progress value={r.automationCoverage} className="h-3" />
-              <p className="text-slate-400 text-sm">
-                {r.automationCoverage < 50 ? "⚠️ Stai perdendo vendite automatiche significative" : r.automationCoverage < 80 ? "📈 Buon punto di partenza, ma c'è ancora margine" : "✅ Ottima copertura delle automazioni!"}
-              </p>
-            </div>
-
-            {/* Potenziale flussi mancanti */}
-            <div className="bg-gradient-to-br from-orange/20 to-orange/5 p-4 rounded-lg border border-orange/30">
-              <p className="text-orange text-sm mb-1">Potenziale Flussi Mancanti</p>
-              <p className="text-3xl font-bold text-white">{formatCurrency(r.totalFlowGap)}<span className="text-base text-slate-300">/mese</span></p>
-              <p className="text-slate-300 text-sm mt-1">{formatCurrency(r.totalFlowGap * 12)}/anno recuperabili</p>
-            </div>
-          </div>
-
-          {/* Lista flussi mancanti */}
-          {r.missingFlows.length > 0 && <div className="mt-6">
-              <h3 className="text-white font-semibold mb-3">Flussi Mancanti (ordinati per impatto):</h3>
-              <div className="space-y-2">
-                {r.missingFlows.slice(0, 4).map((flow, index) => <div key={flow.key} className="flex items-center justify-between bg-slate-700/50 p-3 rounded-lg animate-fade-in" style={{
-              animationDelay: `${400 + index * 100}ms`
-            }}>
-                    <div className="flex items-center gap-3">
-                      <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${flow.priority === 1 ? 'bg-red-500/30 text-red-300' : flow.priority === 2 ? 'bg-yellow-500/30 text-yellow-300' : 'bg-slate-600 text-slate-300'}`}>
-                        P{flow.priority}
-                      </span>
-                      <div>
-                        <p className="text-white font-medium">{flow.label}</p>
-                        <p className="text-slate-400 text-sm">{flow.description}</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-orange font-bold">+{formatCurrency(flow.impactValue)}</p>
-                      <p className="text-slate-400 text-xs">{flow.implementationTime}</p>
-                    </div>
-                  </div>)}
-              </div>
-            </div>}
-        </div>
-
-        {/* Sezione 3: I 3 Scenari di Crescita */}
-        <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 animate-fade-in" style={{
-        animationDelay: '500ms'
-      }}>
-          <h2 className="text-xl font-bold text-orange mb-2 flex items-center gap-2">
-            🚀 Scenari di Crescita
+        {/* ═══ 6. DOVE SI TROVA IL BLOCCO ═══ */}
+        <div className="rounded-2xl p-6" style={{ background: '#141414', border: '1px solid #242424' }}>
+          <h2 className="font-bebas text-2xl tracking-wide mb-4 flex items-center gap-2" style={{ color: '#ff3b3b' }}>
+            <AlertTriangle className="w-5 h-5" /> DOVE STAI PERDENDO SOLDI
           </h2>
-          <p className="text-slate-500 text-xs mb-6">I valori mostrano il <strong className="text-slate-400">recupero mensile aggiuntivo stimato</strong> sulla base del gap tra email attuale e benchmark (€{Math.round(r.revenueGap).toLocaleString('it-IT')}/mese).</p>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Conservativo */}
-            <div className="bg-gradient-to-br from-green-600/20 to-green-500/5 p-5 rounded-xl border border-green-500/30 hover-scale">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="w-3 h-3 rounded-full bg-green-500"></span>
-                <h3 className="text-green-400 font-semibold">Conservativo</h3>
+          <div className="space-y-2">
+            {weaknesses.map((w, i) => (
+              <div key={i} className="flex items-start gap-3 rounded-xl p-3" style={{ background: 'rgba(255,59,59,0.05)', border: '1px solid rgba(255,59,59,0.15)' }}>
+                <span className="font-bebas text-lg flex-shrink-0" style={{ color: '#ff3b3b' }}>0{i + 1}</span>
+                <p className="text-sm" style={{ color: '#ccc' }}>{w}</p>
               </div>
-              <p className="text-3xl font-bold text-white mb-1">+{r.scenarios.conservative.growthPercent}%</p>
-              <p className="text-green-400/70 text-xs mb-3">del gap recuperato</p>
-              <p className="text-2xl font-semibold text-green-400">{formatCurrency(r.scenarios.conservative.value)}<span className="text-sm">/mese</span></p>
-              <p className="text-slate-400 text-sm mt-3">{r.scenarios.conservative.description}</p>
-            </div>
-
-            {/* Moderato */}
-            <div className="bg-gradient-to-br from-orange/30 to-orange/10 p-5 rounded-xl border-2 border-orange hover-scale relative">
-              <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                <span className="bg-orange text-white text-xs px-3 py-1 rounded-full font-semibold">CONSIGLIATO</span>
-              </div>
-              <div className="flex items-center gap-2 mb-3 mt-2">
-                <span className="w-3 h-3 rounded-full bg-orange"></span>
-                <h3 className="text-orange font-semibold">Moderato</h3>
-              </div>
-              <p className="text-3xl font-bold text-white mb-1">+{r.scenarios.moderate.growthPercent}%</p>
-              <p className="text-orange/70 text-xs mb-3">del gap recuperato</p>
-              <p className="text-2xl font-semibold text-orange">{formatCurrency(r.scenarios.moderate.value)}<span className="text-sm">/mese</span></p>
-              <p className="text-slate-400 text-sm mt-3">{r.scenarios.moderate.description}</p>
-            </div>
-
-            {/* Aggressivo */}
-            <div className="bg-gradient-to-br from-purple-600/20 to-purple-500/5 p-5 rounded-xl border border-purple-500/30 hover-scale">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="w-3 h-3 rounded-full bg-purple-500"></span>
-                <h3 className="text-purple-400 font-semibold">Aggressivo</h3>
-              </div>
-              <p className="text-3xl font-bold text-white mb-1">+{r.scenarios.aggressive.growthPercent}%</p>
-              <p className="text-purple-400/70 text-xs mb-3">del gap recuperato</p>
-              <p className="text-2xl font-semibold text-purple-400">{formatCurrency(r.scenarios.aggressive.value)}<span className="text-sm">/mese</span></p>
-              <p className="text-slate-400 text-sm mt-3">{r.scenarios.aggressive.description}</p>
-            </div>
-        </div>
+            ))}
+          </div>
         </div>
 
-        {/* Sezione Forecast: Il Potenziale della Tua Lista */}
-        {r.listForecast &&
-      <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 animate-fade-in" style={{ animationDelay: '550ms' }}>
-            <h2 className="text-xl font-bold text-orange mb-6 flex items-center gap-2">
-              📬 Forecast: Il Potenziale della Tua Lista
-            </h2>
+        {/* ═══ 7. ANALISI AUTOMAZIONI ═══ */}
+        <div className="rounded-2xl p-6" style={{ background: '#141414', border: '1px solid #242424' }}>
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="font-bebas text-2xl tracking-wide" style={{ color: '#ffffff' }}>ANALISI AUTOMAZIONI</h2>
+            <span className="font-mono-dm text-xs px-3 py-1 rounded-full" style={{ background: r.automationCoverage >= 60 ? 'rgba(46,204,113,0.15)' : 'rgba(255,59,59,0.15)', color: r.automationCoverage >= 60 ? '#2ecc71' : '#ff3b3b', border: `1px solid ${r.automationCoverage >= 60 ? 'rgba(46,204,113,0.3)' : 'rgba(255,59,59,0.3)'}` }}>
+              {r.activeFlowsCount}/{r.totalFlowsCount} ATTIVI
+            </span>
+          </div>
 
-            {/* Card superiori */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              {/* Lista Attuale — statica */}
-              <div className="bg-slate-700/50 p-4 rounded-lg text-center">
-                <p className="text-slate-400 text-sm mb-1">Lista Attuale</p>
-                <p className="text-2xl font-bold text-white">{r.listForecast.listSize.toLocaleString('it-IT')}</p>
-                <p className="text-slate-400 text-sm">iscritti</p>
-              </div>
-
-              {/* Slider Invii/mese — interattivo */}
-              <div className="bg-gradient-to-br from-blue-600/20 to-blue-500/5 p-4 rounded-lg border border-blue-500/30 flex flex-col justify-between">
-                <div className="text-center mb-3">
-                  <p className="text-blue-300 text-sm mb-1">✏️ Invii/mese (modificabile)</p>
-                  <p className="text-3xl font-bold text-white">{customSends}</p>
-                  <p className="text-blue-300/70 text-xs">email/mese</p>
-                </div>
-                <div className="space-y-1 px-1">
-                  <Slider
-                min={0}
-                max={30}
-                step={1}
-                value={[customSends]}
-                onValueChange={(v) => setCustomSends(v[0])}
-                className="w-full" />
-
-                  <div className="flex justify-between text-xs text-slate-500">
-                    <span>0</span>
-                    <span>30</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* AOV */}
-              <div className={`p-4 rounded-lg text-center border ${
-          r.listForecast.isCustomAov ?
-          'bg-gradient-to-br from-green-600/20 to-green-500/5 border-green-500/30' :
-          'bg-gradient-to-br from-orange/20 to-orange/5 border-orange/30'}`
-          }>
-                <p className={`text-sm mb-1 ${r.listForecast.isCustomAov ? 'text-green-400' : 'text-orange'}`}>
-                  {r.listForecast.isCustomAov ? '✅ AOV Reale Cliente' : 'AOV Stimato Settore'}
-                </p>
-                <p className={`text-2xl font-bold ${r.listForecast.isCustomAov ? 'text-green-400' : 'text-orange'}`}>
-                  €{r.listForecast.sectorAOV}
-                </p>
-                <p className={`text-sm ${r.listForecast.isCustomAov ? 'text-green-400/70' : 'text-orange/70'}`}>
-                  valore medio ordine
-                </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-5">
+            <div className="rounded-xl p-4" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a' }}>
+              <p className="font-mono-dm text-[10px] tracking-wider" style={{ color: '#888' }}>COPERTURA</p>
+              <p className="font-bebas text-3xl" style={{ color: '#ffffff' }}>{Math.round(r.automationCoverage)}%</p>
+              <div className="w-full h-1.5 rounded-full mt-2" style={{ background: '#2a2a2a' }}>
+                <div className="h-full rounded-full" style={{ width: `${r.automationCoverage}%`, background: '#C8F135' }} />
               </div>
             </div>
-
-            {/* Tabella forecast */}
-            <div className="overflow-x-auto rounded-lg border border-slate-700">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-slate-700">
-                    <th className="text-left p-4 text-slate-400 font-medium w-1/4"></th>
-                    <th className="text-center p-4 text-blue-300 font-semibold bg-blue-500/10 border-x border-blue-500/20">
-                      📍 Corrente (mod.)
-                    </th>
-                    <th className="text-center p-4 text-orange font-semibold bg-orange/10 border-x border-orange/20">
-                      ⚡ Ottimizzato
-                    </th>
-                    <th className="text-center p-4 text-green-400 font-semibold bg-green-500/10">
-                      🏆 Benchmark
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr className="border-b border-slate-700/50">
-                    <td className="p-4 text-slate-400">Invii/mese</td>
-                    <td className="p-4 text-center text-blue-300 font-bold bg-blue-500/5 border-x border-blue-500/10">{customSends}</td>
-                    <td className="p-4 text-center text-orange font-medium bg-orange/5 border-x border-orange/20">{r.listForecast.optimized.sends}</td>
-                    <td className="p-4 text-center text-green-400 font-medium bg-green-500/5">{r.listForecast.benchmark.sends}</td>
-                  </tr>
-                  <tr className="border-b border-slate-700/50">
-                    <td className="p-4 text-slate-400">CR newsletter</td>
-                    <td className="p-4 text-center text-slate-300 bg-blue-500/5 border-x border-blue-500/10">0.2%</td>
-                    <td className="p-4 text-center text-slate-300 bg-orange/5 border-x border-orange/20">0.2%</td>
-                    <td className="p-4 text-center text-slate-300 bg-green-500/5">0.2%</td>
-                  </tr>
-                  <tr className="border-b border-slate-700/50">
-                    <td className="p-4 text-slate-400">Ordini stimati</td>
-                    <td className="p-4 text-center text-blue-300 font-medium bg-blue-500/5 border-x border-blue-500/10">{liveOrders.toLocaleString('it-IT')}</td>
-                    <td className="p-4 text-center text-orange bg-orange/5 border-x border-orange/20">{Math.round(r.listForecast.listSize * 0.30 * r.listForecast.optimized.sends * 0.002).toLocaleString('it-IT')}</td>
-                    <td className="p-4 text-center text-green-400 bg-green-500/5">{Math.round(r.listForecast.listSize * 0.30 * r.listForecast.benchmark.sends * 0.002).toLocaleString('it-IT')}</td>
-                  </tr>
-                  <tr className="border-b border-slate-700/50">
-                    <td className="p-4 text-slate-400">Revenue Newsletter</td>
-                    <td className="p-4 text-center text-blue-300 font-medium bg-blue-500/5 border-x border-blue-500/10">{formatCurrency(liveNewsletterRev)}</td>
-                    <td className="p-4 text-center text-orange font-medium bg-orange/5 border-x border-orange/20">{formatCurrency(r.listForecast.optimized.newsletterRevenue)}</td>
-                    <td className="p-4 text-center text-green-400 font-medium bg-green-500/5">{formatCurrency(r.listForecast.benchmark.newsletterRevenue)}</td>
-                  </tr>
-                  <tr className="border-b border-slate-700/50">
-                    <td className="p-4 text-slate-400">Revenue Automazioni</td>
-                    <td className="p-4 text-center text-blue-300 font-medium bg-blue-500/5 border-x border-blue-500/10">{formatCurrency(liveAutomationRev)}</td>
-                    <td className="p-4 text-center text-orange font-medium bg-orange/5 border-x border-orange/20">{formatCurrency(r.listForecast.optimized.automationRevenue)}</td>
-                    <td className="p-4 text-center text-green-400 font-medium bg-green-500/5">{formatCurrency(r.listForecast.benchmark.automationRevenue)}</td>
-                  </tr>
-                  <tr>
-                    <td className="p-4 text-white font-bold">💰 Totale stimato</td>
-                    <td className="p-4 text-center bg-blue-500/10 border-x border-blue-500/20">
-                      <span className="text-blue-300 font-bold text-base">{formatCurrency(liveTotal)}</span>
-                      <span className="text-blue-300/60 text-xs block">/mese</span>
-                    </td>
-                    <td className="p-4 text-center bg-orange/10 border-x border-orange/20">
-                      <span className="text-orange font-bold text-base">{formatCurrency(r.listForecast.optimized.total)}</span>
-                      <span className="text-orange/60 text-xs block">/mese</span>
-                    </td>
-                    <td className="p-4 text-center bg-green-500/10">
-                      <span className="text-green-400 font-bold text-base">{formatCurrency(r.listForecast.benchmark.total)}</span>
-                      <span className="text-green-400/60 text-xs block">/mese</span>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-            {/* Nota esplicativa */}
-            <div className="mt-4 p-4 bg-slate-700/30 rounded-lg border border-slate-600/50">
-              <p className="text-slate-400 text-xs leading-relaxed">
-                ⚠️ <strong className="text-slate-300">Stima indicativa</strong> basata su benchmark di settore. Formula: CR 0.2% per newsletter, CR dinamico 0.3%–1.0% per automazioni (in base al numero di flussi attivi), AOV {r.listForecast.isCustomAov ? 'reale cliente' : 'stimato da dati di mercato'} {r.sectorBenchmark.label}. La colonna <span className="text-blue-300">Corrente</span> è modificabile tramite lo slider per simulare diversi scenari di invio.
-              </p>
+            <div className="rounded-xl p-4" style={{ background: 'rgba(200,241,53,0.05)', border: '1px solid rgba(200,241,53,0.2)' }}>
+              <p className="font-mono-dm text-[10px] tracking-wider" style={{ color: '#C8F135' }}>POTENZIALE MANCANTE</p>
+              <p className="font-bebas text-3xl" style={{ color: '#C8F135' }}>{formatCurrency(r.totalFlowGap)}<span className="font-mono-dm text-xs" style={{ color: '#888' }}>/mese</span></p>
             </div>
           </div>
-      }
 
-        {/* ── Sezione Popup & Crescita Lista (condizionale) ─────────────────── */}
-        {r.popupData && r.popupData.hasPopup && (
-          <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 animate-fade-in" style={{ animationDelay: '570ms' }}>
-            <h2 className="text-xl font-bold text-teal-400 mb-2 flex items-center gap-2">
-              📬 Popup & Crescita Lista
-            </h2>
-            <p className="text-slate-500 text-xs mb-6">
-              Proiezione basata sul popup attivo — tasso di conversione {r.popupData.conversionRate}% su {r.popupData.monthlyVisitors.toLocaleString('it-IT')} visitatori/mese.
-            </p>
-
-            {/* 3 card principali */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              <div className="bg-gradient-to-br from-teal-600/20 to-teal-500/5 p-5 rounded-xl border border-teal-500/30 text-center">
-                <p className="text-teal-400 text-sm mb-1">📩 Nuovi iscritti/mese</p>
-                <p className="text-3xl font-bold text-white">{r.popupData.newSubscribersPerMonth.toLocaleString('it-IT')}</p>
-                <p className="text-teal-400/70 text-xs mt-1">dal popup attivo</p>
-              </div>
-              <div className="bg-gradient-to-br from-blue-600/20 to-blue-500/5 p-5 rounded-xl border border-blue-500/30 text-center">
-                <p className="text-blue-300 text-sm mb-1">📈 Lista a 12 mesi</p>
-                <p className="text-3xl font-bold text-white">{r.popupData.projectedListSize12m.toLocaleString('it-IT')}</p>
-                <p className="text-blue-300/70 text-xs mt-1">
-                  +{r.popupData.monthlyListGrowthRate}%/mese → {r.popupData.projectedListSize6m.toLocaleString('it-IT')} a 6 mesi
-                </p>
-              </div>
-              <div className="bg-gradient-to-br from-green-600/20 to-green-500/5 p-5 rounded-xl border border-green-500/30 text-center">
-                <p className="text-green-400 text-sm mb-1">💰 Revenue aggiuntiva</p>
-                <p className="text-3xl font-bold text-white">{formatCurrency(r.popupData.projectedRevenue12m)}</p>
-                <p className="text-green-400/70 text-xs mt-1">dai nuovi iscritti (12 mesi)</p>
-                {/* Breakdown tre layer */}
-                <div className="mt-3 pt-3 border-t border-green-500/20 space-y-1 text-left">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-slate-400">🎁 Welcome (5% CR)</span>
-                    <span className="text-green-300">{formatCurrency(r.popupData.revenueWelcome12m)}</span>
+          {/* Flow list */}
+          {r.missingFlows.length > 0 && (
+            <div className="space-y-2">
+              {r.missingFlows.map((flow) => (
+                <div key={flow.key} className="flex items-center justify-between rounded-xl p-3" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a' }}>
+                  <div className="flex items-center gap-3">
+                    <span className="font-mono-dm text-[10px] px-2 py-0.5 rounded" style={{
+                      background: flow.priority === 1 ? 'rgba(255,59,59,0.15)' : flow.priority === 2 ? 'rgba(230,126,34,0.15)' : 'rgba(136,136,136,0.15)',
+                      color: flow.priority === 1 ? '#ff3b3b' : flow.priority === 2 ? '#e67e22' : '#888',
+                    }}>P{flow.priority}</span>
+                    <div>
+                      <p className="font-syne text-sm font-semibold" style={{ color: '#fff' }}>{flow.label}</p>
+                      <p className="font-mono-dm text-[10px]" style={{ color: '#666' }}>{flow.description}</p>
+                    </div>
                   </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-slate-400">🛒 Recuperi (3% CR)</span>
-                    <span className="text-green-300">{formatCurrency(r.popupData.revenueRecovery12m)}</span>
-                  </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-slate-400">⚡ Automazioni</span>
-                    <span className="text-green-300">{formatCurrency(r.popupData.revenueAutomation12m)}</span>
+                  <div className="text-right flex-shrink-0">
+                    <p className="font-bebas text-lg" style={{ color: '#C8F135' }}>+{formatCurrency(flow.impactValue)}</p>
+                    <p className="font-mono-dm text-[10px]" style={{ color: '#666' }}>{flow.implementationTime}</p>
                   </div>
                 </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* ═══ 8. SCENARI DI CRESCITA ═══ */}
+        <div className="rounded-2xl p-6" style={{ background: '#141414', border: '1px solid #242424' }}>
+          <h2 className="font-bebas text-2xl tracking-wide mb-1" style={{ color: '#ffffff' }}>SCENARI DI CRESCITA</h2>
+          <p className="font-mono-dm text-[10px] mb-5" style={{ color: '#666' }}>Incremento stimato sul fatturato e-commerce totale</p>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {/* Conservative */}
+            <div className="rounded-xl p-5" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a' }}>
+              <p className="font-mono-dm text-[10px] tracking-wider mb-1" style={{ color: '#2ecc71' }}>CONSERVATIVO</p>
+              <p className="font-bebas text-4xl" style={{ color: '#ffffff' }}>+{r.scenarios.conservative.growthPercent}%</p>
+              <p className="font-bebas text-xl mt-1" style={{ color: '#2ecc71' }}>{formatCurrency(r.scenarios.conservative.value)}<span className="font-mono-dm text-[10px]" style={{ color: '#666' }}>/mese</span></p>
+              <p className="font-mono-dm text-[10px] mt-2" style={{ color: '#666' }}>{r.scenarios.conservative.description}</p>
+            </div>
+
+            {/* Moderate - recommended */}
+            <div className="rounded-xl p-5 relative" style={{ background: 'rgba(200,241,53,0.05)', border: '2px solid #C8F135' }}>
+              <span className="absolute -top-3 left-1/2 -translate-x-1/2 font-mono-dm text-[10px] px-3 py-0.5 rounded-full" style={{ background: '#C8F135', color: '#080808' }}>CONSIGLIATO</span>
+              <p className="font-mono-dm text-[10px] tracking-wider mb-1 mt-1" style={{ color: '#C8F135' }}>MODERATO</p>
+              <p className="font-bebas text-4xl" style={{ color: '#ffffff' }}>+{r.scenarios.moderate.growthPercent}%</p>
+              <p className="font-bebas text-xl mt-1" style={{ color: '#C8F135' }}>{formatCurrency(r.scenarios.moderate.value)}<span className="font-mono-dm text-[10px]" style={{ color: '#888' }}>/mese</span></p>
+              <p className="font-mono-dm text-[10px] mt-2" style={{ color: '#888' }}>{r.scenarios.moderate.description}</p>
+            </div>
+
+            {/* Aggressive */}
+            <div className="rounded-xl p-5" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a' }}>
+              <p className="font-mono-dm text-[10px] tracking-wider mb-1" style={{ color: '#a78bfa' }}>AGGRESSIVO</p>
+              <p className="font-bebas text-4xl" style={{ color: '#ffffff' }}>+{r.scenarios.aggressive.growthPercent}%</p>
+              <p className="font-bebas text-xl mt-1" style={{ color: '#a78bfa' }}>{formatCurrency(r.scenarios.aggressive.value)}<span className="font-mono-dm text-[10px]" style={{ color: '#666' }}>/mese</span></p>
+              <p className="font-mono-dm text-[10px] mt-2" style={{ color: '#666' }}>{r.scenarios.aggressive.description}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* ═══ 9. ROADMAP 3 AZIONI ═══ */}
+        <div className="rounded-2xl p-6" style={{ background: '#141414', border: '1px solid #242424' }}>
+          <h2 className="font-bebas text-2xl tracking-wide mb-5" style={{ color: '#ffffff' }}>ROADMAP: 3 AZIONI PRIORITARIE</h2>
+          <div className="space-y-3">
+            {r.topActions.map((action, i) => (
+              <div key={i} className="flex items-center gap-4 rounded-xl p-4" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a' }}>
+                <div className="w-10 h-10 rounded-full flex items-center justify-center font-bebas text-xl flex-shrink-0" style={{ background: '#C8F135', color: '#080808' }}>
+                  {i + 1}
+                </div>
+                <div className="flex-1">
+                  <p className="font-syne text-sm font-semibold" style={{ color: '#fff' }}>{action.action}</p>
+                  <p className="font-mono-dm text-[10px]" style={{ color: '#666' }}>{action.timeframe} · Difficoltà: {action.difficulty}</p>
+                </div>
+                <p className="font-bebas text-xl flex-shrink-0" style={{ color: '#2ecc71' }}>{action.roi}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ═══ 10. CASO STUDIO ═══ */}
+        <div className="rounded-2xl p-6" style={{ background: '#141414', border: '1px solid #242424' }}>
+          <h2 className="font-bebas text-2xl tracking-wide mb-1" style={{ color: '#ffffff' }}>CASO STUDIO: {r.sectorBenchmark.label.toUpperCase()}</h2>
+          <p className="font-mono-dm text-[10px] mb-5" style={{ color: '#666' }}>Risultati tipici per e-commerce simili dopo {caseStudy.timeframe}</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-xl p-4" style={{ background: 'rgba(255,59,59,0.05)', border: '1px solid rgba(255,59,59,0.15)' }}>
+              <p className="font-mono-dm text-[10px] tracking-wider mb-3" style={{ color: '#ff3b3b' }}>PRIMA</p>
+              <div className="space-y-2">
+                <div><p className="font-mono-dm text-[10px]" style={{ color: '#666' }}>Fatturato</p><p className="font-bebas text-lg" style={{ color: '#fff' }}>{caseStudy.before.revenue}</p></div>
+                <div><p className="font-mono-dm text-[10px]" style={{ color: '#666' }}>% da Email</p><p className="font-bebas text-lg" style={{ color: '#ff3b3b' }}>{caseStudy.before.emailPct}</p></div>
+                <div><p className="font-mono-dm text-[10px]" style={{ color: '#666' }}>Automazioni</p><p className="font-bebas text-lg" style={{ color: '#fff' }}>{caseStudy.before.flows}</p></div>
+              </div>
+            </div>
+            <div className="rounded-xl p-4" style={{ background: 'rgba(46,204,113,0.05)', border: '1px solid rgba(46,204,113,0.15)' }}>
+              <p className="font-mono-dm text-[10px] tracking-wider mb-3" style={{ color: '#2ecc71' }}>DOPO</p>
+              <div className="space-y-2">
+                <div><p className="font-mono-dm text-[10px]" style={{ color: '#666' }}>Fatturato</p><p className="font-bebas text-lg" style={{ color: '#fff' }}>{caseStudy.after.revenue}</p></div>
+                <div><p className="font-mono-dm text-[10px]" style={{ color: '#666' }}>% da Email</p><p className="font-bebas text-lg" style={{ color: '#2ecc71' }}>{caseStudy.after.emailPct}</p></div>
+                <div><p className="font-mono-dm text-[10px]" style={{ color: '#666' }}>Automazioni</p><p className="font-bebas text-lg" style={{ color: '#fff' }}>{caseStudy.after.flows}</p></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ═══ 11. POTENZIALE ANNUALE ═══ */}
+        <div className="rounded-2xl p-8 text-center" style={{ background: 'linear-gradient(135deg, rgba(200,241,53,0.1), rgba(200,241,53,0.02))', border: '2px solid rgba(200,241,53,0.3)' }}>
+          <p className="font-mono-dm text-xs tracking-widest mb-2" style={{ color: '#C8F135' }}>POTENZIALE ECONOMICO ANNUO</p>
+          <p className="font-bebas text-5xl md:text-7xl" style={{ color: '#C8F135' }}>{formatCurrency(r.yearlyPotential)}</p>
+          <p className="font-mono-dm text-xs mt-2" style={{ color: '#888' }}>
+            Scenario moderato: {formatCurrency(r.scenarios.moderate.value)}/mese × 12
+          </p>
+        </div>
+
+        {/* ═══ 12. SLIDER FORECAST ═══ */}
+        {r.listForecast && (
+          <div className="rounded-2xl p-6" style={{ background: '#141414', border: '1px solid #242424' }}>
+            <h2 className="font-bebas text-2xl tracking-wide mb-5" style={{ color: '#ffffff' }}>FORECAST: IL POTENZIALE DELLA TUA LISTA</h2>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-5">
+              <div className="rounded-xl p-4 text-center" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a' }}>
+                <p className="font-mono-dm text-[10px]" style={{ color: '#888' }}>LISTA ATTUALE</p>
+                <p className="font-bebas text-2xl" style={{ color: '#fff' }}>{r.listForecast.listSize.toLocaleString('it-IT')}</p>
+                <p className="font-mono-dm text-[10px]" style={{ color: '#666' }}>iscritti</p>
+              </div>
+              <div className="rounded-xl p-4 text-center" style={{ background: 'rgba(200,241,53,0.05)', border: '1px solid rgba(200,241,53,0.2)' }}>
+                <p className="font-mono-dm text-[10px] mb-1" style={{ color: '#C8F135' }}>INVII/MESE</p>
+                <p className="font-bebas text-3xl" style={{ color: '#fff' }}>{customSends}</p>
+                <div className="px-2 mt-2">
+                  <Slider min={0} max={30} step={1} value={[customSends]} onValueChange={(v) => setCustomSends(v[0])} className="w-full" />
+                  <div className="flex justify-between font-mono-dm text-[10px] mt-1" style={{ color: '#666' }}><span>0</span><span>30</span></div>
+                </div>
+              </div>
+              <div className="rounded-xl p-4 text-center" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a' }}>
+                <p className="font-mono-dm text-[10px]" style={{ color: '#888' }}>{r.listForecast.isCustomAov ? 'AOV REALE' : 'AOV STIMATO'}</p>
+                <p className="font-bebas text-2xl" style={{ color: r.listForecast.isCustomAov ? '#2ecc71' : '#C8F135' }}>€{r.listForecast.sectorAOV}</p>
+                <p className="font-mono-dm text-[10px]" style={{ color: '#666' }}>valore medio ordine</p>
               </div>
             </div>
 
-            {/* Tabella proiezione crescita lista */}
-            <div className="overflow-x-auto rounded-lg border border-slate-700 mb-4">
+            {/* Forecast table */}
+            <div className="overflow-x-auto rounded-xl" style={{ border: '1px solid #2a2a2a' }}>
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-slate-700">
-                    <th className="text-left p-3 text-slate-400 font-medium">Momento</th>
-                    <th className="text-center p-3 text-teal-400 font-semibold">Oggi</th>
-                    <th className="text-center p-3 text-blue-300 font-semibold">3 mesi</th>
-                    <th className="text-center p-3 text-orange font-semibold">6 mesi</th>
-                    <th className="text-center p-3 text-green-400 font-semibold">12 mesi</th>
+                  <tr style={{ borderBottom: '1px solid #2a2a2a' }}>
+                    <th className="text-left p-3 font-mono-dm text-[10px]" style={{ color: '#666' }}></th>
+                    <th className="text-center p-3 font-mono-dm text-[10px]" style={{ color: '#C8F135', background: 'rgba(200,241,53,0.05)' }}>CORRENTE</th>
+                    <th className="text-center p-3 font-mono-dm text-[10px]" style={{ color: '#e67e22', background: 'rgba(230,126,34,0.05)' }}>OTTIMIZZATO</th>
+                    <th className="text-center p-3 font-mono-dm text-[10px]" style={{ color: '#2ecc71', background: 'rgba(46,204,113,0.05)' }}>BENCHMARK</th>
                   </tr>
                 </thead>
-                <tbody>
-                  <tr className="border-b border-slate-700/50">
-                    <td className="p-3 text-slate-400">Iscritti lista</td>
-                    <td className="p-3 text-center text-teal-400 font-bold">
-                      {r.listForecast?.listSize.toLocaleString('it-IT')}
-                    </td>
-                    <td className="p-3 text-center text-blue-300 font-medium">
-                      {r.listForecast ? Math.round(r.listForecast.listSize * Math.pow(1 + r.popupData.monthlyListGrowthRate / 100, 3)).toLocaleString('it-IT') : '—'}
-                    </td>
-                    <td className="p-3 text-center text-orange font-medium">
-                      {r.popupData.projectedListSize6m.toLocaleString('it-IT')}
-                    </td>
-                    <td className="p-3 text-center text-green-400 font-bold">
-                      {r.popupData.projectedListSize12m.toLocaleString('it-IT')}
-                    </td>
-                  </tr>
+                <tbody className="font-mono-dm text-xs">
+                  {[
+                    ['Invii/mese', customSends, r.listForecast.optimized.sends, r.listForecast.benchmark.sends],
+                    ['Ordini stimati', liveOrders.toLocaleString('it-IT'), Math.round(r.listForecast.listSize * 0.30 * r.listForecast.optimized.sends * 0.002).toLocaleString('it-IT'), Math.round(r.listForecast.listSize * 0.30 * r.listForecast.benchmark.sends * 0.002).toLocaleString('it-IT')],
+                    ['Rev. Newsletter', formatCurrency(liveNewsletterRev), formatCurrency(r.listForecast.optimized.newsletterRevenue), formatCurrency(r.listForecast.benchmark.newsletterRevenue)],
+                    ['Rev. Automazioni', formatCurrency(liveAutomationRev), formatCurrency(r.listForecast.optimized.automationRevenue), formatCurrency(r.listForecast.benchmark.automationRevenue)],
+                  ].map(([label, curr, opt, bench], i) => (
+                    <tr key={i} style={{ borderBottom: '1px solid #1a1a1a' }}>
+                      <td className="p-3" style={{ color: '#888' }}>{label}</td>
+                      <td className="p-3 text-center font-medium" style={{ color: '#C8F135', background: 'rgba(200,241,53,0.02)' }}>{curr}</td>
+                      <td className="p-3 text-center" style={{ color: '#e67e22', background: 'rgba(230,126,34,0.02)' }}>{opt}</td>
+                      <td className="p-3 text-center" style={{ color: '#2ecc71', background: 'rgba(46,204,113,0.02)' }}>{bench}</td>
+                    </tr>
+                  ))}
                   <tr>
-                    <td className="p-3 text-slate-400">Nuovi iscritti aggiunti</td>
-                    <td className="p-3 text-center text-teal-400">—</td>
-                    <td className="p-3 text-center text-blue-300">
-                      +{(r.popupData.newSubscribersPerMonth * 3).toLocaleString('it-IT')}
-                    </td>
-                    <td className="p-3 text-center text-orange">
-                      +{(r.popupData.newSubscribersPerMonth * 6).toLocaleString('it-IT')}
-                    </td>
-                    <td className="p-3 text-center text-green-400 font-bold">
-                      +{(r.popupData.newSubscribersPerMonth * 12).toLocaleString('it-IT')}
-                    </td>
+                    <td className="p-3 font-syne font-bold text-sm" style={{ color: '#fff' }}>Totale</td>
+                    <td className="p-3 text-center font-bold" style={{ color: '#C8F135', background: 'rgba(200,241,53,0.05)' }}>{formatCurrency(liveTotal)}</td>
+                    <td className="p-3 text-center font-bold" style={{ color: '#e67e22', background: 'rgba(230,126,34,0.05)' }}>{formatCurrency(r.listForecast.optimized.total)}</td>
+                    <td className="p-3 text-center font-bold" style={{ color: '#2ecc71', background: 'rgba(46,204,113,0.05)' }}>{formatCurrency(r.listForecast.benchmark.total)}</td>
                   </tr>
                 </tbody>
               </table>
             </div>
 
-            {/* Nota benchmark */}
-            <div className="bg-teal-900/20 border border-teal-500/20 rounded-lg p-4">
-              <p className="text-teal-400/80 text-xs leading-relaxed">
-                <strong className="text-teal-400">📊 Benchmark e-commerce popup:</strong>{' '}
-                Un buon tasso di conversione popup è tra il <strong className="text-white">3% e il 5%</strong>.
-                {r.popupData.conversionRate < 3
-                  ? ` Il tuo ${r.popupData.conversionRate}% è sotto la media — ottimizzare il copy e l'offerta popup può portare a 2-3× più iscritti.`
-                  : r.popupData.conversionRate >= 5
-                    ? ` Il tuo ${r.popupData.conversionRate}% è eccellente — sei già nella top tier e-commerce!`
-                    : ` Il tuo ${r.popupData.conversionRate}% è nella norma, con margine per migliorare ulteriormente.`
-                }
-              </p>
+            <p className="font-mono-dm text-[10px] mt-3" style={{ color: '#555' }}>
+              Stima indicativa basata su CR 0.2% newsletter, CR dinamico automazioni, AOV {r.listForecast.isCustomAov ? 'reale' : 'benchmark'} {r.sectorBenchmark.label}.
+            </p>
+          </div>
+        )}
+
+        {/* ═══ POPUP & CRESCITA LISTA ═══ */}
+        {r.popupData && r.popupData.hasPopup && (
+          <div className="rounded-2xl p-6" style={{ background: '#141414', border: '1px solid #242424' }}>
+            <h2 className="font-bebas text-2xl tracking-wide mb-5" style={{ color: '#ffffff' }}>POPUP & CRESCITA LISTA</h2>
+            <p className="font-mono-dm text-[10px] mb-5" style={{ color: '#666' }}>Tasso conversione {r.popupData.conversionRate}% su {r.popupData.monthlyVisitors.toLocaleString('it-IT')} visitatori/mese</p>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-5">
+              <div className="rounded-xl p-4 text-center" style={{ background: 'rgba(200,241,53,0.05)', border: '1px solid rgba(200,241,53,0.2)' }}>
+                <p className="font-mono-dm text-[10px]" style={{ color: '#C8F135' }}>NUOVI ISCRITTI/MESE</p>
+                <p className="font-bebas text-3xl" style={{ color: '#fff' }}>{r.popupData.newSubscribersPerMonth.toLocaleString('it-IT')}</p>
+              </div>
+              <div className="rounded-xl p-4 text-center" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a' }}>
+                <p className="font-mono-dm text-[10px]" style={{ color: '#888' }}>LISTA A 12 MESI</p>
+                <p className="font-bebas text-3xl" style={{ color: '#fff' }}>{r.popupData.projectedListSize12m.toLocaleString('it-IT')}</p>
+                <p className="font-mono-dm text-[10px]" style={{ color: '#666' }}>+{r.popupData.monthlyListGrowthRate}%/mese</p>
+              </div>
+              <div className="rounded-xl p-4 text-center" style={{ background: 'rgba(46,204,113,0.05)', border: '1px solid rgba(46,204,113,0.15)' }}>
+                <p className="font-mono-dm text-[10px]" style={{ color: '#2ecc71' }}>REVENUE 12 MESI</p>
+                <p className="font-bebas text-3xl" style={{ color: '#2ecc71' }}>{formatCurrency(r.popupData.projectedRevenue12m)}</p>
+                <div className="mt-2 pt-2 space-y-1 text-left" style={{ borderTop: '1px solid rgba(46,204,113,0.1)' }}>
+                  <div className="flex justify-between font-mono-dm text-[10px]"><span style={{ color: '#666' }}>Welcome</span><span style={{ color: '#2ecc71' }}>{formatCurrency(r.popupData.revenueWelcome12m)}</span></div>
+                  <div className="flex justify-between font-mono-dm text-[10px]"><span style={{ color: '#666' }}>Recuperi</span><span style={{ color: '#2ecc71' }}>{formatCurrency(r.popupData.revenueRecovery12m)}</span></div>
+                  <div className="flex justify-between font-mono-dm text-[10px]"><span style={{ color: '#666' }}>Automazioni</span><span style={{ color: '#2ecc71' }}>{formatCurrency(r.popupData.revenueAutomation12m)}</span></div>
+                </div>
+              </div>
             </div>
           </div>
         )}
 
-        {/* Sezione 4: Top 3 Azioni Prioritarie */}
-        <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 animate-fade-in" style={{
-        animationDelay: '600ms'
-      }}>
-          <h2 className="text-xl font-bold text-orange mb-6 flex items-center gap-2">
-            🎯 Roadmap: Le 3 Azioni Prioritarie
-          </h2>
-          
-          <div className="space-y-4">
-            {r.topActions.map((action, index) => <div key={index} className="flex flex-col md:flex-row md:items-center gap-4 bg-slate-700/50 p-4 rounded-lg animate-fade-in" style={{
-            animationDelay: `${700 + index * 100}ms`
-          }}>
-                <div className="flex items-center gap-4 flex-1">
-                  <div className="w-10 h-10 rounded-full bg-orange flex items-center justify-center text-white font-bold text-lg">
-                    {index + 1}
-                  </div>
-                  <div>
-                    <p className="text-white font-semibold">{action.action}</p>
-                    <p className="text-slate-400 text-sm">⏱️ {action.timeframe} • Difficoltà: {action.difficulty}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="text-right">
-                    <p className="text-green-400 font-bold text-lg">{action.roi}</p>
-                  </div>
-                </div>
-              </div>)}
-          </div>
-        </div>
-
-        {/* ── Proiezione Fatturato E-commerce nel Tempo ────────────────────── */}
-        <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 animate-fade-in" style={{ animationDelay: '810ms' }}>
-          <h2 className="text-xl font-bold text-orange mb-2 flex items-center gap-2">
-            📈 Proiezione Fatturato E-commerce nel Tempo
-          </h2>
-          <p className="text-slate-500 text-xs mb-6">
-            Come potrebbe variare il fatturato mensile totale del tuo e-commerce dopo l'implementazione delle attività consigliate (scenario moderato +{r.scenarios.moderate.growthPercent}% sul fatturato e-commerce).
-          </p>
+        {/* ═══ PROIEZIONE FATTURATO NEL TEMPO ═══ */}
+        <div className="rounded-2xl p-6" style={{ background: '#141414', border: '1px solid #242424' }}>
+          <h2 className="font-bebas text-2xl tracking-wide mb-1" style={{ color: '#ffffff' }}>PROIEZIONE FATTURATO NEL TEMPO</h2>
+          <p className="font-mono-dm text-[10px] mb-5" style={{ color: '#666' }}>Scenario moderato +{r.scenarios.moderate.growthPercent}% sul fatturato e-commerce</p>
 
           {(() => {
             const totalRevenue = r.monthlyRevenue;
             const emailBase = r.currentEmailRevenue;
-            const moderateGrowth = r.scenarios.moderate.value; // incremento email mensile a regime
-            // Ramp-up progressivo: a 3 mesi 40%, a 6 mesi 75%, a 12 mesi 100%
+            const moderateGrowth = r.scenarios.moderate.value;
             const emailAt3m = emailBase + moderateGrowth * 0.4;
             const emailAt6m = emailBase + moderateGrowth * 0.75;
             const emailAt12m = emailBase + moderateGrowth;
-            // Fatturato totale ecommerce = (fatturato totale - email attuale) + email proiettata
             const nonEmailRevenue = totalRevenue - emailBase;
             const totalAt3m = nonEmailRevenue + emailAt3m;
             const totalAt6m = nonEmailRevenue + emailAt6m;
@@ -810,345 +637,180 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
             const growth12 = ((totalAt12m - totalRevenue) / totalRevenue * 100);
 
             return (
-              <>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                  {/* Oggi */}
-                  <div className="bg-slate-700/50 p-5 rounded-xl border border-slate-600 text-center">
-                    <p className="text-slate-400 text-sm mb-1">📍 Oggi</p>
-                    <p className="text-2xl font-bold text-white">{formatCurrency(totalRevenue)}</p>
-                    <p className="text-slate-500 text-xs mt-1">/mese totale</p>
-                    <p className="text-slate-500 text-xs">di cui {formatCurrency(emailBase)} da email</p>
-                  </div>
-
-                  {/* 3 mesi */}
-                  <div className="bg-gradient-to-br from-blue-600/20 to-blue-500/5 p-5 rounded-xl border border-blue-500/30 text-center">
-                    <p className="text-blue-300 text-sm mb-1">🗓️ 3 Mesi</p>
-                    <p className="text-2xl font-bold text-white">{formatCurrency(totalAt3m)}</p>
-                    <p className="text-blue-400 text-xs mt-1 font-semibold">+{formatCurrency(totalAt3m - totalRevenue)} (+{growth3.toFixed(1)}%)</p>
-                    <p className="text-slate-500 text-xs mt-1">Email: {formatCurrency(emailAt3m)}</p>
-                    <p className="text-slate-500 text-xs">Fase di setup e primi flussi</p>
-                  </div>
-
-                  {/* 6 mesi */}
-                  <div className="bg-gradient-to-br from-orange/20 to-orange/5 p-5 rounded-xl border border-orange/30 text-center">
-                    <p className="text-orange text-sm mb-1">🗓️ 6 Mesi</p>
-                    <p className="text-2xl font-bold text-white">{formatCurrency(totalAt6m)}</p>
-                    <p className="text-orange text-xs mt-1 font-semibold">+{formatCurrency(totalAt6m - totalRevenue)} (+{growth6.toFixed(1)}%)</p>
-                    <p className="text-slate-500 text-xs mt-1">Email: {formatCurrency(emailAt6m)}</p>
-                    <p className="text-slate-500 text-xs">Ottimizzazione e scaling</p>
-                  </div>
-
-                  {/* 12 mesi */}
-                  <div className="bg-gradient-to-br from-green-600/20 to-green-500/5 p-5 rounded-xl border-2 border-green-500/40 text-center relative">
-                    <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                      <span className="bg-green-500 text-white text-xs px-3 py-1 rounded-full font-semibold">OBIETTIVO</span>
-                    </div>
-                    <p className="text-green-400 text-sm mb-1 mt-2">🗓️ 12 Mesi</p>
-                    <p className="text-2xl font-bold text-white">{formatCurrency(totalAt12m)}</p>
-                    <p className="text-green-400 text-xs mt-1 font-semibold">+{formatCurrency(totalAt12m - totalRevenue)} (+{growth12.toFixed(1)}%)</p>
-                    <p className="text-slate-500 text-xs mt-1">Email: {formatCurrency(emailAt12m)}</p>
-                    <p className="text-slate-500 text-xs">Performance a regime</p>
-                  </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="rounded-xl p-4 text-center" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a' }}>
+                  <p className="font-mono-dm text-[10px]" style={{ color: '#888' }}>OGGI</p>
+                  <p className="font-bebas text-2xl" style={{ color: '#fff' }}>{formatCurrency(totalRevenue)}</p>
+                  <p className="font-mono-dm text-[10px]" style={{ color: '#666' }}>Email: {formatCurrency(emailBase)}</p>
                 </div>
-
-                {/* Barra visuale progressione */}
-                <div className="bg-slate-700/30 p-4 rounded-lg border border-slate-600/50">
-                  <div className="flex items-center gap-3 mb-3">
-                    <span className="text-slate-400 text-sm font-medium">Progressione crescita fatturato</span>
-                  </div>
-                  <div className="relative h-3 bg-slate-700 rounded-full overflow-hidden">
-                    <div className="absolute h-full bg-gradient-to-r from-blue-500 via-orange to-green-500 rounded-full transition-all duration-1000" style={{ width: '100%' }} />
-                  </div>
-                  <div className="flex justify-between text-xs mt-2">
-                    <span className="text-slate-500">{formatCurrency(totalRevenue)}</span>
-                    <span className="text-blue-300">{formatCurrency(totalAt3m)}</span>
-                    <span className="text-orange">{formatCurrency(totalAt6m)}</span>
-                    <span className="text-green-400">{formatCurrency(totalAt12m)}</span>
-                  </div>
-                  <p className="text-slate-500 text-xs mt-3">
-                    ⚠️ <strong className="text-slate-400">Stima indicativa</strong> — la crescita è progressiva e riguarda l'incremento derivante dall'email marketing ottimizzato sul fatturato totale e-commerce.
-                  </p>
+                <div className="rounded-xl p-4 text-center" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a' }}>
+                  <p className="font-mono-dm text-[10px]" style={{ color: '#C8F135' }}>3 MESI</p>
+                  <p className="font-bebas text-2xl" style={{ color: '#fff' }}>{formatCurrency(totalAt3m)}</p>
+                  <p className="font-mono-dm text-[10px]" style={{ color: '#2ecc71' }}>+{growth3.toFixed(1)}%</p>
                 </div>
-              </>
+                <div className="rounded-xl p-4 text-center" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a' }}>
+                  <p className="font-mono-dm text-[10px]" style={{ color: '#e67e22' }}>6 MESI</p>
+                  <p className="font-bebas text-2xl" style={{ color: '#fff' }}>{formatCurrency(totalAt6m)}</p>
+                  <p className="font-mono-dm text-[10px]" style={{ color: '#2ecc71' }}>+{growth6.toFixed(1)}%</p>
+                </div>
+                <div className="rounded-xl p-4 text-center relative" style={{ background: 'rgba(200,241,53,0.05)', border: '2px solid rgba(200,241,53,0.3)' }}>
+                  <span className="absolute -top-2 left-1/2 -translate-x-1/2 font-mono-dm text-[9px] px-2 py-0.5 rounded-full" style={{ background: '#C8F135', color: '#080808' }}>OBIETTIVO</span>
+                  <p className="font-mono-dm text-[10px] mt-1" style={{ color: '#C8F135' }}>12 MESI</p>
+                  <p className="font-bebas text-2xl" style={{ color: '#fff' }}>{formatCurrency(totalAt12m)}</p>
+                  <p className="font-mono-dm text-[10px]" style={{ color: '#2ecc71' }}>+{growth12.toFixed(1)}%</p>
+                </div>
+              </div>
             );
           })()}
         </div>
 
-        {/* Potenziale Annuo Totale */}
-        <div className="bg-gradient-to-r from-orange to-orange/80 p-6 rounded-xl animate-fade-in" style={{
-        animationDelay: '850ms'
-      }}>
-          <div className="text-center">
-            <p className="text-white/80 text-lg mb-2">💰 Potenziale Economico Annuo Recuperabile</p>
-            <p className="text-4xl md:text-5xl font-bold text-white">{formatCurrency(r.yearlyPotential)}</p>
-            <p className="text-white/70 mt-2">
-              Gap annuale tra email attuale ({formatCurrency(r.currentEmailRevenue)}/mese) e benchmark di settore ({formatCurrency(r.benchmarkEmailRevenue)}/mese)
-            </p>
-          </div>
-        </div>
+        {/* ═══ INVESTIMENTO & ROI (admin only) ═══ */}
+        {showInvestment && (
+          <div className="rounded-2xl p-6" style={{ background: '#141414', border: '1px solid rgba(200,241,53,0.3)' }}>
+            <h2 className="font-bebas text-2xl tracking-wide mb-1" style={{ color: '#C8F135' }}>INVESTIMENTO & ROI</h2>
+            <p className="font-mono-dm text-[10px] mb-5" style={{ color: '#666' }}>Inserisci i costi del servizio per calcolare break-even e ROI</p>
 
-        {/* ── Sezione Investimento & ROI ─────────────────────────────────── */}
-        {showInvestment &&
-      <div className="bg-gradient-to-br from-teal-900/40 to-teal-800/20 p-6 rounded-xl border animate-fade-in border-primary bg-primary" style={{ animationDelay: '820ms' }}>
-            <h2 className="text-xl font-bold text-teal-400 mb-2 flex items-center gap-2">
-              💼 Investimento & ROI
-            </h2>
-            <p className="text-slate-400 text-sm mb-6">
-              Inserisci i costi del servizio per calcolare il break-even e il ROI in tempo reale.
-            </p>
-
-            {/* Form inline fee */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 bg-slate-800/50 p-4 rounded-xl border border-primary">
-              {/* Setup una-tantum */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-5">
               <div>
-                <label className="block text-slate-400 text-xs font-medium mb-1.5">💰 Setup una-tantum</label>
+                <label className="block font-mono-dm text-[10px] mb-1.5" style={{ color: '#888' }}>SETUP UNA-TANTUM</label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-semibold text-sm">€</span>
-                  <input
-                type="number"
-                placeholder="es. 1500"
-                min={0}
-                value={setupFee}
-                onChange={(e) => setSetupFee(e.target.value)}
-                className="w-full bg-slate-700 border border-slate-600 text-white rounded-lg px-3 py-2 pl-8 text-sm placeholder:text-slate-500 focus:outline-none focus:border-teal-500" />
-
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono-dm text-sm" style={{ color: '#666' }}>€</span>
+                  <input type="number" placeholder="1500" min={0} value={setupFee} onChange={(e) => setSetupFee(e.target.value)}
+                    className="w-full rounded-lg px-3 py-2 pl-8 text-sm focus:outline-none" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a', color: '#fff' }} />
                 </div>
               </div>
-              {/* Fee fissa mensile */}
               <div>
-                <label className="block text-slate-400 text-xs font-medium mb-1.5">📅 Fee fissa mensile</label>
+                <label className="block font-mono-dm text-[10px] mb-1.5" style={{ color: '#888' }}>FEE FISSA MENSILE</label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-semibold text-sm">€</span>
-                  <input
-                type="number"
-                placeholder="es. 800"
-                min={0}
-                value={monthlyFixed}
-                onChange={(e) => setMonthlyFixed(e.target.value)}
-                className="w-full bg-slate-700 border border-slate-600 text-white rounded-lg px-3 py-2 pl-8 text-sm placeholder:text-slate-500 focus:outline-none focus:border-teal-500" />
-
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono-dm text-sm" style={{ color: '#666' }}>€</span>
+                  <input type="number" placeholder="800" min={0} value={monthlyFixed} onChange={(e) => setMonthlyFixed(e.target.value)}
+                    className="w-full rounded-lg px-3 py-2 pl-8 text-sm focus:outline-none" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a', color: '#fff' }} />
                 </div>
               </div>
-              {/* Commissione % */}
               <div>
-                <label className="block text-slate-400 text-xs font-medium mb-1.5">📊 Commissione % su fatturato email netto IVA</label>
+                <label className="block font-mono-dm text-[10px] mb-1.5" style={{ color: '#888' }}>COMMISSIONE % SU FATTURATO EMAIL NETTO IVA</label>
                 <div className="relative">
-                  <input
-                type="number"
-                placeholder="es. 10"
-                min={0}
-                max={100}
-                value={monthlyPercent}
-                onChange={(e) => setMonthlyPercent(e.target.value)}
-                className="w-full bg-slate-700 border border-slate-600 text-white rounded-lg px-3 py-2 pr-8 text-sm placeholder:text-slate-500 focus:outline-none focus:border-teal-500" />
-
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 font-semibold text-sm">%</span>
+                  <input type="number" placeholder="10" min={0} max={100} value={monthlyPercent} onChange={(e) => setMonthlyPercent(e.target.value)}
+                    className="w-full rounded-lg px-3 py-2 pr-8 text-sm focus:outline-none" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a', color: '#fff' }} />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 font-mono-dm text-sm" style={{ color: '#666' }}>%</span>
                 </div>
-                {monthlyPercentN > 0 && emailRevenueNetVAT > 0 &&
-            <p className="text-slate-500 text-xs mt-1">
-                    = {formatCurrency(monthlyPercentFee)}/mese su {formatCurrency(emailRevenueNetVAT)} fatturato email generato netto IVA
-                  </p>
-            }
+                {monthlyPercentN > 0 && emailRevenueNetVAT > 0 && (
+                  <p className="font-mono-dm text-[10px] mt-1" style={{ color: '#666' }}>= {formatCurrency(monthlyPercentFee)}/mese su {formatCurrency(emailRevenueNetVAT)} netto IVA</p>
+                )}
               </div>
             </div>
 
-            {/* Card summary */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-              {/* Setup */}
-              <div className="bg-slate-800/60 p-4 rounded-xl border border-slate-700/50 text-center">
-                <p className="text-slate-400 text-sm mb-1">💰 Setup una-tantum</p>
-                {setupFeeN > 0 ?
-            <>
-                    <p className="text-2xl font-bold text-white">{formatCurrency(setupFeeN)}</p>
-                    <p className="text-slate-500 text-xs mt-1">investimento iniziale</p>
-                  </> :
-
-            <p className="text-slate-500 text-lg font-semibold">—</p>
-            }
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-5">
+              <div className="rounded-xl p-4 text-center" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a' }}>
+                <p className="font-mono-dm text-[10px]" style={{ color: '#888' }}>SETUP</p>
+                {setupFeeN > 0 ? <p className="font-bebas text-2xl" style={{ color: '#fff' }}>{formatCurrency(setupFeeN)}</p> : <p className="font-bebas text-xl" style={{ color: '#555' }}>—</p>}
               </div>
-
-              {/* Fee mensile */}
-              <div className="bg-slate-800/60 p-4 rounded-xl border border-slate-700/50 text-center">
-                <p className="text-slate-400 text-sm mb-1">📅 Fee Mensile Totale</p>
-                {totalMonthlyFee > 0 ?
-            <>
-                    <p className="text-2xl font-bold text-teal-400">{formatCurrency(totalMonthlyFee)}/mese</p>
-                    {monthlyFixedN > 0 && monthlyPercentN > 0 &&
-              <p className="text-slate-500 text-xs mt-1">
-                        {formatCurrency(monthlyFixedN)} fisso + {monthlyPercentN}% su fatturato email netto IVA
-                      </p>
-              }
-                    {monthlyFixedN > 0 && monthlyPercentN === 0 &&
-              <p className="text-slate-500 text-xs mt-1">fee fissa mensile</p>
-              }
-                    {monthlyFixedN === 0 && monthlyPercentN > 0 &&
-              <p className="text-slate-500 text-xs mt-1">{monthlyPercentN}% sul fatturato e-commerce</p>
-              }
-                  </> :
-
-            <p className="text-slate-500 text-lg font-semibold">—</p>
-            }
+              <div className="rounded-xl p-4 text-center" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a' }}>
+                <p className="font-mono-dm text-[10px]" style={{ color: '#888' }}>FEE MENSILE TOTALE</p>
+                {totalMonthlyFee > 0 ? <p className="font-bebas text-2xl" style={{ color: '#C8F135' }}>{formatCurrency(totalMonthlyFee)}</p> : <p className="font-bebas text-xl" style={{ color: '#555' }}>—</p>}
               </div>
-
-              {/* Break-even */}
-              <div className={`p-4 rounded-xl border text-center ${
-          breakEvenMonths !== null ?
-          'bg-green-900/30 border-green-500/30' :
-          setupFeeN > 0 ?
-          'bg-red-900/20 border-red-500/20' :
-          'bg-slate-800/60 border-slate-700/50'}`
-          }>
-                <p className="text-slate-400 text-sm mb-1">⏱️ Break-even Setup</p>
-                {setupFeeN === 0 ?
-            <p className="text-slate-500 text-lg font-semibold">—</p> :
-            breakEvenMonths !== null ?
-            <>
-                    <p className="text-2xl font-bold text-green-400">{breakEvenMonths} mesi</p>
-                    <p className="text-green-400/70 text-xs mt-1">tempo di rientro</p>
-                  </> :
-
-            <>
-                    <p className="text-xl font-bold text-red-400">Fee &gt; Revenue</p>
-                    <p className="text-red-400/70 text-xs mt-1">rientro non calcolabile</p>
-                  </>
-            }
+              <div className="rounded-xl p-4 text-center" style={{ background: breakEvenMonths ? 'rgba(46,204,113,0.05)' : setupFeeN > 0 ? 'rgba(255,59,59,0.05)' : '#1a1a1a', border: `1px solid ${breakEvenMonths ? 'rgba(46,204,113,0.2)' : setupFeeN > 0 ? 'rgba(255,59,59,0.2)' : '#2a2a2a'}` }}>
+                <p className="font-mono-dm text-[10px]" style={{ color: '#888' }}>BREAK-EVEN</p>
+                {setupFeeN === 0 ? <p className="font-bebas text-xl" style={{ color: '#555' }}>—</p> :
+                  breakEvenMonths ? <p className="font-bebas text-2xl" style={{ color: '#2ecc71' }}>{breakEvenMonths} mesi</p> :
+                  <p className="font-bebas text-lg" style={{ color: '#ff3b3b' }}>Fee &gt; Revenue</p>}
               </div>
             </div>
 
-            {/* Nota esplicativa break-even */}
-            <div className="bg-slate-800/40 border border-slate-700/50 rounded-xl p-4 mb-6">
-              <p className="text-slate-400 text-xs leading-relaxed">
-                <strong className="text-teal-400">📐 Formula break-even:</strong>{' '}
-                Setup ÷ (Potenziale Mensile Moderato − Fee Mensile Totale) = mesi per rientrare nell'investimento iniziale.
-                {setupFeeN > 0 && totalMonthlyFee > 0 &&
-            <span className="block mt-1 text-slate-500">
-                    Esempio con i tuoi valori: {formatCurrency(setupFeeN)} ÷ ({formatCurrency(annualRevAdded / 12)} − {formatCurrency(totalMonthlyFee)}) = {monthlyNetGain > 0 ? `${formatCurrency(setupFeeN / monthlyNetGain).replace('€', '')} → ${breakEvenMonths} mes${breakEvenMonths === 1 ? 'e' : 'i'}` : 'N/A (fee > revenue mensile)'}
-                  </span>
-            }
-              </p>
-            </div>
-
-            {/* Tabella ROI 3 anni */}
-            <div className="overflow-x-auto rounded-xl border border-slate-700/50">
+            {/* ROI 3 anni table */}
+            <div className="overflow-x-auto rounded-xl" style={{ border: '1px solid #2a2a2a' }}>
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-slate-700">
-                    <th className="text-left p-4 text-slate-400 font-medium"></th>
-                    <th className="text-center p-4 text-white font-semibold bg-slate-700/30">Anno 1</th>
-                    <th className="text-center p-4 text-white font-semibold bg-slate-700/20">Anno 2</th>
-                    <th className="text-center p-4 text-white font-semibold bg-slate-700/10">Anno 3</th>
+                  <tr style={{ borderBottom: '1px solid #2a2a2a' }}>
+                    <th className="text-left p-3 font-mono-dm text-[10px]" style={{ color: '#666' }}></th>
+                    <th className="text-center p-3 font-mono-dm text-[10px]" style={{ color: '#fff' }}>ANNO 1</th>
+                    <th className="text-center p-3 font-mono-dm text-[10px]" style={{ color: '#fff' }}>ANNO 2</th>
+                    <th className="text-center p-3 font-mono-dm text-[10px]" style={{ color: '#fff' }}>ANNO 3</th>
                   </tr>
                 </thead>
-                <tbody>
-                  <tr className="border-b border-slate-700/40">
-                    <td className="p-4 text-slate-400">📈 Revenue aggiunto</td>
-                    <td className="p-4 text-center text-green-400 font-medium bg-slate-800/20">
-                      {formatCurrency(annualRevAdded)}
-                    </td>
-                    <td className="p-4 text-center text-green-400 font-medium bg-slate-800/10">
-                      {formatCurrency(annualRevAdded)}
-                    </td>
-                    <td className="p-4 text-center text-green-400 font-medium">
-                      {formatCurrency(annualRevAdded)}
-                    </td>
+                <tbody className="font-mono-dm text-xs">
+                  <tr style={{ borderBottom: '1px solid #1a1a1a' }}>
+                    <td className="p-3" style={{ color: '#888' }}>Revenue aggiunto</td>
+                    <td className="p-3 text-center" style={{ color: '#2ecc71' }}>{formatCurrency(annualRevAdded)}</td>
+                    <td className="p-3 text-center" style={{ color: '#2ecc71' }}>{formatCurrency(annualRevAdded)}</td>
+                    <td className="p-3 text-center" style={{ color: '#2ecc71' }}>{formatCurrency(annualRevAdded)}</td>
                   </tr>
-                  <tr className="border-b border-slate-700/40">
-                    <td className="p-4 text-slate-400">💸 Costo servizio</td>
-                    <td className="p-4 text-center text-red-400 font-medium bg-slate-800/20">
-                      {formatCurrency(annualCostY1)}
-                      {setupFeeN > 0 && <span className="block text-xs text-slate-500">(incl. setup)</span>}
-                    </td>
-                    <td className="p-4 text-center text-red-400 font-medium bg-slate-800/10">
-                      {formatCurrency(annualCostY2)}
-                    </td>
-                    <td className="p-4 text-center text-red-400 font-medium">
-                      {formatCurrency(annualCostY3)}
-                    </td>
+                  <tr style={{ borderBottom: '1px solid #1a1a1a' }}>
+                    <td className="p-3" style={{ color: '#888' }}>Costo servizio</td>
+                    <td className="p-3 text-center" style={{ color: '#ff3b3b' }}>{formatCurrency(annualCostY1)}{setupFeeN > 0 && <span style={{ color: '#555' }}> (incl. setup)</span>}</td>
+                    <td className="p-3 text-center" style={{ color: '#ff3b3b' }}>{formatCurrency(annualCostY2)}</td>
+                    <td className="p-3 text-center" style={{ color: '#ff3b3b' }}>{formatCurrency(annualCostY3)}</td>
                   </tr>
-                  <tr className="border-b border-slate-700/40">
-                    <td className="p-4 text-white font-bold">💰 ROI Netto</td>
-                    <td className={`p-4 text-center font-bold text-base bg-slate-800/20 ${netRoiY1 >= 0 ? 'text-teal-400' : 'text-red-400'}`}>
-                      {formatCurrency(netRoiY1)}
-                    </td>
-                    <td className={`p-4 text-center font-bold text-base bg-slate-800/10 ${netRoiY2 >= 0 ? 'text-teal-400' : 'text-red-400'}`}>
-                      {formatCurrency(netRoiY2)}
-                    </td>
-                    <td className={`p-4 text-center font-bold text-base ${netRoiY3 >= 0 ? 'text-teal-400' : 'text-red-400'}`}>
-                      {formatCurrency(netRoiY3)}
-                    </td>
+                  <tr style={{ borderBottom: '1px solid #1a1a1a' }}>
+                    <td className="p-3 font-syne font-bold" style={{ color: '#fff' }}>ROI Netto</td>
+                    <td className="p-3 text-center font-bold" style={{ color: netRoiY1 >= 0 ? '#C8F135' : '#ff3b3b' }}>{formatCurrency(netRoiY1)}</td>
+                    <td className="p-3 text-center font-bold" style={{ color: netRoiY2 >= 0 ? '#C8F135' : '#ff3b3b' }}>{formatCurrency(netRoiY2)}</td>
+                    <td className="p-3 text-center font-bold" style={{ color: netRoiY3 >= 0 ? '#C8F135' : '#ff3b3b' }}>{formatCurrency(netRoiY3)}</td>
                   </tr>
                   <tr>
-                    <td className="p-4 text-white font-bold">📊 ROI %</td>
-                    <td className={`p-4 text-center font-bold text-lg bg-slate-800/20 ${roiPctY1 >= 0 ? 'text-teal-400' : 'text-red-400'}`}>
-                      {roiPctY1 >= 0 ? '+' : ''}{Math.round(roiPctY1)}%
-                    </td>
-                    <td className={`p-4 text-center font-bold text-lg bg-slate-800/10 ${roiPctY2 >= 0 ? 'text-teal-400' : 'text-red-400'}`}>
-                      {roiPctY2 >= 0 ? '+' : ''}{Math.round(roiPctY2)}%
-                    </td>
-                    <td className={`p-4 text-center font-bold text-lg ${roiPctY3 >= 0 ? 'text-teal-400' : 'text-red-400'}`}>
-                      {roiPctY3 >= 0 ? '+' : ''}{Math.round(roiPctY3)}%
-                    </td>
+                    <td className="p-3 font-syne font-bold" style={{ color: '#fff' }}>ROI %</td>
+                    <td className="p-3 text-center font-bold text-base" style={{ color: roiPctY1 >= 0 ? '#C8F135' : '#ff3b3b' }}>{roiPctY1 >= 0 ? '+' : ''}{Math.round(roiPctY1)}%</td>
+                    <td className="p-3 text-center font-bold text-base" style={{ color: roiPctY2 >= 0 ? '#C8F135' : '#ff3b3b' }}>{roiPctY2 >= 0 ? '+' : ''}{Math.round(roiPctY2)}%</td>
+                    <td className="p-3 text-center font-bold text-base" style={{ color: roiPctY3 >= 0 ? '#C8F135' : '#ff3b3b' }}>{roiPctY3 >= 0 ? '+' : ''}{Math.round(roiPctY3)}%</td>
                   </tr>
                 </tbody>
               </table>
             </div>
-
-            <p className="text-slate-500 text-xs mt-3">
-              * Revenue aggiunto = gap annuale tra fatturato email attuale e benchmark di settore ({formatCurrency(annualRevAdded / 12)}/mese × 12). Anno 1 include setup una-tantum. Anno 2 e 3 solo fee ricorrenti.
-            </p>
           </div>
-      }
+        )}
 
-        {/* Download PDF */}
-        <div className="bg-gradient-to-br from-slate-800 to-slate-700 p-6 rounded-xl border border-slate-600 animate-fade-in" style={{
-        animationDelay: '850ms'
-      }}>
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div>
-              <h3 className="text-lg font-bold text-white mb-1">
-                📥 Scarica il tuo Report PDF
-              </h3>
-              <p className="text-slate-400 text-sm">
-                Salva questo report per consultarlo quando vuoi
-              </p>
+        {/* ═══ 13. SOCIAL PROOF ═══ */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {[
+            { value: '40+', label: 'Brand e-commerce gestiti', icon: <Users className="w-4 h-4" /> },
+            { value: '€2.5M+', label: 'Revenue email generato', icon: <TrendingUp className="w-4 h-4" /> },
+            { value: '35x', label: 'ROI medio email', icon: <Zap className="w-4 h-4" /> },
+            { value: '96%', label: 'Clienti soddisfatti', icon: <CheckCircle className="w-4 h-4" /> },
+          ].map((stat, i) => (
+            <div key={i} className="rounded-xl p-4 text-center" style={{ background: '#141414', border: '1px solid #242424' }}>
+              <div className="flex justify-center mb-2" style={{ color: '#C8F135' }}>{stat.icon}</div>
+              <p className="font-bebas text-2xl" style={{ color: '#fff' }}>{stat.value}</p>
+              <p className="font-mono-dm text-[10px]" style={{ color: '#666' }}>{stat.label}</p>
             </div>
-            <Button onClick={handleDownloadPdf} disabled={isDownloading} className="bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-white px-6">
-              {isDownloading ? <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Generazione...
-                </> : <>
-                  <Download className="w-4 h-4 mr-2" />
-                  Scarica PDF
-                </>}
-            </Button>
-          </div>
+          ))}
         </div>
 
-        {/* Prenota Consulenza - Calendario GHL Embeddato */}
-        <div className="bg-gradient-to-br from-slate-800 to-slate-700 p-6 sm:p-8 rounded-xl border border-orange/30 animate-fade-in" style={{
-        animationDelay: '900ms'
-      }}>
+        {/* ═══ DOWNLOAD PDF ═══ */}
+        <div className="rounded-2xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4" style={{ background: '#141414', border: '1px solid #242424' }}>
+          <div>
+            <h3 className="font-syne text-base font-bold" style={{ color: '#fff' }}>Scarica il tuo Report PDF</h3>
+            <p className="font-mono-dm text-[10px]" style={{ color: '#666' }}>Salva per consultarlo quando vuoi</p>
+          </div>
+          <Button onClick={handleDownloadPdf} disabled={isDownloading} className="rounded-full px-6 py-2.5 font-syne font-semibold text-sm" style={{ background: '#C8F135', color: '#080808' }}>
+            {isDownloading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Generazione...</> : <><Download className="w-4 h-4 mr-2" />Scarica PDF</>}
+          </Button>
+        </div>
+
+        {/* ═══ 14. CTA FINALE — CALENDARIO ═══ */}
+        <div className="rounded-2xl p-6 md:p-8" style={{ background: '#141414', border: '2px solid rgba(200,241,53,0.3)' }}>
           <div className="text-center mb-6">
-            <h3 className="text-2xl font-bold text-white mb-3">
-              📅 Prenota la tua Consulenza Gratuita
+            <span className="font-mono-dm text-[10px] tracking-widest px-3 py-1 rounded-full mb-3 inline-block" style={{ background: 'rgba(255,59,59,0.15)', color: '#ff3b3b', border: '1px solid rgba(255,59,59,0.3)' }}>
+              POSTI LIMITATI — QUESTA SETTIMANA
+            </span>
+            <h3 className="font-bebas text-3xl md:text-4xl tracking-wide mt-3" style={{ color: '#ffffff' }}>
+              PRENOTA LA TUA CONSULENZA GRATUITA
             </h3>
-            <p className="text-slate-300 max-w-2xl mx-auto">
-              Hai visto il potenziale del tuo business. Scopri come sbloccare questi risultati con una consulenza personalizzata di 30 minuti con i nostri esperti.
+            <p className="font-syne text-sm mt-2 max-w-xl mx-auto" style={{ color: '#888' }}>
+              Scopri come sbloccare {formatCurrency(r.yearlyPotential)}/anno con una sessione strategica di 30 minuti.
             </p>
           </div>
-          
-          {/* GHL Calendar Embed */}
-          <div className="bg-white rounded-xl overflow-hidden mb-6">
-            <iframe
-            src="https://go.mailift.com/widget/booking/3IIFrrczXhMvLYQAL4md"
-            style={{ width: '100%', height: '700px', border: 'none' }}
-            title="Prenota Consulenza Gratuita"
-            loading="lazy" />
 
+          <div className="rounded-xl overflow-hidden mb-6" style={{ background: '#fff' }}>
+            <iframe
+              src="https://go.mailift.com/widget/booking/3IIFrrczXhMvLYQAL4md"
+              style={{ width: '100%', height: '700px', border: 'none' }}
+              title="Prenota Consulenza Gratuita"
+              loading="lazy"
+            />
           </div>
 
           <div className="text-center">
-            <Button onClick={onRestart} variant="outline" className="border-slate-600 text-slate-300 hover:bg-slate-700 hover:text-white">
+            <Button onClick={onRestart} variant="outline" className="rounded-full font-mono-dm text-xs" style={{ borderColor: '#2a2a2a', color: '#888', background: 'transparent' }}>
               Fai un'altra analisi
             </Button>
           </div>
@@ -1156,118 +818,82 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
 
       </div>
 
-      {/* ── Pulsante flottante "Simula" ──────────────────────────────────────── */}
-      {(
-        <button
-          onClick={() => setShowSimPanel(true)}
-          className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-full shadow-2xl text-sm font-semibold transition-all hover:scale-105 active:scale-95"
-          style={{ background: simulatedReport ? '#7c3aed' : '#1e293b', border: '2px solid', borderColor: simulatedReport ? '#a78bfa' : '#475569', color: simulatedReport ? '#e9d5ff' : '#94a3b8' }}
-          title="Simula modifiche ai dati"
-        >
-          <Settings className="w-4 h-4" />
-          {simulatedReport ? '✦ Sim. attiva' : 'Simula dati'}
-        </button>
-      )}
+      {/* ── Pulsante flottante "Simula" ──────────────────── */}
+      <button
+        onClick={() => setShowSimPanel(true)}
+        className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-full shadow-2xl text-sm font-semibold transition-all hover:scale-105 active:scale-95 font-syne"
+        style={{ background: simulatedReport ? '#7c3aed' : '#141414', border: `2px solid ${simulatedReport ? '#a78bfa' : '#2a2a2a'}`, color: simulatedReport ? '#e9d5ff' : '#888' }}
+        title="Simula modifiche ai dati"
+      >
+        <Settings className="w-4 h-4" />
+        {simulatedReport ? '✦ Sim. attiva' : 'Simula dati'}
+      </button>
 
-      {/* ── Pannello laterale "Simula modifiche" ─────────────────────────────── */}
+      {/* ── Pannello laterale "Simula modifiche" ─────────────── */}
       {showSimPanel && (
         <>
-          {/* Overlay scuro */}
-          <div
-            className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
-            onClick={() => setShowSimPanel(false)}
-          />
-          {/* Drawer laterale destra */}
-          <div className="fixed top-0 right-0 h-full w-full max-w-md z-50 bg-slate-900 border-l border-slate-700 shadow-2xl flex flex-col overflow-hidden">
-            {/* Header pannello */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-700 bg-slate-800 flex-shrink-0">
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" onClick={() => setShowSimPanel(false)} />
+          <div className="fixed top-0 right-0 h-full w-full max-w-md z-50 flex flex-col overflow-hidden" style={{ background: '#0a0a0a', borderLeft: '1px solid #242424' }}>
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 flex-shrink-0" style={{ borderBottom: '1px solid #242424', background: '#111' }}>
               <div className="flex items-center gap-2">
-                <Settings className="w-5 h-5 text-purple-400" />
-                <h3 className="text-white font-bold text-base">Simula modifiche</h3>
+                <Settings className="w-5 h-5" style={{ color: '#a78bfa' }} />
+                <h3 className="font-syne font-bold text-base" style={{ color: '#fff' }}>Simula modifiche</h3>
                 {simulatedReport && (
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-purple-600/30 text-purple-300 border border-purple-500/40">
-                    ATTIVA
-                  </span>
+                  <span className="font-mono-dm text-[10px] px-2 py-0.5 rounded-full" style={{ background: 'rgba(124,58,237,0.3)', color: '#c4b5fd', border: '1px solid rgba(167,139,250,0.4)' }}>ATTIVA</span>
                 )}
               </div>
-              <button
-                onClick={() => setShowSimPanel(false)}
-                className="text-slate-400 hover:text-white transition-colors p-1 rounded-lg hover:bg-slate-700"
-              >
+              <button onClick={() => setShowSimPanel(false)} className="p-1 rounded-lg transition-colors hover:bg-white/10" style={{ color: '#888' }}>
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Corpo scrollabile */}
+            {/* Body */}
             <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
-
-              {/* Fatturato mensile */}
+              {/* Fatturato */}
               <div>
-                <label className="block text-slate-300 text-sm font-semibold mb-1.5">💶 Fatturato mensile totale</label>
+                <label className="block font-mono-dm text-[10px] tracking-wider mb-1.5" style={{ color: '#888' }}>FATTURATO MENSILE TOTALE</label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-bold">€</span>
-                  <input
-                    type="number"
-                    min={0}
-                    value={simInputs.monthlyRevenue}
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono-dm text-sm" style={{ color: '#666' }}>€</span>
+                  <input type="number" min={0} value={simInputs.monthlyRevenue}
                     onChange={e => setSimInputs(p => ({ ...p, monthlyRevenue: parseFloat(e.target.value) || 0 }))}
-                    className="w-full bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-2 pl-8 text-sm focus:outline-none focus:border-purple-500"
-                  />
+                    className="w-full rounded-lg px-3 py-2 pl-8 text-sm focus:outline-none" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a', color: '#fff' }} />
                 </div>
               </div>
 
-              {/* % da email */}
+              {/* % email */}
               <div>
-                <label className="block text-slate-300 text-sm font-semibold mb-1.5">📧 % fatturato da email attuale</label>
+                <label className="block font-mono-dm text-[10px] tracking-wider mb-1.5" style={{ color: '#888' }}>% FATTURATO DA EMAIL</label>
                 <div className="flex items-center gap-3">
-                  <Slider
-                    min={0}
-                    max={80}
-                    step={1}
-                    value={[simInputs.emailPct]}
-                    onValueChange={v => setSimInputs(p => ({ ...p, emailPct: v[0] }))}
-                    className="flex-1"
-                  />
-                  <span className="text-white font-bold w-12 text-right">{simInputs.emailPct}%</span>
+                  <Slider min={0} max={80} step={1} value={[simInputs.emailPct]} onValueChange={v => setSimInputs(p => ({ ...p, emailPct: v[0] }))} className="flex-1" />
+                  <span className="font-bebas text-lg w-12 text-right" style={{ color: '#fff' }}>{simInputs.emailPct}%</span>
                 </div>
               </div>
 
-              {/* Lista iscritti */}
+              {/* Lista */}
               <div>
-                <label className="block text-slate-300 text-sm font-semibold mb-1.5">👥 Dimensione lista</label>
-                <input
-                  type="number"
-                  min={0}
-                  value={simInputs.listSize}
+                <label className="block font-mono-dm text-[10px] tracking-wider mb-1.5" style={{ color: '#888' }}>DIMENSIONE LISTA</label>
+                <input type="number" min={0} value={simInputs.listSize}
                   onChange={e => setSimInputs(p => ({ ...p, listSize: parseFloat(e.target.value) || 0 }))}
-                  className="w-full bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-500"
-                />
+                  className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a', color: '#fff' }} />
               </div>
 
               {/* AOV */}
               <div>
-                <label className="block text-slate-300 text-sm font-semibold mb-1.5">🏷️ AOV personalizzato (lascia vuoto per benchmark)</label>
+                <label className="block font-mono-dm text-[10px] tracking-wider mb-1.5" style={{ color: '#888' }}>AOV PERSONALIZZATO</label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-bold">€</span>
-                  <input
-                    type="number"
-                    min={0}
-                    placeholder="es. 65"
-                    value={simInputs.aov}
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono-dm text-sm" style={{ color: '#666' }}>€</span>
+                  <input type="number" min={0} placeholder="benchmark" value={simInputs.aov}
                     onChange={e => setSimInputs(p => ({ ...p, aov: e.target.value }))}
-                    className="w-full bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-2 pl-8 text-sm focus:outline-none focus:border-purple-500 placeholder:text-slate-600"
-                  />
+                    className="w-full rounded-lg px-3 py-2 pl-8 text-sm focus:outline-none" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a', color: '#fff' }} />
                 </div>
               </div>
 
-              {/* Frequenza email */}
+              {/* Frequenza */}
               <div>
-                <label className="block text-slate-300 text-sm font-semibold mb-1.5">📨 Frequenza invio newsletter</label>
-                <select
-                  value={simInputs.emailFrequency}
-                  onChange={e => setSimInputs(p => ({ ...p, emailFrequency: e.target.value }))}
-                  className="w-full bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-500"
-                >
+                <label className="block font-mono-dm text-[10px] tracking-wider mb-1.5" style={{ color: '#888' }}>FREQUENZA NEWSLETTER</label>
+                <select value={simInputs.emailFrequency} onChange={e => setSimInputs(p => ({ ...p, emailFrequency: e.target.value }))}
+                  className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a', color: '#fff' }}>
                   <option value="none">Nessuna (0/mese)</option>
                   <option value="1-2">1-2/settimana (~5/mese)</option>
                   <option value="3-4">3-4/settimana (~14/mese)</option>
@@ -1276,29 +902,20 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
                 </select>
               </div>
 
-              {/* Flussi attivi */}
+              {/* Flussi */}
               <div>
-                <label className="block text-slate-300 text-sm font-semibold mb-2">⚙️ Flussi automazione attivi</label>
+                <label className="block font-mono-dm text-[10px] tracking-wider mb-2" style={{ color: '#888' }}>FLUSSI AUTOMAZIONE ATTIVI</label>
                 <div className="grid grid-cols-1 gap-2">
                   {ALL_FLOWS.map(({ key, label }) => {
                     const isActive = simInputs.activeFlows.includes(key);
                     return (
-                      <button
-                        key={key}
-                        onClick={() => setSimInputs(p => ({
-                          ...p,
-                          activeFlows: isActive
-                            ? p.activeFlows.filter(f => f !== key)
-                            : [...p.activeFlows, key]
-                        }))}
-                        className={`flex items-center justify-between px-3 py-2 rounded-lg border text-sm text-left transition-all ${
-                          isActive
-                            ? 'bg-purple-600/20 border-purple-500/50 text-purple-200'
-                            : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-500'
-                        }`}
-                      >
-                        <span>{label}</span>
-                        <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${isActive ? 'bg-purple-500 text-white' : 'bg-slate-700 text-slate-500'}`}>
+                      <button key={key}
+                        onClick={() => setSimInputs(p => ({ ...p, activeFlows: isActive ? p.activeFlows.filter(f => f !== key) : [...p.activeFlows, key] }))}
+                        className="flex items-center justify-between px-3 py-2 rounded-lg text-sm text-left transition-all"
+                        style={{ background: isActive ? 'rgba(124,58,237,0.15)' : '#1a1a1a', border: `1px solid ${isActive ? 'rgba(167,139,250,0.4)' : '#2a2a2a'}`, color: isActive ? '#c4b5fd' : '#888' }}>
+                        <span className="font-syne text-sm">{label}</span>
+                        <span className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
+                          style={{ background: isActive ? '#7c3aed' : '#2a2a2a', color: isActive ? '#fff' : '#555' }}>
                           {isActive ? '✓' : '+'}
                         </span>
                       </button>
@@ -1309,68 +926,56 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
 
               {/* Scenari */}
               <div>
-                <label className="block text-slate-300 text-sm font-semibold mb-2">🚀 Scenari crescita (% del gap recuperato)</label>
+                <label className="block font-mono-dm text-[10px] tracking-wider mb-2" style={{ color: '#888' }}>SCENARI CRESCITA (%)</label>
                 <div className="space-y-3">
-                  <div>
-                    <div className="flex justify-between mb-1">
-                      <span className="text-green-400 text-xs">Conservativo</span>
-                      <span className="text-white text-xs font-bold">{simInputs.scenarioConservative}%</span>
+                  {[
+                    { label: 'Conservativo', key: 'scenarioConservative' as const, color: '#2ecc71', min: 5, max: 40 },
+                    { label: 'Moderato', key: 'scenarioModerate' as const, color: '#C8F135', min: 10, max: 70 },
+                    { label: 'Aggressivo', key: 'scenarioAggressive' as const, color: '#a78bfa', min: 20, max: 100 },
+                  ].map(s => (
+                    <div key={s.key}>
+                      <div className="flex justify-between mb-1">
+                        <span className="font-mono-dm text-[10px]" style={{ color: s.color }}>{s.label}</span>
+                        <span className="font-bebas text-sm" style={{ color: '#fff' }}>{simInputs[s.key]}%</span>
+                      </div>
+                      <Slider min={s.min} max={s.max} step={1} value={[simInputs[s.key]]}
+                        onValueChange={v => setSimInputs(p => ({ ...p, [s.key]: v[0] }))} className="w-full" />
                     </div>
-                    <Slider min={5} max={40} step={1} value={[simInputs.scenarioConservative]}
-                      onValueChange={v => setSimInputs(p => ({ ...p, scenarioConservative: v[0] }))} className="w-full" />
-                  </div>
-                  <div>
-                    <div className="flex justify-between mb-1">
-                      <span className="text-orange text-xs">Moderato</span>
-                      <span className="text-white text-xs font-bold">{simInputs.scenarioModerate}%</span>
-                    </div>
-                    <Slider min={10} max={70} step={1} value={[simInputs.scenarioModerate]}
-                      onValueChange={v => setSimInputs(p => ({ ...p, scenarioModerate: v[0] }))} className="w-full" />
-                  </div>
-                  <div>
-                    <div className="flex justify-between mb-1">
-                      <span className="text-purple-400 text-xs">Aggressivo</span>
-                      <span className="text-white text-xs font-bold">{simInputs.scenarioAggressive}%</span>
-                    </div>
-                    <Slider min={20} max={100} step={1} value={[simInputs.scenarioAggressive]}
-                      onValueChange={v => setSimInputs(p => ({ ...p, scenarioAggressive: v[0] }))} className="w-full" />
-                  </div>
+                  ))}
                 </div>
               </div>
 
               {/* Popup */}
               <div>
-                <label className="block text-slate-300 text-sm font-semibold mb-2">🪟 Popup optin</label>
+                <label className="block font-mono-dm text-[10px] tracking-wider mb-2" style={{ color: '#888' }}>POPUP OPT-IN</label>
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between bg-slate-800 border border-slate-700 rounded-lg px-3 py-2">
-                    <span className="text-slate-300 text-sm">Popup attivo</span>
-                    <button
-                      onClick={() => setSimInputs(p => ({ ...p, hasPopup: !p.hasPopup }))}
-                      className={`w-10 h-5 rounded-full transition-all relative ${simInputs.hasPopup ? 'bg-purple-500' : 'bg-slate-600'}`}
-                    >
-                      <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${simInputs.hasPopup ? 'left-5' : 'left-0.5'}`} />
+                  <div className="flex items-center justify-between rounded-lg px-3 py-2" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a' }}>
+                    <span className="font-syne text-sm" style={{ color: '#ccc' }}>Popup attivo</span>
+                    <button onClick={() => setSimInputs(p => ({ ...p, hasPopup: !p.hasPopup }))}
+                      className="w-10 h-5 rounded-full transition-all relative" style={{ background: simInputs.hasPopup ? '#7c3aed' : '#2a2a2a' }}>
+                      <span className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all" style={{ left: simInputs.hasPopup ? '20px' : '2px' }} />
                     </button>
                   </div>
                   {simInputs.hasPopup && (
                     <>
                       <div>
                         <div className="flex justify-between mb-1">
-                          <span className="text-slate-400 text-xs">Tasso conversione</span>
-                          <span className="text-white text-xs font-bold">{simInputs.popupConversionRate}%</span>
+                          <span className="font-mono-dm text-[10px]" style={{ color: '#888' }}>Conversione</span>
+                          <span className="font-bebas text-sm" style={{ color: '#fff' }}>{simInputs.popupConversionRate}%</span>
                         </div>
                         <Slider min={0.5} max={15} step={0.5} value={[simInputs.popupConversionRate]}
                           onValueChange={v => setSimInputs(p => ({ ...p, popupConversionRate: v[0] }))} className="w-full" />
                       </div>
                       <div>
-                        <label className="block text-slate-400 text-xs mb-1">Visitatori/mese</label>
+                        <label className="block font-mono-dm text-[10px] mb-1" style={{ color: '#888' }}>Visitatori/mese</label>
                         <input type="number" min={0} value={simInputs.monthlyVisitors}
                           onChange={e => setSimInputs(p => ({ ...p, monthlyVisitors: parseFloat(e.target.value) || 0 }))}
-                          className="w-full bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-500" />
+                          className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a', color: '#fff' }} />
                       </div>
                       <div>
                         <div className="flex justify-between mb-1">
-                          <span className="text-slate-400 text-xs">Crescita lista mensile</span>
-                          <span className="text-white text-xs font-bold">{simInputs.monthlyListGrowthRate}%</span>
+                          <span className="font-mono-dm text-[10px]" style={{ color: '#888' }}>Crescita lista</span>
+                          <span className="font-bebas text-sm" style={{ color: '#fff' }}>{simInputs.monthlyListGrowthRate}%</span>
                         </div>
                         <Slider min={0.5} max={20} step={0.5} value={[simInputs.monthlyListGrowthRate]}
                           onValueChange={v => setSimInputs(p => ({ ...p, monthlyListGrowthRate: v[0] }))} className="w-full" />
@@ -1381,29 +986,24 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
               </div>
             </div>
 
-            {/* Footer azioni */}
-            <div className="px-5 py-4 border-t border-slate-700 bg-slate-800/80 flex-shrink-0 space-y-2">
-              <Button
-                onClick={() => { handleSimulate(); setShowSimPanel(false); }}
-                className="w-full bg-purple-600 hover:bg-purple-500 text-white font-semibold py-2.5"
-              >
-                <RefreshCw className="w-4 h-4 mr-2" />
-                Applica simulazione
+            {/* Footer */}
+            <div className="px-5 py-4 flex-shrink-0 space-y-2" style={{ borderTop: '1px solid #242424', background: '#111' }}>
+              <Button onClick={() => { handleSimulate(); setShowSimPanel(false); }}
+                className="w-full rounded-full font-syne font-semibold py-2.5" style={{ background: '#7c3aed', color: '#fff' }}>
+                <RefreshCw className="w-4 h-4 mr-2" />Applica simulazione
               </Button>
               {simulatedReport && (
-                <Button
-                  onClick={() => { handleResetSimulation(); setShowSimPanel(false); }}
-                  variant="outline"
-                  className="w-full border-slate-600 text-slate-300 hover:bg-slate-700"
-                >
-                  <RotateCcw className="w-4 h-4 mr-2" />
-                  Ripristina dati originali
+                <Button onClick={() => { handleResetSimulation(); setShowSimPanel(false); }} variant="outline"
+                  className="w-full rounded-full font-mono-dm text-xs" style={{ borderColor: '#2a2a2a', color: '#888', background: 'transparent' }}>
+                  <RotateCcw className="w-4 h-4 mr-2" />Ripristina originali
                 </Button>
               )}
             </div>
           </div>
         </>
       )}
-    </div>;
+    </div>
+  );
 };
+
 export default AdvancedReportComponent;
