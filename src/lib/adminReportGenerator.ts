@@ -3,7 +3,6 @@ import type { AdvancedReport } from './reportCalculations';
 interface FormData {
   sector: string;
   monthlyRevenue: string;
-  adsInvestment: string;
   emailRevenuePercentage: string;
   emailFrequency: string;
   listSize: string;
@@ -14,11 +13,15 @@ interface FormData {
   phone: string;
   email: string;
   motivation: string;
-  emailSatisfaction: string;
+  // Optional fields for backward compat
+  adsInvestment?: string;
+  emailSatisfaction?: string;
+  platform?: string;
+  emailTool?: string;
+  segmentation?: string;
 }
 
 export interface AdminReport {
-  // === DATI LEAD ===
   lead: {
     fullName: string;
     companyName: string;
@@ -28,8 +31,6 @@ export interface AdminReport {
     submittedAt: string;
     source: string;
   };
-  
-  // === RISPOSTE QUIZ RAW ===
   quizResponses: {
     sector: string;
     sectorLabel: string;
@@ -47,17 +48,15 @@ export interface AdminReport {
     motivationLabel: string;
     emailSatisfaction: string;
     emailSatisfactionLabel: string;
+    platform?: string;
+    emailTool?: string;
+    segmentation?: string;
   };
-  
-  // === ANALISI FINANZIARIA DETTAGLIATA ===
   financialAnalysis: {
-    // Situazione attuale
     currentMonthlyRevenue: number;
     currentEmailRevenue: number;
     currentEmailPercent: number;
     currentRevenuePerSubscriber: number;
-    
-    // Benchmark
     sectorBenchmark: {
       label: string;
       emailShare: number;
@@ -67,14 +66,10 @@ export interface AdminReport {
     };
     benchmarkEmailRevenue: number;
     benchmarkRevenuePerSubscriber: number;
-    
-    // Gap Analysis
     monthlyGap: number;
     yearlyGap: number;
     percentageGap: number;
     revenuePerSubGap: number;
-    
-    // ROI Potenziale (assumendo costo consulenza)
     potentialROI: {
       investmentAssumption: number;
       monthlyReturn: number;
@@ -83,94 +78,32 @@ export interface AdminReport {
       paybackMonths: number;
     };
   };
-  
-  // === ANALISI AUTOMAZIONI DETTAGLIATA ===
   automationAnalysis: {
     totalFlows: number;
     activeFlowsCount: number;
     coveragePercent: number;
     rating: 'A' | 'B' | 'C' | 'D';
     ratingDescription: string;
-    
-    activeFlows: Array<{
-      key: string;
-      label: string;
-      estimatedValue: number;
-    }>;
-    
+    activeFlows: Array<{ key: string; label: string; estimatedValue: number }>;
     missingFlows: Array<{
-      key: string;
-      label: string;
-      description: string;
-      priority: number;
-      priorityLabel: string;
-      impactPercent: number;
-      impactValue: number;
-      implementationTime: string;
-      implementationCost: string;
+      key: string; label: string; description: string;
+      priority: number; priorityLabel: string;
+      impactPercent: number; impactValue: number;
+      implementationTime: string; implementationCost: string;
     }>;
-    
     totalMissingFlowsValue: number;
     topPriorityFlows: string[];
   };
-  
-  // === SCENARI CRESCITA DETTAGLIATI ===
   growthScenarios: {
-    conservative: {
-      growthPercent: number;
-      additionalMonthlyRevenue: number;
-      additionalYearlyRevenue: number;
-      description: string;
-      requiredActions: string[];
-      timeToImplement: string;
-      difficultyLevel: string;
-    };
-    moderate: {
-      growthPercent: number;
-      additionalMonthlyRevenue: number;
-      additionalYearlyRevenue: number;
-      description: string;
-      requiredActions: string[];
-      timeToImplement: string;
-      difficultyLevel: string;
-    };
-    aggressive: {
-      growthPercent: number;
-      additionalMonthlyRevenue: number;
-      additionalYearlyRevenue: number;
-      description: string;
-      requiredActions: string[];
-      timeToImplement: string;
-      difficultyLevel: string;
-    };
+    conservative: { growthPercent: number; additionalMonthlyRevenue: number; additionalYearlyRevenue: number; description: string; requiredActions: string[]; timeToImplement: string; difficultyLevel: string };
+    moderate: { growthPercent: number; additionalMonthlyRevenue: number; additionalYearlyRevenue: number; description: string; requiredActions: string[]; timeToImplement: string; difficultyLevel: string };
+    aggressive: { growthPercent: number; additionalMonthlyRevenue: number; additionalYearlyRevenue: number; description: string; requiredActions: string[]; timeToImplement: string; difficultyLevel: string };
   };
-  
-  // === ROADMAP COMPLETA ===
   roadmap: {
-    immediate: Array<{
-      action: string;
-      impact: string;
-      timeframe: string;
-      difficulty: string;
-      estimatedValue: number;
-    }>;
-    shortTerm: Array<{
-      action: string;
-      impact: string;
-      timeframe: string;
-      difficulty: string;
-      estimatedValue: number;
-    }>;
-    mediumTerm: Array<{
-      action: string;
-      impact: string;
-      timeframe: string;
-      difficulty: string;
-      estimatedValue: number;
-    }>;
+    immediate: Array<{ action: string; impact: string; timeframe: string; difficulty: string; estimatedValue: number }>;
+    shortTerm: Array<{ action: string; impact: string; timeframe: string; difficulty: string; estimatedValue: number }>;
+    mediumTerm: Array<{ action: string; impact: string; timeframe: string; difficulty: string; estimatedValue: number }>;
   };
-  
-  // === SCORE E METRICHE ===
   scores: {
     emailHealthScore: number;
     automationScore: number;
@@ -178,8 +111,6 @@ export interface AdminReport {
     overallScore: number;
     improvementPotential: number;
   };
-  
-  // === NOTE PER CONSULENZA ===
   consultingNotes: {
     leadQuality: 'Hot' | 'Warm' | 'Cold';
     leadQualityReason: string;
@@ -239,8 +170,6 @@ export const generateAdminReport = (
   formData: FormData,
   report: AdvancedReport
 ): AdminReport => {
-  
-  // Calcola lead quality
   const monthlyValue = report.monthlyRevenue;
   let leadQuality: 'Hot' | 'Warm' | 'Cold';
   let leadQualityReason: string;
@@ -256,103 +185,48 @@ export const generateAdminReport = (
     leadQualityReason = 'Fatturato basso o già ben ottimizzato';
   }
   
-  // Calcola priority
   let priorityLevel: 'Alta' | 'Media' | 'Bassa';
   if (leadQuality === 'Hot') priorityLevel = 'Alta';
   else if (leadQuality === 'Warm') priorityLevel = 'Media';
   else priorityLevel = 'Bassa';
   
-  // Estimated contract value
   let estimatedContractValue: string;
-  if (monthlyValue >= 100000) {
-    estimatedContractValue = '€3.000-5.000/mese';
-  } else if (monthlyValue >= 50000) {
-    estimatedContractValue = '€1.500-3.000/mese';
-  } else {
-    estimatedContractValue = '€500-1.500/mese';
-  }
+  if (monthlyValue >= 100000) estimatedContractValue = '€3.000-5.000/mese';
+  else if (monthlyValue >= 50000) estimatedContractValue = '€1.500-3.000/mese';
+  else estimatedContractValue = '€500-1.500/mese';
   
-  // Key pain points
   const keyPainPoints: string[] = [];
-  if (report.currentEmailPercent < 15) {
-    keyPainPoints.push('Email revenue molto sotto benchmark - non stanno monetizzando la lista');
-  }
-  if (report.automationCoverage < 50) {
-    keyPainPoints.push('Mancano automazioni fondamentali - perdono vendite ogni giorno');
-  }
+  if (report.currentEmailPercent < 15) keyPainPoints.push('Email revenue molto sotto benchmark');
+  if (report.automationCoverage < 50) keyPainPoints.push('Mancano automazioni fondamentali');
   if (!formData.activeFlows.includes('cart_recovery')) {
-    keyPainPoints.push('No recupero carrello - perdita immediata stimata: ' + 
-      `€${Math.round(report.benchmarkEmailRevenue * 0.15).toLocaleString()}/mese`);
+    keyPainPoints.push('No recupero carrello - perdita stimata: €' + Math.round(report.benchmarkEmailRevenue * 0.15).toLocaleString() + '/mese');
   }
-  if (formData.emailFrequency === 'none' || formData.emailFrequency === '1-2') {
-    keyPainPoints.push('Frequenza invio troppo bassa - lista sottoutilizzata');
-  }
+  if (formData.emailFrequency === 'none' || formData.emailFrequency === '1-2') keyPainPoints.push('Frequenza invio troppo bassa');
   
-  // Upsell opportunities
   const upsellOpportunities: string[] = [];
-  if (monthlyValue >= 50000) {
-    upsellOpportunities.push('Setup completo Klaviyo/Mailchimp');
-    upsellOpportunities.push('Gestione campagne mensili');
-  }
+  if (monthlyValue >= 50000) { upsellOpportunities.push('Setup completo Klaviyo/Mailchimp'); upsellOpportunities.push('Gestione campagne mensili'); }
   upsellOpportunities.push('Creazione template email brandizzati');
   upsellOpportunities.push('Strategia segmentazione avanzata');
-  if (report.listSize >= 10000) {
-    upsellOpportunities.push('Pulizia e ottimizzazione lista');
-  }
+  if (report.listSize >= 10000) upsellOpportunities.push('Pulizia e ottimizzazione lista');
   
-  // Suggested approach
   let suggestedApproach: string;
-  if (leadQuality === 'Hot') {
-    suggestedApproach = 'Chiamata immediata. Mostrare numeri concreti di perdita giornaliera. ' +
-      'Proporre audit gratuito con demo live delle opportunità.';
-  } else if (leadQuality === 'Warm') {
-    suggestedApproach = 'WhatsApp iniziale + email di follow-up con case study simile. ' +
-      'Proporre call conoscitiva di 15 minuti.';
-  } else {
-    suggestedApproach = 'Email nurturing con contenuti educativi. Ricontattare tra 30-60 giorni.';
-  }
+  if (leadQuality === 'Hot') suggestedApproach = 'Chiamata immediata. Mostrare numeri concreti di perdita giornaliera. Proporre audit gratuito con demo live.';
+  else if (leadQuality === 'Warm') suggestedApproach = 'WhatsApp iniziale + email di follow-up con case study simile. Proporre call conoscitiva di 15 minuti.';
+  else suggestedApproach = 'Email nurturing con contenuti educativi. Ricontattare tra 30-60 giorni.';
   
-  // Build roadmap
-  const immediate = report.missingFlows
-    .filter(f => f.priority === 1)
-    .slice(0, 2)
-    .map(f => ({
-      action: `Implementare ${f.label}`,
-      impact: `+${Math.round(f.impactPercent)}% revenue email`,
-      timeframe: f.implementationTime,
-      difficulty: 'Media',
-      estimatedValue: f.impactValue
-    }));
-    
-  const shortTerm = report.missingFlows
-    .filter(f => f.priority === 2)
-    .slice(0, 2)
-    .map(f => ({
-      action: `Attivare ${f.label}`,
-      impact: `+${Math.round(f.impactPercent)}% revenue email`,
-      timeframe: f.implementationTime,
-      difficulty: 'Media',
-      estimatedValue: f.impactValue
-    }));
-    
+  const immediate = report.missingFlows.filter(f => f.priority === 1).slice(0, 2).map(f => ({
+    action: `Implementare ${f.label}`, impact: `+${Math.round(f.impactPercent)}% revenue email`,
+    timeframe: f.implementationTime, difficulty: 'Media', estimatedValue: f.impactValue
+  }));
+  const shortTerm = report.missingFlows.filter(f => f.priority === 2).slice(0, 2).map(f => ({
+    action: `Attivare ${f.label}`, impact: `+${Math.round(f.impactPercent)}% revenue email`,
+    timeframe: f.implementationTime, difficulty: 'Media', estimatedValue: f.impactValue
+  }));
   const mediumTerm = [
-    {
-      action: 'Implementare segmentazione RFM',
-      impact: '+8-12% conversioni',
-      timeframe: '2-3 settimane',
-      difficulty: 'Alta',
-      estimatedValue: report.currentEmailRevenue * 0.1
-    },
-    {
-      action: 'Ottimizzare template per mobile',
-      impact: '+5-10% click rate',
-      timeframe: '1 settimana',
-      difficulty: 'Bassa',
-      estimatedValue: report.currentEmailRevenue * 0.05
-    }
+    { action: 'Implementare segmentazione RFM', impact: '+8-12% conversioni', timeframe: '2-3 settimane', difficulty: 'Alta', estimatedValue: report.currentEmailRevenue * 0.1 },
+    { action: 'Ottimizzare template per mobile', impact: '+5-10% click rate', timeframe: '1 settimana', difficulty: 'Bassa', estimatedValue: report.currentEmailRevenue * 0.05 }
   ];
   
-  // ROI calculation (assuming 2000€ consulting fee)
   const investmentAssumption = 2000;
   const monthlyReturn = report.revenueGap + report.totalFlowGap;
   const roiPercentage = ((monthlyReturn * 12) / investmentAssumption) * 100;
@@ -360,97 +234,64 @@ export const generateAdminReport = (
   
   return {
     lead: {
-      fullName: formData.fullName,
-      companyName: formData.companyName,
-      email: formData.email,
-      phone: formData.phone,
-      website: formData.website,
-      submittedAt: new Date().toISOString(),
-      source: 'Email Marketing Quiz'
+      fullName: formData.fullName, companyName: formData.companyName || '',
+      email: formData.email, phone: formData.phone, website: formData.website,
+      submittedAt: new Date().toISOString(), source: 'Email Marketing Quiz'
     },
-    
     quizResponses: {
-      sector: formData.sector,
-      sectorLabel: report.sectorBenchmark.label,
-      monthlyRevenue: formData.monthlyRevenue,
-      monthlyRevenueEstimated: report.monthlyRevenue,
-      adsInvestment: formData.adsInvestment,
+      sector: formData.sector, sectorLabel: report.sectorBenchmark.label,
+      monthlyRevenue: formData.monthlyRevenue, monthlyRevenueEstimated: report.monthlyRevenue,
+      adsInvestment: formData.adsInvestment || '',
       emailRevenuePercentage: formData.emailRevenuePercentage,
       emailRevenuePercentageEstimated: report.currentEmailPercent,
-      emailFrequency: formData.emailFrequency,
-      listSize: formData.listSize,
+      emailFrequency: formData.emailFrequency, listSize: formData.listSize,
       listSizeEstimated: report.listSize,
       activeFlows: formData.activeFlows,
       activeFlowsLabels: formData.activeFlows.map(f => flowLabelsMap[f] || f),
       motivation: formData.motivation,
       motivationLabel: motivationLabelsMap[formData.motivation] || formData.motivation,
-      emailSatisfaction: formData.emailSatisfaction,
-      emailSatisfactionLabel: satisfactionLabelsMap[formData.emailSatisfaction] || formData.emailSatisfaction
+      emailSatisfaction: formData.emailSatisfaction || '',
+      emailSatisfactionLabel: satisfactionLabelsMap[formData.emailSatisfaction || ''] || '',
+      platform: formData.platform,
+      emailTool: formData.emailTool,
+      segmentation: formData.segmentation,
     },
-    
     financialAnalysis: {
       currentMonthlyRevenue: report.monthlyRevenue,
       currentEmailRevenue: report.currentEmailRevenue,
       currentEmailPercent: report.currentEmailPercent,
       currentRevenuePerSubscriber: report.currentRevenuePerSub,
-      
       sectorBenchmark: {
-        label: report.sectorBenchmark.label,
-        emailShare: report.sectorBenchmark.emailShare,
-        revenuePerSub: report.sectorBenchmark.revenuePerSub,
-        openRate: report.sectorBenchmark.openRate,
+        label: report.sectorBenchmark.label, emailShare: report.sectorBenchmark.emailShare,
+        revenuePerSub: report.sectorBenchmark.revenuePerSub, openRate: report.sectorBenchmark.openRate,
         clickRate: report.sectorBenchmark.clickRate
       },
       benchmarkEmailRevenue: report.benchmarkEmailRevenue,
       benchmarkRevenuePerSubscriber: report.benchmarkRevenuePerSub,
-      
-      monthlyGap: report.revenueGap,
-      yearlyGap: report.revenueGap * 12,
-      percentageGap: report.revenueGapPercent,
-      revenuePerSubGap: report.revenuePerSubGap,
-      
+      monthlyGap: report.revenueGap, yearlyGap: report.revenueGap * 12,
+      percentageGap: report.revenueGapPercent, revenuePerSubGap: report.revenuePerSubGap,
       potentialROI: {
-        investmentAssumption,
-        monthlyReturn,
-        yearlyReturn: monthlyReturn * 12,
-        roiPercentage: Math.round(roiPercentage),
-        paybackMonths: Math.round(paybackMonths * 10) / 10
+        investmentAssumption, monthlyReturn, yearlyReturn: monthlyReturn * 12,
+        roiPercentage: Math.round(roiPercentage), paybackMonths: Math.round(paybackMonths * 10) / 10
       }
     },
-    
     automationAnalysis: {
-      totalFlows: report.totalFlowsCount,
-      activeFlowsCount: report.activeFlowsCount,
+      totalFlows: report.totalFlowsCount, activeFlowsCount: report.activeFlowsCount,
       coveragePercent: Math.round(report.automationCoverage),
       rating: report.automationRating,
       ratingDescription: getRatingDescription(report.automationRating),
-      
-      activeFlows: formData.activeFlows
-        .filter(f => f !== 'none')
-        .map(f => ({
-          key: f,
-          label: flowLabelsMap[f] || f,
-          estimatedValue: report.benchmarkEmailRevenue * 0.05 // stima conservativa
-        })),
-      
-      missingFlows: report.missingFlows.map(f => ({
-        key: f.key,
-        label: f.label,
-        description: f.description,
-        priority: f.priority,
-        priorityLabel: f.priority === 1 ? 'Alta' : f.priority === 2 ? 'Media' : 'Bassa',
-        impactPercent: f.impactPercent,
-        impactValue: f.impactValue,
-        implementationTime: f.implementationTime,
-        implementationCost: getImplementationCost(f.priority)
+      activeFlows: formData.activeFlows.filter(f => f !== 'none').map(f => ({
+        key: f, label: flowLabelsMap[f] || f, estimatedValue: report.benchmarkEmailRevenue * 0.05
       })),
-      
+      missingFlows: report.missingFlows.map(f => ({
+        key: f.key, label: f.label, description: f.description,
+        priority: f.priority, priorityLabel: f.priority === 1 ? 'Alta' : f.priority === 2 ? 'Media' : 'Bassa',
+        impactPercent: f.impactPercent, impactValue: f.impactValue,
+        implementationTime: f.implementationTime, implementationCost: getImplementationCost(f.priority)
+      })),
       totalMissingFlowsValue: report.totalFlowGap,
-      topPriorityFlows: report.missingFlows
-        .filter(f => f.priority === 1)
-        .map(f => f.label)
+      topPriorityFlows: report.missingFlows.filter(f => f.priority === 1).map(f => f.label)
     },
-    
     growthScenarios: {
       conservative: {
         growthPercent: report.scenarios.conservative.growthPercent,
@@ -458,8 +299,7 @@ export const generateAdminReport = (
         additionalYearlyRevenue: report.scenarios.conservative.value * 12,
         description: report.scenarios.conservative.description,
         requiredActions: ['Ottimizzazione subject lines', 'A/B test CTA', 'Pulizia lista'],
-        timeToImplement: '2-4 settimane',
-        difficultyLevel: 'Bassa'
+        timeToImplement: '2-4 settimane', difficultyLevel: 'Bassa'
       },
       moderate: {
         growthPercent: report.scenarios.moderate.growthPercent,
@@ -467,8 +307,7 @@ export const generateAdminReport = (
         additionalYearlyRevenue: report.scenarios.moderate.value * 12,
         description: report.scenarios.moderate.description,
         requiredActions: ['Implementazione flussi mancanti', 'Segmentazione base', 'Calendar campagne'],
-        timeToImplement: '1-2 mesi',
-        difficultyLevel: 'Media'
+        timeToImplement: '1-2 mesi', difficultyLevel: 'Media'
       },
       aggressive: {
         growthPercent: report.scenarios.aggressive.growthPercent,
@@ -476,17 +315,10 @@ export const generateAdminReport = (
         additionalYearlyRevenue: report.scenarios.aggressive.value * 12,
         description: report.scenarios.aggressive.description,
         requiredActions: ['Tutti i flussi', 'Segmentazione RFM', 'Personalizzazione dinamica', 'SMS integration'],
-        timeToImplement: '2-3 mesi',
-        difficultyLevel: 'Alta'
+        timeToImplement: '2-3 mesi', difficultyLevel: 'Alta'
       }
     },
-    
-    roadmap: {
-      immediate,
-      shortTerm,
-      mediumTerm
-    },
-    
+    roadmap: { immediate, shortTerm, mediumTerm },
     scores: {
       emailHealthScore: report.emailHealthScore,
       automationScore: Math.round(report.automationCoverage),
@@ -494,15 +326,9 @@ export const generateAdminReport = (
       overallScore: report.emailHealthScore,
       improvementPotential: 100 - report.emailHealthScore
     },
-    
     consultingNotes: {
-      leadQuality,
-      leadQualityReason,
-      suggestedApproach,
-      keyPainPoints,
-      upsellOpportunities,
-      estimatedContractValue,
-      priorityLevel
+      leadQuality, leadQualityReason, suggestedApproach, keyPainPoints,
+      upsellOpportunities, estimatedContractValue, priorityLevel
     }
   };
 };
