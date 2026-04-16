@@ -690,7 +690,7 @@ const EmailMarketingSurvey: React.FC = () => {
                 {isSubmitting ? (
                   <><Loader2 className="w-5 h-5 animate-spin" /> Generazione report...</>
                 ) : (
-                  <>Ricevi il Report<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></>
+                  <>Sblocca il Report Completo<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></>
                 )}
               </button>
 
