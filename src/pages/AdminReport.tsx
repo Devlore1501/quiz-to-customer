@@ -119,7 +119,7 @@ const AdminReport: React.FC = () => {
     );
   }
 
-  const [adminTab, setAdminTab] = useState<'survey' | 'dropoff'>('survey');
+  // adminTab state moved to top of component
 
   if (authenticated) {
     return (
