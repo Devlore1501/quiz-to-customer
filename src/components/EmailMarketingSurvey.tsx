@@ -595,7 +595,9 @@ const EmailMarketingSurvey: React.FC = () => {
       formData.emailFrequency
     );
     const previewGap = previewReport.revenueGap;
-    const formattedGap = previewGap >= 1000 ? `${(previewGap / 1000).toFixed(previewGap >= 10000 ? 0 : 1)}k` : previewGap.toLocaleString('it-IT');
+    const yearlyGap = previewGap * 12;
+    const fmtMonth = previewGap.toLocaleString('it-IT', { maximumFractionDigits: 0 });
+    const fmtYear = yearlyGap.toLocaleString('it-IT', { maximumFractionDigits: 0 });
 
     return (
       <div className="min-h-screen bg-[#080808] flex flex-col items-center justify-center px-4 font-['Syne',sans-serif]">
