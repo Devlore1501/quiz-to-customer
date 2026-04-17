@@ -3,8 +3,8 @@ import type { AdvancedReport } from './reportCalculations';
 
 // Brand colors Mailift
 const COLORS = {
-  primary: '#1a2744',      // Blu scuro (header/sfondo)
-  accent: '#f5a623',       // Arancione/Oro (accenti)
+ primary: '#121d2b',      // Navy brand Mailift (header/sfondo)
+ accent: '#FAB450',       // Arancione brand Mailift (accenti)
   white: '#ffffff',
   lightGray: '#f8fafc',
   textSecondary: '#64748b',
