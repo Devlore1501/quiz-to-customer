@@ -4,23 +4,16 @@ import { AdminSurvey } from '@/components/AdminSurvey';
 import DropoffAnalytics from '@/components/DropoffAnalytics';
 import { Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { useSearchParams } from 'react-router-dom';
-
 const AdminReport: React.FC = () => {
-  const [searchParams] = useSearchParams();
-  const bypassAuth = searchParams.get('bypass') === 'mailift2024admin';
-  
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(!bypassAuth);
-  const [authenticated, setAuthenticated] = useState(bypassAuth);
+  const [loading, setLoading] = useState(true);
+  const [authenticated, setAuthenticated] = useState(false);
   const [error, setError] = useState('');
   const [adminTab, setAdminTab] = useState<'survey' | 'dropoff'>('survey');
 
   useEffect(() => {
-    if (bypassAuth) return;
-    
     let mounted = true;
     const timeout = setTimeout(() => {
       console.warn('AdminReport: safety timeout reached, forcing loading=false');
@@ -75,7 +68,7 @@ const AdminReport: React.FC = () => {
       clearTimeout(timeout);
       subscription.unsubscribe();
     };
-  }, [bypassAuth]);
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
