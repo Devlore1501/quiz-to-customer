@@ -179,6 +179,20 @@ const STEPS = [
 
 const TOTAL_STEPS = STEPS.length;
 
+// ═══ Label Resolvers (per webhook payload leggibile in Make/GHL) ═════════
+
+const labelFor = (options: { value: string; label: string }[], value: string): string => {
+  if (!value) return '';
+  const opt = options.find(o => o.value === value);
+  // Strip leading emoji + space for clean CRM display
+  return (opt?.label || value).replace(/^[^\w\d]+\s/, '').trim();
+};
+
+const labelsFor = (options: { value: string; label: string }[], values: string[]): string[] => {
+  if (!values?.length) return [];
+  return values.map(v => labelFor(options, v));
+};
+
 // ═══ Analysis Screen ═════════════════════════════════════════════════════
 
 const AnalysisScreen: React.FC<{ sectorLabel: string; onComplete: () => void }> = ({ sectorLabel, onComplete }) => {
