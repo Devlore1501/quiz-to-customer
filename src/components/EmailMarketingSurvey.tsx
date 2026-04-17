@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { trackQuizCompleted, trackCompleteRegistration } from '@/lib/facebookPixel';
 import { usePartialTracking } from '@/hooks/usePartialTracking';
 import { InsightCard, getInsightForStep } from '@/components/InsightCard';
+import mailiftLogo from '@/assets/mailift-logo.png';
 
 // ═══ Types ═══════════════════════════════════════════════════════════════
 
@@ -215,13 +216,13 @@ const AnalysisScreen: React.FC<{ sectorLabel: string; onComplete: () => void }> 
   const dashOffset = circumference - (progress / 100) * circumference;
 
   return (
-    <div className="min-h-screen bg-[#080808] flex flex-col items-center justify-center px-4 font-['Syne',sans-serif]">
+    <div className="min-h-screen bg-[#121d2b] flex flex-col items-center justify-center px-4 font-['Syne',sans-serif]">
       <div className="w-full max-w-lg">
-        <div className="bg-[#141414] border border-[#242424] rounded-[18px] p-9 text-center">
+        <div className="bg-[#1a2942] border border-[#2a3a52] rounded-[18px] p-9 text-center">
           {/* Circular progress */}
           <div className="relative w-[120px] h-[120px] mx-auto mb-6">
             <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
-              <circle cx="60" cy="60" r="55" fill="none" stroke="#2e2e2e" strokeWidth="8" />
+              <circle cx="60" cy="60" r="55" fill="none" stroke="#34465e" strokeWidth="8" />
               <circle cx="60" cy="60" r="55" fill="none" stroke="#C8F135" strokeWidth="8"
                 strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={dashOffset}
                 className="transition-all duration-600 ease-out" />
@@ -246,7 +247,7 @@ const AnalysisScreen: React.FC<{ sectorLabel: string; onComplete: () => void }> 
                 <div key={i} className={`flex items-center gap-[10px] py-[9px] px-[14px] rounded-lg text-[13px] font-medium transition-all duration-300
                   ${isDone ? 'text-[#C8F135]' : isActive ? 'text-[#f0f0eb] bg-[rgba(200,241,53,0.05)]' : 'text-[#5a5a5a]'}`}>
                   <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center text-[11px] flex-shrink-0
-                    ${isDone ? 'border-[#C8F135] bg-[rgba(200,241,53,0.1)]' : isActive ? 'border-[#ff8c42] bg-[rgba(255,140,66,0.1)] animate-pulse' : 'border-[#2e2e2e]'}`}>
+                    ${isDone ? 'border-[#C8F135] bg-[rgba(200,241,53,0.1)]' : isActive ? 'border-[#ff8c42] bg-[rgba(255,140,66,0.1)] animate-pulse' : 'border-[#34465e]'}`}>
                     {isDone ? '✓' : step.emoji}
                   </div>
                   <span>{step.text}</span>
@@ -267,7 +268,7 @@ const AnalysisScreen: React.FC<{ sectorLabel: string; onComplete: () => void }> 
 // ═══ Disqualified Screen ═════════════════════════════════════════════════
 
 const DisqualifiedScreen: React.FC = () => (
-  <div className="min-h-screen bg-[#080808] flex flex-col items-center justify-center px-4 font-['Syne',sans-serif]">
+  <div className="min-h-screen bg-[#121d2b] flex flex-col items-center justify-center px-4 font-['Syne',sans-serif]">
     <div className="w-full max-w-md text-center">
       <div className="text-6xl mb-6">😔</div>
       <h1 className="text-2xl font-bold text-[#f0f0eb] mb-4">
@@ -276,7 +277,7 @@ const DisqualifiedScreen: React.FC = () => (
       <p className="text-[#888] mb-8">
         I nostri servizi sono ottimizzati per e-commerce con fatturato superiore a 10.000€/mese.
       </p>
-      <div className="bg-[#141414] rounded-2xl p-6 border border-[#242424]">
+      <div className="bg-[#1a2942] rounded-2xl p-6 border border-[#2a3a52]">
         <div className="flex items-center justify-center gap-2 text-[#C8F135] font-medium mb-3">
           <span>✨</span>
           <span>Risorse gratuite per te</span>
@@ -285,7 +286,7 @@ const DisqualifiedScreen: React.FC = () => (
           Scarica la nostra guida gratuita per far crescere il tuo e-commerce con l'email marketing.
         </p>
         <a href="https://gamma.app/docs/Email-Marketing-Secret-2025-mwanhid9h9buczz" target="_blank" rel="noopener noreferrer"
-          className="block w-full py-3 px-6 bg-[#C8F135] text-[#080808] rounded-xl font-semibold hover:bg-[#d4f545] transition-colors text-center">
+          className="block w-full py-3 px-6 bg-[#C8F135] text-[#121d2b] rounded-xl font-semibold hover:bg-[#d4f545] transition-colors text-center">
           Scarica Guida Gratuita
         </a>
       </div>
@@ -600,11 +601,11 @@ const EmailMarketingSurvey: React.FC = () => {
     const fmtYear = yearlyGap.toLocaleString('it-IT', { maximumFractionDigits: 0 });
 
     return (
-      <div className="min-h-screen bg-[#080808] flex flex-col items-center justify-center px-4 font-['Syne',sans-serif]">
+      <div className="min-h-screen bg-[#121d2b] flex flex-col items-center justify-center px-4 font-['Syne',sans-serif]">
         <div className="w-full max-w-[680px] mx-auto">
-          <div className="bg-[#141414] border border-[#242424] rounded-[18px] overflow-hidden">
+          <div className="bg-[#1a2942] border border-[#2a3a52] rounded-[18px] overflow-hidden">
             {/* Top section */}
-            <div className="bg-gradient-to-br from-[#0d1800] to-[#111] p-8 text-center relative overflow-hidden">
+            <div className="bg-gradient-to-br from-[#0d1623] to-[#111] p-8 text-center relative overflow-hidden">
               <div className="absolute -top-[60%] left-1/2 -translate-x-1/2 w-[360px] h-[360px] bg-[radial-gradient(circle,rgba(200,241,53,0.07)_0%,transparent_65%)] pointer-events-none" />
               <div className="w-[52px] h-[52px] bg-[rgba(200,241,53,0.1)] border border-[rgba(200,241,53,0.3)] rounded-full flex items-center justify-center mx-auto mb-4 text-xl relative z-10">
                 ✓✓
@@ -628,7 +629,7 @@ const EmailMarketingSurvey: React.FC = () => {
                   {fmtYear}€<span className="text-[16px] text-[#888]">/anno</span>
                 </div>
               </div>
-              <div className="h-px bg-[#242424] my-3" />
+              <div className="h-px bg-[#2a3a52] my-3" />
               <p className="text-[13px] text-[#C8F135] font-semibold mb-2">Sblocca il report completo:</p>
               <ul className="text-[13px] text-[#888] leading-relaxed space-y-1.5">
                 <li className="flex items-start gap-2"><span className="text-[#C8F135] mt-0.5">✓</span> Roadmap personalizzata</li>
@@ -652,13 +653,13 @@ const EmailMarketingSurvey: React.FC = () => {
                 <div>
                   <span className="text-[11px] text-[#5a5a5a] uppercase tracking-wider block mb-1">Nome e Cognome</span>
                   <input type="text" value={formData.fullName} onChange={e => handleInputChange('fullName', e.target.value)}
-                    className="w-full py-[13px] px-[15px] bg-[#080808] border border-[#242424] rounded-[10px] text-[#f0f0eb] font-['Syne',sans-serif] text-[14px] font-medium outline-none focus:border-[rgba(200,241,53,0.4)] transition-colors placeholder:text-[#252525]"
+                    className="w-full py-[13px] px-[15px] bg-[#121d2b] border border-[#2a3a52] rounded-[10px] text-[#f0f0eb] font-['Syne',sans-serif] text-[14px] font-medium outline-none focus:border-[rgba(200,241,53,0.4)] transition-colors placeholder:text-[#252525]"
                     placeholder="Mario Rossi" autoComplete="name" />
                 </div>
                 <div>
                   <span className="text-[11px] text-[#5a5a5a] uppercase tracking-wider block mb-1">Email</span>
                   <input type="email" value={formData.email} onChange={e => handleInputChange('email', e.target.value)}
-                    className="w-full py-[13px] px-[15px] bg-[#080808] border border-[#242424] rounded-[10px] text-[#f0f0eb] font-['Syne',sans-serif] text-[14px] font-medium outline-none focus:border-[rgba(200,241,53,0.4)] transition-colors placeholder:text-[#252525]"
+                    className="w-full py-[13px] px-[15px] bg-[#121d2b] border border-[#2a3a52] rounded-[10px] text-[#f0f0eb] font-['Syne',sans-serif] text-[14px] font-medium outline-none focus:border-[rgba(200,241,53,0.4)] transition-colors placeholder:text-[#252525]"
                     placeholder="nome@tuaemail.com" autoComplete="email" inputMode="email" />
                   {emailValidation.status === 'invalid' && (
                     <p className="text-[#ff3b3b] text-xs mt-1">{emailValidation.message}</p>
@@ -667,7 +668,7 @@ const EmailMarketingSurvey: React.FC = () => {
                 <div>
                   <span className="text-[11px] text-[#5a5a5a] uppercase tracking-wider block mb-1">WhatsApp / Telefono</span>
                   <input type="tel" value={formData.phone} onChange={e => handleInputChange('phone', e.target.value)}
-                    className="w-full py-[13px] px-[15px] bg-[#080808] border border-[#242424] rounded-[10px] text-[#f0f0eb] font-['Syne',sans-serif] text-[14px] font-medium outline-none focus:border-[rgba(200,241,53,0.4)] transition-colors placeholder:text-[#252525]"
+                    className="w-full py-[13px] px-[15px] bg-[#121d2b] border border-[#2a3a52] rounded-[10px] text-[#f0f0eb] font-['Syne',sans-serif] text-[14px] font-medium outline-none focus:border-[rgba(200,241,53,0.4)] transition-colors placeholder:text-[#252525]"
                     placeholder="+39 xxx xxx xxxx" autoComplete="tel" />
                   {formData.phone.trim() && !validatePhone(formData.phone).valid && (
                     <p className="text-[#ff3b3b] text-xs mt-1">{validatePhone(formData.phone).message}</p>
@@ -679,8 +680,8 @@ const EmailMarketingSurvey: React.FC = () => {
               <div className="flex items-start gap-[10px] mb-4 text-[12px] text-[#888] leading-relaxed">
                 <div onClick={() => handleInputChange('acceptTerms', !formData.acceptTerms)}
                   className={`w-4 h-4 border-2 rounded-[3px] flex-shrink-0 mt-[1px] cursor-pointer flex items-center justify-center transition-all
-                    ${formData.acceptTerms ? 'bg-[#C8F135] border-[#C8F135]' : 'border-[#2e2e2e] bg-[#080808]'}`}>
-                  {formData.acceptTerms && <span className="text-[10px] text-[#080808] font-bold">✓</span>}
+                    ${formData.acceptTerms ? 'bg-[#C8F135] border-[#C8F135]' : 'border-[#34465e] bg-[#121d2b]'}`}>
+                  {formData.acceptTerms && <span className="text-[10px] text-[#121d2b] font-bold">✓</span>}
                 </div>
                 <span>
                   Acconsento al trattamento dei dati ai sensi della <a href="/privacy" target="_blank" className="text-[#C8F135] underline">Privacy Policy</a>. 
@@ -691,7 +692,7 @@ const EmailMarketingSurvey: React.FC = () => {
               {/* Submit */}
               <button onClick={handleGateSubmit} disabled={!canSubmit}
                 className={`w-full py-4 rounded-[10px] font-['Syne',sans-serif] text-[15px] font-bold flex items-center justify-center gap-2 transition-all
-                  ${canSubmit ? 'bg-[#C8F135] text-[#080808] hover:bg-[#d4f545] hover:-translate-y-[1px] cursor-pointer' : 'bg-[#C8F135]/60 text-[#080808]/60 cursor-not-allowed'}`}>
+                  ${canSubmit ? 'bg-[#C8F135] text-[#121d2b] hover:bg-[#d4f545] hover:-translate-y-[1px] cursor-pointer' : 'bg-[#C8F135]/60 text-[#121d2b]/60 cursor-not-allowed'}`}>
                 {isSubmitting ? (
                   <><Loader2 className="w-5 h-5 animate-spin" /> Generazione report...</>
                 ) : (
@@ -719,11 +720,11 @@ const EmailMarketingSurvey: React.FC = () => {
     const insightData = getInsightForStep(currentStep, formData as unknown as Record<string, unknown>);
     if (!insightData) { handleInsightContinue(); return null; }
     return (
-      <div className="min-h-screen bg-[#080808] flex flex-col items-center justify-center px-4 font-['Syne',sans-serif]">
+      <div className="min-h-screen bg-[#121d2b] flex flex-col items-center justify-center px-4 font-['Syne',sans-serif]">
         <div className="w-full max-w-[680px] mx-auto">
-          <div className="bg-[#141414] border border-[#242424] rounded-[18px] overflow-hidden">
+          <div className="bg-[#1a2942] border border-[#2a3a52] rounded-[18px] overflow-hidden">
             {/* Progress */}
-            <div className="h-1 bg-[#242424] rounded-t-[18px] overflow-hidden">
+            <div className="h-1 bg-[#2a3a52] rounded-t-[18px] overflow-hidden">
               <div className="h-full bg-[#C8F135] transition-all duration-500" style={{ width: `${progress}%` }} />
             </div>
             <div className="flex justify-between px-5 pt-3">
@@ -746,13 +747,11 @@ const EmailMarketingSurvey: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#080808] font-['Syne',sans-serif] text-[#f0f0eb]">
+    <div className="min-h-screen bg-[#121d2b] font-['Syne',sans-serif] text-[#f0f0eb]">
       <div className="max-w-[680px] mx-auto px-[18px] relative z-[1]">
         {/* Header */}
         <header className="pt-6 text-center">
-          <div className="font-['Bebas_Neue',sans-serif] text-xl tracking-[5px] text-[#C8F135]">
-            MAILIFT
-          </div>
+          <img src={mailiftLogo} alt="Mailift" className="h-10 w-auto mx-auto" />
         </header>
 
         {/* Hero */}
@@ -771,9 +770,9 @@ const EmailMarketingSurvey: React.FC = () => {
         </div>
 
         {/* Quiz Card */}
-        <div className="bg-[#141414] border border-[#242424] rounded-[18px] mb-12 pb-1">
+        <div className="bg-[#1a2942] border border-[#2a3a52] rounded-[18px] mb-12 pb-1">
           {/* Progress bar */}
-          <div className="h-1 bg-[#242424] rounded-t-[18px] overflow-hidden">
+          <div className="h-1 bg-[#2a3a52] rounded-t-[18px] overflow-hidden">
             <div className="h-full bg-[#C8F135] transition-all duration-500 ease-out" style={{ width: `${progress}%` }} />
           </div>
           <div className="flex justify-between px-5 pt-3">
@@ -823,10 +822,10 @@ const EmailMarketingSurvey: React.FC = () => {
                         className={`flex items-center gap-3 py-[13px] px-[15px] rounded-[10px] border text-[14px] font-medium text-left transition-all select-none
                           ${isSelected
                             ? 'border-[#C8F135] bg-[rgba(200,241,53,0.1)] text-[#f0f0eb]'
-                            : 'border-[#242424] bg-[#080808] text-[#aaa] hover:border-[rgba(200,241,53,0.35)] hover:bg-[rgba(200,241,53,0.05)] hover:text-[#f0f0eb]'}`}>
+                            : 'border-[#2a3a52] bg-[#121d2b] text-[#aaa] hover:border-[rgba(200,241,53,0.35)] hover:bg-[rgba(200,241,53,0.05)] hover:text-[#f0f0eb]'}`}>
                         <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all
-                          ${isSelected ? 'border-[#C8F135] bg-[#C8F135]' : 'border-[#2e2e2e]'}`}>
-                          {isSelected && <span className="w-[5px] h-[5px] bg-[#080808] rounded-full" />}
+                          ${isSelected ? 'border-[#C8F135] bg-[#C8F135]' : 'border-[#34465e]'}`}>
+                          {isSelected && <span className="w-[5px] h-[5px] bg-[#121d2b] rounded-full" />}
                         </div>
                         <span>{opt.label}</span>
                       </button>
@@ -838,10 +837,10 @@ const EmailMarketingSurvey: React.FC = () => {
                     <div className="mt-3 space-y-3">
                       <input value={formData.customSector} onChange={e => handleInputChange('customSector', e.target.value)}
                         placeholder="Specifica il tuo settore..."
-                        className="w-full py-[13px] px-[15px] bg-[#080808] border border-[#242424] rounded-[10px] text-[#f0f0eb] font-['Syne',sans-serif] text-[14px] font-medium outline-none focus:border-[rgba(200,241,53,0.45)] transition-colors placeholder:text-[#252525]"
+                        className="w-full py-[13px] px-[15px] bg-[#121d2b] border border-[#2a3a52] rounded-[10px] text-[#f0f0eb] font-['Syne',sans-serif] text-[14px] font-medium outline-none focus:border-[rgba(200,241,53,0.45)] transition-colors placeholder:text-[#252525]"
                         autoFocus />
                       <button onClick={() => { if (formData.customSector.trim()) advanceFromCurrentStep(); }}
-                        className="w-full py-4 bg-[#C8F135] text-[#080808] rounded-[10px] font-['Syne',sans-serif] text-[15px] font-bold flex items-center justify-center gap-2 hover:bg-[#d4f545] transition-all">
+                        className="w-full py-4 bg-[#C8F135] text-[#121d2b] rounded-[10px] font-['Syne',sans-serif] text-[15px] font-bold flex items-center justify-center gap-2 hover:bg-[#d4f545] transition-all">
                         Continua <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
                       </button>
                     </div>
@@ -860,10 +859,10 @@ const EmailMarketingSurvey: React.FC = () => {
                         className={`flex items-center gap-3 py-[13px] px-[15px] rounded-[10px] border text-[14px] font-medium text-left transition-all select-none
                           ${isSelected
                             ? 'border-[#C8F135] bg-[rgba(200,241,53,0.1)] text-[#f0f0eb]'
-                            : 'border-[#242424] bg-[#080808] text-[#aaa] hover:border-[rgba(200,241,53,0.35)] hover:bg-[rgba(200,241,53,0.05)] hover:text-[#f0f0eb]'}`}>
+                            : 'border-[#2a3a52] bg-[#121d2b] text-[#aaa] hover:border-[rgba(200,241,53,0.35)] hover:bg-[rgba(200,241,53,0.05)] hover:text-[#f0f0eb]'}`}>
                         <div className={`w-4 h-4 rounded-[3px] border-2 flex-shrink-0 flex items-center justify-center transition-all
-                          ${isSelected ? 'border-[#C8F135] bg-[#C8F135]' : 'border-[#2e2e2e]'}`}>
-                          {isSelected && <span className="text-[10px] text-[#080808] font-bold">✓</span>}
+                          ${isSelected ? 'border-[#C8F135] bg-[#C8F135]' : 'border-[#34465e]'}`}>
+                          {isSelected && <span className="text-[10px] text-[#121d2b] font-bold">✓</span>}
                         </div>
                         <span>{opt.label}</span>
                       </button>
@@ -877,7 +876,7 @@ const EmailMarketingSurvey: React.FC = () => {
                 <div>
                   <input value={formData.website} onChange={e => handleInputChange('website', e.target.value)}
                     placeholder="www.tuosito.com"
-                    className="w-full py-[13px] px-[15px] bg-[#080808] border border-[#242424] rounded-[10px] text-[#f0f0eb] font-['Syne',sans-serif] text-[14px] font-medium outline-none focus:border-[rgba(200,241,53,0.45)] transition-colors placeholder:text-[#252525]" />
+                    className="w-full py-[13px] px-[15px] bg-[#121d2b] border border-[#2a3a52] rounded-[10px] text-[#f0f0eb] font-['Syne',sans-serif] text-[14px] font-medium outline-none focus:border-[rgba(200,241,53,0.45)] transition-colors placeholder:text-[#252525]" />
                   <p className="mt-[6px] text-[11px] text-[#5a5a5a]">
                     Puoi scrivere "privato" se preferisci non condividerlo.
                   </p>
@@ -895,7 +894,7 @@ const EmailMarketingSurvey: React.FC = () => {
                 advanceFromCurrentStep();
               }}
                 disabled={(step.type === 'checkbox' && formData.activeFlows.length === 0) || (step.type === 'input' && !formData.website.trim())}
-                className="w-full py-4 bg-[#C8F135] text-[#080808] rounded-[10px] font-['Syne',sans-serif] text-[15px] font-bold flex items-center justify-center gap-2 hover:bg-[#d4f545] transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                className="w-full py-4 bg-[#C8F135] text-[#121d2b] rounded-[10px] font-['Syne',sans-serif] text-[15px] font-bold flex items-center justify-center gap-2 hover:bg-[#d4f545] transition-all disabled:opacity-50 disabled:cursor-not-allowed">
                 Continua
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
               </button>
