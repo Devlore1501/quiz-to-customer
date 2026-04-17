@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { trackQuizCompleted, trackCompleteRegistration } from '@/lib/facebookPixel';
 import { usePartialTracking } from '@/hooks/usePartialTracking';
 import { InsightCard, getInsightForStep } from '@/components/InsightCard';
+import mailiftLogo from '@/assets/mailift-logo.png';
 
 // ═══ Types ═══════════════════════════════════════════════════════════════
 
@@ -750,9 +751,7 @@ const EmailMarketingSurvey: React.FC = () => {
       <div className="max-w-[680px] mx-auto px-[18px] relative z-[1]">
         {/* Header */}
         <header className="pt-6 text-center">
-          <div className="font-['Bebas_Neue',sans-serif] text-xl tracking-[5px] text-[#C8F135]">
-            MAILIFT
-          </div>
+          <img src={mailiftLogo} alt="Mailift" className="h-10 w-auto mx-auto" />
         </header>
 
         {/* Hero */}
