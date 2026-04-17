@@ -1,26 +1,46 @@
 
 
-## Piano: Rimuovere blur e aggiungere dicitura invito nel gate
+## Piano: Sostituire l'accento lime `#C8F135` con l'arancione del logo `#FAB450`
 
-### Cosa cambia
+### Colore identificato
 
-Nel gate (fase contatti dopo l'analisi), attualmente c'è un box rosso con l'importo della revenue leak **sfocato** (`blur-md`). La richiesta è:
+Analizzando il logo Mailift, il colore arancione/ambra dominante è **`#FAB450`** (rgb 250, 180, 80). Verrà usato come nuovo accento brand al posto del lime `#C8F135`.
 
-1. **Rimuovere il blur** dall'importo — mostrare il numero reale (o un placeholder leggibile)
-2. **Cambiare la dicitura** per invitare a lasciare i dati per vedere il **report di analisi completo**, non per "sbloccare il numero"
+Hover state: `#fbbf6a` (versione leggermente più chiara, sostituisce `#d4f545`).
+Versioni trasparenti: `rgba(250, 180, 80, X)` sostituiscono `rgba(200, 241, 53, X)`.
 
-### Modifica
+### File coinvolti
 
-**File: `src/components/EmailMarketingSurvey.tsx` (righe 609-618)**
+| File | Occorrenze | Note |
+|---|---|---|
+| `src/components/EmailMarketingSurvey.tsx` | ~120 | Quiz, gate, loading, hero badge, checkbox, bottoni CTA, progress bar, stati selected/hover |
+| `src/components/AdvancedReport.tsx` | ~80 | Report — metriche, badge, scenari, bottoni, accenti |
+| `src/components/InsightCard.tsx` | ~10 | Card insight nel report |
 
-Il box blurred preview diventa un messaggio chiaro senza blur:
+### Mappa sostituzioni
 
-- Rimuovere `blur-md` dallo span del numero
-- Cambiare il testo da "Revenue leak mensile stimata / Sblocca il report per vedere il numero esatto e la roadmap di recupero" a una dicitura tipo:
-  - Titolo: **"Il tuo report è pronto"**
-  - Testo: **"Lascia i tuoi dati per accedere al report di analisi completo con roadmap personalizzata e scenari di crescita."**
-- Cambiare lo stile del box da rosso (revenue leak) a lime/neutro (più invitante, meno allarmante)
-- Rimuovere il numero finto `00k€` e sostituire con un'icona documento/report
+| Vecchio (lime) | Nuovo (arancione logo) |
+|---|---|
+| `#C8F135` | `#FAB450` |
+| `#d4f545` (hover) | `#fbbf6a` |
+| `rgba(200, 241, 53, X)` | `rgba(250, 180, 80, X)` |
+| `rgba(200,241,53,X)` (no spaces) | `rgba(250,180,80,X)` |
 
-Un solo file modificato, ~10 righe.
+### Eccezioni / cose da NON toccare
+
+- **`#ff8c42` / `rgba(255,140,66,X)`** — già un arancione, usato per stato "active" (loading step in corso). Va lasciato com'è oppure differenziato. Per evitare conflitto visivo con il nuovo accento `#FAB450`, lo stato "active" può restare `#ff8c42` (più rosso/saturo) per distinguersi dall'accento brand principale, oppure essere rimpiazzato con una versione più scura tipo `#e89638`. **Suggerimento**: mantenere `#ff8c42` perché serve come indicatore distinto di "in corso" vs "completato".
+- **Rosso revenue leak** (`#ff3b3b`, `rgba(255,59,59,X)`) — non toccare.
+- **Sfondo navy** `#121d2b`, `#1a2942`, `#2a3a52` — non toccare.
+
+### Esecuzione
+
+1. `EmailMarketingSurvey.tsx`: sed-style replace di tutte le 4 mappature sopra
+2. `AdvancedReport.tsx`: stesse 4 mappature
+3. `InsightCard.tsx`: stesse 4 mappature
+
+Nessuna modifica di logica — solo colori. Il testo dei pulsanti su sfondo arancione resterà `#121d2b` (navy scuro), che ha buon contrasto con `#FAB450`.
+
+### Memoria da aggiornare
+
+Aggiungere a `mem://index.md` Core: l'accento brand è ora arancione `#FAB450` (dal logo Mailift), non più lime.
 
