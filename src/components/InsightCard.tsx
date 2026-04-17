@@ -22,8 +22,8 @@ export const InsightCard: React.FC<InsightCardProps> = ({ data, onContinue }) =>
           {data.emoji}
         </div>
         <div className="p-[18px_18px_16px]">
-          <div className="flex items-center gap-[6px] font-['DM_Mono',monospace] text-[10px] tracking-[2px] uppercase text-[#C8F135] mb-[10px]">
-            <div className="w-[18px] h-[18px] bg-[rgba(200,241,53,0.1)] border border-[rgba(200,241,53,0.3)] rounded-full flex items-center justify-center text-[9px]">
+          <div className="flex items-center gap-[6px] font-['DM_Mono',monospace] text-[10px] tracking-[2px] uppercase text-[#FAB450] mb-[10px]">
+            <div className="w-[18px] h-[18px] bg-[rgba(250,180,80,0.1)] border border-[rgba(250,180,80,0.3)] rounded-full flex items-center justify-center text-[9px]">
               ℹ
             </div>
             {data.tag}
@@ -31,13 +31,13 @@ export const InsightCard: React.FC<InsightCardProps> = ({ data, onContinue }) =>
           <h3 className="text-[19px] font-bold leading-[1.3] text-[#f0f0eb] mb-2">
             {data.title}
           </h3>
-          <div className="w-8 h-[2px] bg-[#C8F135] mb-3 rounded-sm" />
+          <div className="w-8 h-[2px] bg-[#FAB450] mb-3 rounded-sm" />
           <p className="text-[14px] text-[#888] leading-[1.65] mb-[14px]">
             {data.text}
           </p>
           {data.statText && (
-            <div className="flex items-start gap-[10px] p-[10px_12px] bg-[rgba(200,241,53,0.04)] border border-[rgba(200,241,53,0.1)] rounded-lg text-[13px] text-[#aaa] leading-[1.5]">
-              <span className="text-[#C8F135] flex-shrink-0 mt-[1px]">
+            <div className="flex items-start gap-[10px] p-[10px_12px] bg-[rgba(250,180,80,0.04)] border border-[rgba(250,180,80,0.1)] rounded-lg text-[13px] text-[#aaa] leading-[1.5]">
+              <span className="text-[#FAB450] flex-shrink-0 mt-[1px]">
                 {data.statIcon || 'ⓘ'}
               </span>
               <span>{data.statText}</span>
@@ -47,7 +47,7 @@ export const InsightCard: React.FC<InsightCardProps> = ({ data, onContinue }) =>
       </div>
       <button
         onClick={onContinue}
-        className="w-full mt-4 py-4 bg-[#C8F135] text-[#080808] border-none rounded-[10px] font-['Syne',sans-serif] text-[15px] font-bold cursor-pointer flex items-center justify-center gap-2 hover:bg-[#d4f545] hover:-translate-y-[1px] transition-all"
+        className="w-full mt-4 py-4 bg-[#FAB450] text-[#080808] border-none rounded-[10px] font-['Syne',sans-serif] text-[15px] font-bold cursor-pointer flex items-center justify-center gap-2 hover:bg-[#fbbf6a] hover:-translate-y-[1px] transition-all"
       >
         Continua
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>

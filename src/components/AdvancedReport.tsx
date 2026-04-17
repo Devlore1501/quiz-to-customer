@@ -258,16 +258,16 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
 
         {/* ═══ 1. HEADER PROFILO ═══ */}
         <div className="text-center space-y-3">
-          <span className="font-mono-dm text-xs tracking-widest px-3 py-1 rounded-full" style={{ background: 'rgba(200,241,53,0.15)', color: '#C8F135', border: '1px solid rgba(200,241,53,0.3)' }}>
+          <span className="font-mono-dm text-xs tracking-widest px-3 py-1 rounded-full" style={{ background: 'rgba(250,180,80,0.15)', color: '#FAB450', border: '1px solid rgba(250,180,80,0.3)' }}>
             ANALISI COMPLETATA
           </span>
           <h1 className="font-bebas text-4xl md:text-5xl tracking-wide" style={{ color: '#ffffff' }}>
             {userName || 'Il tuo'} Report Email Marketing
           </h1>
           <p className="font-mono-dm text-sm" style={{ color: '#666' }}>
-            Settore: <span style={{ color: '#C8F135' }}>{r.sectorBenchmark.label}</span>
+            Settore: <span style={{ color: '#FAB450' }}>{r.sectorBenchmark.label}</span>
             {website && (
-              <> · <a href={website.startsWith('http') ? website : `https://${website}`} target="_blank" rel="noopener noreferrer" style={{ color: '#C8F135' }} className="hover:underline">{website.replace(/^https?:\/\//, '')}</a></>
+              <> · <a href={website.startsWith('http') ? website : `https://${website}`} target="_blank" rel="noopener noreferrer" style={{ color: '#FAB450' }} className="hover:underline">{website.replace(/^https?:\/\//, '')}</a></>
             )}
           </p>
         </div>
@@ -336,9 +336,9 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
               <p className="font-bebas text-2xl mt-1" style={{ color: '#e67e22' }}>{formatCurrency(r.currentEmailRevenue)}</p>
               <p className="font-mono-dm text-[10px]" style={{ color: '#666' }}>{r.currentEmailPercent}% del totale</p>
             </div>
-            <div className="rounded-xl p-4" style={{ background: 'rgba(200,241,53,0.05)', border: '1px solid rgba(200,241,53,0.2)' }}>
-              <p className="font-mono-dm text-[10px] tracking-wider" style={{ color: '#C8F135' }}>BENCHMARK 35%</p>
-              <p className="font-bebas text-2xl mt-1" style={{ color: '#C8F135' }}>{formatCurrency(r.benchmarkEmailRevenue)}</p>
+            <div className="rounded-xl p-4" style={{ background: 'rgba(250,180,80,0.05)', border: '1px solid rgba(250,180,80,0.2)' }}>
+              <p className="font-mono-dm text-[10px] tracking-wider" style={{ color: '#FAB450' }}>BENCHMARK 35%</p>
+              <p className="font-bebas text-2xl mt-1" style={{ color: '#FAB450' }}>{formatCurrency(r.benchmarkEmailRevenue)}</p>
             </div>
             <div className="rounded-xl p-4" style={{ background: 'rgba(255,59,59,0.05)', border: '1px solid rgba(255,59,59,0.2)' }}>
               <p className="font-mono-dm text-[10px] tracking-wider" style={{ color: '#ff3b3b' }}>GAP MENSILE</p>
@@ -349,10 +349,10 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
           <div className="mt-5 space-y-2">
             <div className="flex justify-between font-mono-dm text-[10px]">
               <span style={{ color: '#888' }}>Il tuo risultato ({r.currentEmailPercent}%)</span>
-              <span style={{ color: '#C8F135' }}>Benchmark (35%)</span>
+              <span style={{ color: '#FAB450' }}>Benchmark (35%)</span>
             </div>
             <div className="relative h-3 rounded-full overflow-hidden" style={{ background: '#2a2a2a' }}>
-              <div className="absolute h-full rounded-full transition-all duration-1000" style={{ width: `${Math.min(100, r.currentEmailPercent / 35 * 100)}%`, background: 'linear-gradient(90deg, #ff3b3b, #e67e22, #C8F135)' }} />
+              <div className="absolute h-full rounded-full transition-all duration-1000" style={{ width: `${Math.min(100, r.currentEmailPercent / 35 * 100)}%`, background: 'linear-gradient(90deg, #ff3b3b, #e67e22, #FAB450)' }} />
             </div>
           </div>
         </div>
@@ -401,12 +401,12 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
               <p className="font-mono-dm text-[10px] tracking-wider" style={{ color: '#888' }}>COPERTURA</p>
               <p className="font-bebas text-3xl" style={{ color: '#ffffff' }}>{Math.round(r.automationCoverage)}%</p>
               <div className="w-full h-1.5 rounded-full mt-2" style={{ background: '#2a2a2a' }}>
-                <div className="h-full rounded-full" style={{ width: `${r.automationCoverage}%`, background: '#C8F135' }} />
+                <div className="h-full rounded-full" style={{ width: `${r.automationCoverage}%`, background: '#FAB450' }} />
               </div>
             </div>
-            <div className="rounded-xl p-4" style={{ background: 'rgba(200,241,53,0.05)', border: '1px solid rgba(200,241,53,0.2)' }}>
-              <p className="font-mono-dm text-[10px] tracking-wider" style={{ color: '#C8F135' }}>POTENZIALE MANCANTE</p>
-              <p className="font-bebas text-3xl" style={{ color: '#C8F135' }}>{formatCurrency(r.totalFlowGap)}<span className="font-mono-dm text-xs" style={{ color: '#888' }}>/mese</span></p>
+            <div className="rounded-xl p-4" style={{ background: 'rgba(250,180,80,0.05)', border: '1px solid rgba(250,180,80,0.2)' }}>
+              <p className="font-mono-dm text-[10px] tracking-wider" style={{ color: '#FAB450' }}>POTENZIALE MANCANTE</p>
+              <p className="font-bebas text-3xl" style={{ color: '#FAB450' }}>{formatCurrency(r.totalFlowGap)}<span className="font-mono-dm text-xs" style={{ color: '#888' }}>/mese</span></p>
             </div>
           </div>
 
@@ -426,7 +426,7 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
                     </div>
                   </div>
                   <div className="text-right flex-shrink-0">
-                    <p className="font-bebas text-lg" style={{ color: '#C8F135' }}>+{formatCurrency(flow.impactValue)}</p>
+                    <p className="font-bebas text-lg" style={{ color: '#FAB450' }}>+{formatCurrency(flow.impactValue)}</p>
                     <p className="font-mono-dm text-[10px]" style={{ color: '#666' }}>{flow.implementationTime}</p>
                   </div>
                 </div>
@@ -450,11 +450,11 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
             </div>
 
             {/* Moderate - recommended */}
-            <div className="rounded-xl p-5 relative" style={{ background: 'rgba(200,241,53,0.05)', border: '2px solid #C8F135' }}>
-              <span className="absolute -top-3 left-1/2 -translate-x-1/2 font-mono-dm text-[10px] px-3 py-0.5 rounded-full" style={{ background: '#C8F135', color: '#080808' }}>CONSIGLIATO</span>
-              <p className="font-mono-dm text-[10px] tracking-wider mb-1 mt-1" style={{ color: '#C8F135' }}>MODERATO</p>
+            <div className="rounded-xl p-5 relative" style={{ background: 'rgba(250,180,80,0.05)', border: '2px solid #FAB450' }}>
+              <span className="absolute -top-3 left-1/2 -translate-x-1/2 font-mono-dm text-[10px] px-3 py-0.5 rounded-full" style={{ background: '#FAB450', color: '#080808' }}>CONSIGLIATO</span>
+              <p className="font-mono-dm text-[10px] tracking-wider mb-1 mt-1" style={{ color: '#FAB450' }}>MODERATO</p>
               <p className="font-bebas text-4xl" style={{ color: '#ffffff' }}>+{r.scenarios.moderate.growthPercent}%</p>
-              <p className="font-bebas text-xl mt-1" style={{ color: '#C8F135' }}>{formatCurrency(r.scenarios.moderate.value)}<span className="font-mono-dm text-[10px]" style={{ color: '#888' }}>/mese</span></p>
+              <p className="font-bebas text-xl mt-1" style={{ color: '#FAB450' }}>{formatCurrency(r.scenarios.moderate.value)}<span className="font-mono-dm text-[10px]" style={{ color: '#888' }}>/mese</span></p>
               <p className="font-mono-dm text-[10px] mt-2" style={{ color: '#888' }}>{r.scenarios.moderate.description}</p>
             </div>
 
@@ -474,7 +474,7 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
           <div className="space-y-3">
             {r.topActions.map((action, i) => (
               <div key={i} className="flex items-center gap-4 rounded-xl p-4" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a' }}>
-                <div className="w-10 h-10 rounded-full flex items-center justify-center font-bebas text-xl flex-shrink-0" style={{ background: '#C8F135', color: '#080808' }}>
+                <div className="w-10 h-10 rounded-full flex items-center justify-center font-bebas text-xl flex-shrink-0" style={{ background: '#FAB450', color: '#080808' }}>
                   {i + 1}
                 </div>
                 <div className="flex-1">
@@ -512,9 +512,9 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
         </div>
 
         {/* ═══ 11. POTENZIALE ANNUALE ═══ */}
-        <div className="rounded-2xl p-8 text-center" style={{ background: 'linear-gradient(135deg, rgba(200,241,53,0.1), rgba(200,241,53,0.02))', border: '2px solid rgba(200,241,53,0.3)' }}>
-          <p className="font-mono-dm text-xs tracking-widest mb-2" style={{ color: '#C8F135' }}>POTENZIALE ECONOMICO ANNUO</p>
-          <p className="font-bebas text-5xl md:text-7xl" style={{ color: '#C8F135' }}>{formatCurrency(r.yearlyPotential)}</p>
+        <div className="rounded-2xl p-8 text-center" style={{ background: 'linear-gradient(135deg, rgba(250,180,80,0.1), rgba(250,180,80,0.02))', border: '2px solid rgba(250,180,80,0.3)' }}>
+          <p className="font-mono-dm text-xs tracking-widest mb-2" style={{ color: '#FAB450' }}>POTENZIALE ECONOMICO ANNUO</p>
+          <p className="font-bebas text-5xl md:text-7xl" style={{ color: '#FAB450' }}>{formatCurrency(r.yearlyPotential)}</p>
           <p className="font-mono-dm text-xs mt-2" style={{ color: '#888' }}>
             Scenario moderato: {formatCurrency(r.scenarios.moderate.value)}/mese × 12
           </p>
@@ -531,8 +531,8 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
                 <p className="font-bebas text-2xl" style={{ color: '#fff' }}>{r.listForecast.listSize.toLocaleString('it-IT')}</p>
                 <p className="font-mono-dm text-[10px]" style={{ color: '#666' }}>iscritti</p>
               </div>
-              <div className="rounded-xl p-4 text-center" style={{ background: 'rgba(200,241,53,0.05)', border: '1px solid rgba(200,241,53,0.2)' }}>
-                <p className="font-mono-dm text-[10px] mb-1" style={{ color: '#C8F135' }}>INVII/MESE</p>
+              <div className="rounded-xl p-4 text-center" style={{ background: 'rgba(250,180,80,0.05)', border: '1px solid rgba(250,180,80,0.2)' }}>
+                <p className="font-mono-dm text-[10px] mb-1" style={{ color: '#FAB450' }}>INVII/MESE</p>
                 <p className="font-bebas text-3xl" style={{ color: '#fff' }}>{customSends}</p>
                 <div className="px-2 mt-2">
                   <Slider min={0} max={30} step={1} value={[customSends]} onValueChange={(v) => setCustomSends(v[0])} className="w-full" />
@@ -541,7 +541,7 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
               </div>
               <div className="rounded-xl p-4 text-center" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a' }}>
                 <p className="font-mono-dm text-[10px]" style={{ color: '#888' }}>{r.listForecast.isCustomAov ? 'AOV REALE' : 'AOV STIMATO'}</p>
-                <p className="font-bebas text-2xl" style={{ color: r.listForecast.isCustomAov ? '#2ecc71' : '#C8F135' }}>€{r.listForecast.sectorAOV}</p>
+                <p className="font-bebas text-2xl" style={{ color: r.listForecast.isCustomAov ? '#2ecc71' : '#FAB450' }}>€{r.listForecast.sectorAOV}</p>
                 <p className="font-mono-dm text-[10px]" style={{ color: '#666' }}>valore medio ordine</p>
               </div>
             </div>
@@ -552,7 +552,7 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
                 <thead>
                   <tr style={{ borderBottom: '1px solid #2a2a2a' }}>
                     <th className="text-left p-3 font-mono-dm text-[10px]" style={{ color: '#666' }}></th>
-                    <th className="text-center p-3 font-mono-dm text-[10px]" style={{ color: '#C8F135', background: 'rgba(200,241,53,0.05)' }}>CORRENTE</th>
+                    <th className="text-center p-3 font-mono-dm text-[10px]" style={{ color: '#FAB450', background: 'rgba(250,180,80,0.05)' }}>CORRENTE</th>
                     <th className="text-center p-3 font-mono-dm text-[10px]" style={{ color: '#e67e22', background: 'rgba(230,126,34,0.05)' }}>OTTIMIZZATO</th>
                     <th className="text-center p-3 font-mono-dm text-[10px]" style={{ color: '#2ecc71', background: 'rgba(46,204,113,0.05)' }}>BENCHMARK</th>
                   </tr>
@@ -566,14 +566,14 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
                   ].map(([label, curr, opt, bench], i) => (
                     <tr key={i} style={{ borderBottom: '1px solid #1a1a1a' }}>
                       <td className="p-3" style={{ color: '#888' }}>{label}</td>
-                      <td className="p-3 text-center font-medium" style={{ color: '#C8F135', background: 'rgba(200,241,53,0.02)' }}>{curr}</td>
+                      <td className="p-3 text-center font-medium" style={{ color: '#FAB450', background: 'rgba(250,180,80,0.02)' }}>{curr}</td>
                       <td className="p-3 text-center" style={{ color: '#e67e22', background: 'rgba(230,126,34,0.02)' }}>{opt}</td>
                       <td className="p-3 text-center" style={{ color: '#2ecc71', background: 'rgba(46,204,113,0.02)' }}>{bench}</td>
                     </tr>
                   ))}
                   <tr>
                     <td className="p-3 font-syne font-bold text-sm" style={{ color: '#fff' }}>Totale</td>
-                    <td className="p-3 text-center font-bold" style={{ color: '#C8F135', background: 'rgba(200,241,53,0.05)' }}>{formatCurrency(liveTotal)}</td>
+                    <td className="p-3 text-center font-bold" style={{ color: '#FAB450', background: 'rgba(250,180,80,0.05)' }}>{formatCurrency(liveTotal)}</td>
                     <td className="p-3 text-center font-bold" style={{ color: '#e67e22', background: 'rgba(230,126,34,0.05)' }}>{formatCurrency(r.listForecast.optimized.total)}</td>
                     <td className="p-3 text-center font-bold" style={{ color: '#2ecc71', background: 'rgba(46,204,113,0.05)' }}>{formatCurrency(r.listForecast.benchmark.total)}</td>
                   </tr>
@@ -594,8 +594,8 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
             <p className="font-mono-dm text-[10px] mb-5" style={{ color: '#666' }}>Tasso conversione {r.popupData.conversionRate}% su {r.popupData.monthlyVisitors.toLocaleString('it-IT')} visitatori/mese</p>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-5">
-              <div className="rounded-xl p-4 text-center" style={{ background: 'rgba(200,241,53,0.05)', border: '1px solid rgba(200,241,53,0.2)' }}>
-                <p className="font-mono-dm text-[10px]" style={{ color: '#C8F135' }}>NUOVI ISCRITTI/MESE</p>
+              <div className="rounded-xl p-4 text-center" style={{ background: 'rgba(250,180,80,0.05)', border: '1px solid rgba(250,180,80,0.2)' }}>
+                <p className="font-mono-dm text-[10px]" style={{ color: '#FAB450' }}>NUOVI ISCRITTI/MESE</p>
                 <p className="font-bebas text-3xl" style={{ color: '#fff' }}>{r.popupData.newSubscribersPerMonth.toLocaleString('it-IT')}</p>
               </div>
               <div className="rounded-xl p-4 text-center" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a' }}>
@@ -644,7 +644,7 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
                   <p className="font-mono-dm text-[10px]" style={{ color: '#666' }}>Email: {formatCurrency(emailBase)}</p>
                 </div>
                 <div className="rounded-xl p-4 text-center" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a' }}>
-                  <p className="font-mono-dm text-[10px]" style={{ color: '#C8F135' }}>3 MESI</p>
+                  <p className="font-mono-dm text-[10px]" style={{ color: '#FAB450' }}>3 MESI</p>
                   <p className="font-bebas text-2xl" style={{ color: '#fff' }}>{formatCurrency(totalAt3m)}</p>
                   <p className="font-mono-dm text-[10px]" style={{ color: '#2ecc71' }}>+{growth3.toFixed(1)}%</p>
                 </div>
@@ -653,9 +653,9 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
                   <p className="font-bebas text-2xl" style={{ color: '#fff' }}>{formatCurrency(totalAt6m)}</p>
                   <p className="font-mono-dm text-[10px]" style={{ color: '#2ecc71' }}>+{growth6.toFixed(1)}%</p>
                 </div>
-                <div className="rounded-xl p-4 text-center relative" style={{ background: 'rgba(200,241,53,0.05)', border: '2px solid rgba(200,241,53,0.3)' }}>
-                  <span className="absolute -top-2 left-1/2 -translate-x-1/2 font-mono-dm text-[9px] px-2 py-0.5 rounded-full" style={{ background: '#C8F135', color: '#080808' }}>OBIETTIVO</span>
-                  <p className="font-mono-dm text-[10px] mt-1" style={{ color: '#C8F135' }}>12 MESI</p>
+                <div className="rounded-xl p-4 text-center relative" style={{ background: 'rgba(250,180,80,0.05)', border: '2px solid rgba(250,180,80,0.3)' }}>
+                  <span className="absolute -top-2 left-1/2 -translate-x-1/2 font-mono-dm text-[9px] px-2 py-0.5 rounded-full" style={{ background: '#FAB450', color: '#080808' }}>OBIETTIVO</span>
+                  <p className="font-mono-dm text-[10px] mt-1" style={{ color: '#FAB450' }}>12 MESI</p>
                   <p className="font-bebas text-2xl" style={{ color: '#fff' }}>{formatCurrency(totalAt12m)}</p>
                   <p className="font-mono-dm text-[10px]" style={{ color: '#2ecc71' }}>+{growth12.toFixed(1)}%</p>
                 </div>
@@ -666,8 +666,8 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
 
         {/* ═══ INVESTIMENTO & ROI (admin only) ═══ */}
         {showInvestment && (
-          <div className="rounded-2xl p-6" style={{ background: '#141414', border: '1px solid rgba(200,241,53,0.3)' }}>
-            <h2 className="font-bebas text-2xl tracking-wide mb-1" style={{ color: '#C8F135' }}>INVESTIMENTO & ROI</h2>
+          <div className="rounded-2xl p-6" style={{ background: '#141414', border: '1px solid rgba(250,180,80,0.3)' }}>
+            <h2 className="font-bebas text-2xl tracking-wide mb-1" style={{ color: '#FAB450' }}>INVESTIMENTO & ROI</h2>
             <p className="font-mono-dm text-[10px] mb-5" style={{ color: '#666' }}>Inserisci i costi del servizio per calcolare break-even e ROI</p>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-5">
@@ -707,7 +707,7 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
               </div>
               <div className="rounded-xl p-4 text-center" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a' }}>
                 <p className="font-mono-dm text-[10px]" style={{ color: '#888' }}>FEE MENSILE TOTALE</p>
-                {totalMonthlyFee > 0 ? <p className="font-bebas text-2xl" style={{ color: '#C8F135' }}>{formatCurrency(totalMonthlyFee)}</p> : <p className="font-bebas text-xl" style={{ color: '#555' }}>—</p>}
+                {totalMonthlyFee > 0 ? <p className="font-bebas text-2xl" style={{ color: '#FAB450' }}>{formatCurrency(totalMonthlyFee)}</p> : <p className="font-bebas text-xl" style={{ color: '#555' }}>—</p>}
               </div>
               <div className="rounded-xl p-4 text-center" style={{ background: breakEvenMonths ? 'rgba(46,204,113,0.05)' : setupFeeN > 0 ? 'rgba(255,59,59,0.05)' : '#1a1a1a', border: `1px solid ${breakEvenMonths ? 'rgba(46,204,113,0.2)' : setupFeeN > 0 ? 'rgba(255,59,59,0.2)' : '#2a2a2a'}` }}>
                 <p className="font-mono-dm text-[10px]" style={{ color: '#888' }}>BREAK-EVEN</p>
@@ -743,15 +743,15 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
                   </tr>
                   <tr style={{ borderBottom: '1px solid #1a1a1a' }}>
                     <td className="p-3 font-syne font-bold" style={{ color: '#fff' }}>ROI Netto</td>
-                    <td className="p-3 text-center font-bold" style={{ color: netRoiY1 >= 0 ? '#C8F135' : '#ff3b3b' }}>{formatCurrency(netRoiY1)}</td>
-                    <td className="p-3 text-center font-bold" style={{ color: netRoiY2 >= 0 ? '#C8F135' : '#ff3b3b' }}>{formatCurrency(netRoiY2)}</td>
-                    <td className="p-3 text-center font-bold" style={{ color: netRoiY3 >= 0 ? '#C8F135' : '#ff3b3b' }}>{formatCurrency(netRoiY3)}</td>
+                    <td className="p-3 text-center font-bold" style={{ color: netRoiY1 >= 0 ? '#FAB450' : '#ff3b3b' }}>{formatCurrency(netRoiY1)}</td>
+                    <td className="p-3 text-center font-bold" style={{ color: netRoiY2 >= 0 ? '#FAB450' : '#ff3b3b' }}>{formatCurrency(netRoiY2)}</td>
+                    <td className="p-3 text-center font-bold" style={{ color: netRoiY3 >= 0 ? '#FAB450' : '#ff3b3b' }}>{formatCurrency(netRoiY3)}</td>
                   </tr>
                   <tr>
                     <td className="p-3 font-syne font-bold" style={{ color: '#fff' }}>ROI %</td>
-                    <td className="p-3 text-center font-bold text-base" style={{ color: roiPctY1 >= 0 ? '#C8F135' : '#ff3b3b' }}>{roiPctY1 >= 0 ? '+' : ''}{Math.round(roiPctY1)}%</td>
-                    <td className="p-3 text-center font-bold text-base" style={{ color: roiPctY2 >= 0 ? '#C8F135' : '#ff3b3b' }}>{roiPctY2 >= 0 ? '+' : ''}{Math.round(roiPctY2)}%</td>
-                    <td className="p-3 text-center font-bold text-base" style={{ color: roiPctY3 >= 0 ? '#C8F135' : '#ff3b3b' }}>{roiPctY3 >= 0 ? '+' : ''}{Math.round(roiPctY3)}%</td>
+                    <td className="p-3 text-center font-bold text-base" style={{ color: roiPctY1 >= 0 ? '#FAB450' : '#ff3b3b' }}>{roiPctY1 >= 0 ? '+' : ''}{Math.round(roiPctY1)}%</td>
+                    <td className="p-3 text-center font-bold text-base" style={{ color: roiPctY2 >= 0 ? '#FAB450' : '#ff3b3b' }}>{roiPctY2 >= 0 ? '+' : ''}{Math.round(roiPctY2)}%</td>
+                    <td className="p-3 text-center font-bold text-base" style={{ color: roiPctY3 >= 0 ? '#FAB450' : '#ff3b3b' }}>{roiPctY3 >= 0 ? '+' : ''}{Math.round(roiPctY3)}%</td>
                   </tr>
                 </tbody>
               </table>
@@ -768,7 +768,7 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
             { value: '96%', label: 'Clienti soddisfatti', icon: <CheckCircle className="w-4 h-4" /> },
           ].map((stat, i) => (
             <div key={i} className="rounded-xl p-4 text-center" style={{ background: '#141414', border: '1px solid #242424' }}>
-              <div className="flex justify-center mb-2" style={{ color: '#C8F135' }}>{stat.icon}</div>
+              <div className="flex justify-center mb-2" style={{ color: '#FAB450' }}>{stat.icon}</div>
               <p className="font-bebas text-2xl" style={{ color: '#fff' }}>{stat.value}</p>
               <p className="font-mono-dm text-[10px]" style={{ color: '#666' }}>{stat.label}</p>
             </div>
@@ -781,13 +781,13 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
             <h3 className="font-syne text-base font-bold" style={{ color: '#fff' }}>Scarica il tuo Report PDF</h3>
             <p className="font-mono-dm text-[10px]" style={{ color: '#666' }}>Salva per consultarlo quando vuoi</p>
           </div>
-          <Button onClick={handleDownloadPdf} disabled={isDownloading} className="rounded-full px-6 py-2.5 font-syne font-semibold text-sm" style={{ background: '#C8F135', color: '#080808' }}>
+          <Button onClick={handleDownloadPdf} disabled={isDownloading} className="rounded-full px-6 py-2.5 font-syne font-semibold text-sm" style={{ background: '#FAB450', color: '#080808' }}>
             {isDownloading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Generazione...</> : <><Download className="w-4 h-4 mr-2" />Scarica PDF</>}
           </Button>
         </div>
 
         {/* ═══ 14. CTA FINALE — CALENDARIO ═══ */}
-        <div className="rounded-2xl p-6 md:p-8" style={{ background: '#141414', border: '2px solid rgba(200,241,53,0.3)' }}>
+        <div className="rounded-2xl p-6 md:p-8" style={{ background: '#141414', border: '2px solid rgba(250,180,80,0.3)' }}>
           <div className="text-center mb-6">
             <span className="font-mono-dm text-[10px] tracking-widest px-3 py-1 rounded-full mb-3 inline-block" style={{ background: 'rgba(255,59,59,0.15)', color: '#ff3b3b', border: '1px solid rgba(255,59,59,0.3)' }}>
               POSTI LIMITATI — QUESTA SETTIMANA
@@ -930,7 +930,7 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
                 <div className="space-y-3">
                   {[
                     { label: 'Conservativo', key: 'scenarioConservative' as const, color: '#2ecc71', min: 5, max: 40 },
-                    { label: 'Moderato', key: 'scenarioModerate' as const, color: '#C8F135', min: 10, max: 70 },
+                    { label: 'Moderato', key: 'scenarioModerate' as const, color: '#FAB450', min: 10, max: 70 },
                     { label: 'Aggressivo', key: 'scenarioAggressive' as const, color: '#a78bfa', min: 20, max: 100 },
                   ].map(s => (
                     <div key={s.key}>
