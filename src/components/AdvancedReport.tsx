@@ -230,7 +230,7 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
   };
 
   return (
-    <div className="min-h-screen relative" style={{ background: '#080808', fontFamily: "'Syne', sans-serif" }}>
+    <div className="min-h-screen relative" style={{ background: '#121d2b', fontFamily: "'Syne', sans-serif" }}>
       {/* Google Fonts */}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap');
@@ -284,12 +284,12 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
         </div>
 
         {/* ═══ 3. SCORE COMPLESSIVO ═══ */}
-        <div className="rounded-2xl p-6" style={{ background: '#141414', border: '1px solid #242424' }}>
+        <div className="rounded-2xl p-6" style={{ background: '#1a2942', border: '1px solid #2a3a52' }}>
           <div className="flex flex-col md:flex-row items-center gap-6">
             {/* Score circle */}
             <div className="relative w-36 h-36 flex-shrink-0">
               <svg className="w-full h-full transform -rotate-90" viewBox="0 0 128 128">
-                <circle cx="64" cy="64" r="56" stroke="#242424" strokeWidth="10" fill="none" />
+                <circle cx="64" cy="64" r="56" stroke="#2a3a52" strokeWidth="10" fill="none" />
                 <circle cx="64" cy="64" r="56" stroke={getScoreColor(r.emailHealthScore)} strokeWidth="10" fill="none"
                   strokeDasharray={`${r.emailHealthScore * 3.52} 352`} strokeLinecap="round" />
               </svg>
@@ -312,10 +312,10 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
           {/* 5 dimension bars */}
           <div className="grid grid-cols-1 sm:grid-cols-5 gap-3 mt-6">
             {dimensions.map((d) => (
-              <div key={d.label} className="rounded-xl p-3" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a' }}>
+              <div key={d.label} className="rounded-xl p-3" style={{ background: '#1a2942', border: '1px solid #2a3a52' }}>
                 <p className="font-mono-dm text-[10px] tracking-wider mb-2" style={{ color: '#888' }}>{d.label.toUpperCase()}</p>
                 <p className="font-bebas text-2xl mb-1" style={{ color: d.color }}>{d.score}</p>
-                <div className="w-full h-1.5 rounded-full" style={{ background: '#2a2a2a' }}>
+                <div className="w-full h-1.5 rounded-full" style={{ background: '#2a3a52' }}>
                   <div className="h-full rounded-full transition-all duration-1000" style={{ width: `${d.score}%`, background: d.color }} />
                 </div>
               </div>
@@ -324,14 +324,14 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
         </div>
 
         {/* ═══ 4. SITUAZIONE ATTUALE VS BENCHMARK ═══ */}
-        <div className="rounded-2xl p-6" style={{ background: '#141414', border: '1px solid #242424' }}>
+        <div className="rounded-2xl p-6" style={{ background: '#1a2942', border: '1px solid #2a3a52' }}>
           <h2 className="font-bebas text-2xl tracking-wide mb-5" style={{ color: '#ffffff' }}>SITUAZIONE ATTUALE VS BENCHMARK</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <div className="rounded-xl p-4" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a' }}>
+            <div className="rounded-xl p-4" style={{ background: '#1a2942', border: '1px solid #2a3a52' }}>
               <p className="font-mono-dm text-[10px] tracking-wider" style={{ color: '#666' }}>FATTURATO MENSILE</p>
               <p className="font-bebas text-2xl mt-1" style={{ color: '#ffffff' }}>{formatCurrency(r.monthlyRevenue)}</p>
             </div>
-            <div className="rounded-xl p-4" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a' }}>
+            <div className="rounded-xl p-4" style={{ background: '#1a2942', border: '1px solid #2a3a52' }}>
               <p className="font-mono-dm text-[10px] tracking-wider" style={{ color: '#666' }}>EMAIL ATTUALE</p>
               <p className="font-bebas text-2xl mt-1" style={{ color: '#e67e22' }}>{formatCurrency(r.currentEmailRevenue)}</p>
               <p className="font-mono-dm text-[10px]" style={{ color: '#666' }}>{r.currentEmailPercent}% del totale</p>
@@ -351,14 +351,14 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
               <span style={{ color: '#888' }}>Il tuo risultato ({r.currentEmailPercent}%)</span>
               <span style={{ color: '#FAB450' }}>Benchmark (35%)</span>
             </div>
-            <div className="relative h-3 rounded-full overflow-hidden" style={{ background: '#2a2a2a' }}>
+            <div className="relative h-3 rounded-full overflow-hidden" style={{ background: '#2a3a52' }}>
               <div className="absolute h-full rounded-full transition-all duration-1000" style={{ width: `${Math.min(100, r.currentEmailPercent / 35 * 100)}%`, background: 'linear-gradient(90deg, #ff3b3b, #e67e22, #FAB450)' }} />
             </div>
           </div>
         </div>
 
         {/* ═══ 5. COSA FUNZIONA ═══ */}
-        <div className="rounded-2xl p-6" style={{ background: '#141414', border: '1px solid #242424' }}>
+        <div className="rounded-2xl p-6" style={{ background: '#1a2942', border: '1px solid #2a3a52' }}>
           <h2 className="font-bebas text-2xl tracking-wide mb-4 flex items-center gap-2" style={{ color: '#2ecc71' }}>
             <CheckCircle className="w-5 h-5" /> COSA FUNZIONA
           </h2>
@@ -373,7 +373,7 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
         </div>
 
         {/* ═══ 6. DOVE SI TROVA IL BLOCCO ═══ */}
-        <div className="rounded-2xl p-6" style={{ background: '#141414', border: '1px solid #242424' }}>
+        <div className="rounded-2xl p-6" style={{ background: '#1a2942', border: '1px solid #2a3a52' }}>
           <h2 className="font-bebas text-2xl tracking-wide mb-4 flex items-center gap-2" style={{ color: '#ff3b3b' }}>
             <AlertTriangle className="w-5 h-5" /> DOVE STAI PERDENDO SOLDI
           </h2>
@@ -388,7 +388,7 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
         </div>
 
         {/* ═══ 7. ANALISI AUTOMAZIONI ═══ */}
-        <div className="rounded-2xl p-6" style={{ background: '#141414', border: '1px solid #242424' }}>
+        <div className="rounded-2xl p-6" style={{ background: '#1a2942', border: '1px solid #2a3a52' }}>
           <div className="flex items-center justify-between mb-5">
             <h2 className="font-bebas text-2xl tracking-wide" style={{ color: '#ffffff' }}>ANALISI AUTOMAZIONI</h2>
             <span className="font-mono-dm text-xs px-3 py-1 rounded-full" style={{ background: r.automationCoverage >= 60 ? 'rgba(46,204,113,0.15)' : 'rgba(255,59,59,0.15)', color: r.automationCoverage >= 60 ? '#2ecc71' : '#ff3b3b', border: `1px solid ${r.automationCoverage >= 60 ? 'rgba(46,204,113,0.3)' : 'rgba(255,59,59,0.3)'}` }}>
@@ -397,10 +397,10 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-5">
-            <div className="rounded-xl p-4" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a' }}>
+            <div className="rounded-xl p-4" style={{ background: '#1a2942', border: '1px solid #2a3a52' }}>
               <p className="font-mono-dm text-[10px] tracking-wider" style={{ color: '#888' }}>COPERTURA</p>
               <p className="font-bebas text-3xl" style={{ color: '#ffffff' }}>{Math.round(r.automationCoverage)}%</p>
-              <div className="w-full h-1.5 rounded-full mt-2" style={{ background: '#2a2a2a' }}>
+              <div className="w-full h-1.5 rounded-full mt-2" style={{ background: '#2a3a52' }}>
                 <div className="h-full rounded-full" style={{ width: `${r.automationCoverage}%`, background: '#FAB450' }} />
               </div>
             </div>
@@ -414,7 +414,7 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
           {r.missingFlows.length > 0 && (
             <div className="space-y-2">
               {r.missingFlows.map((flow) => (
-                <div key={flow.key} className="flex items-center justify-between rounded-xl p-3" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a' }}>
+                <div key={flow.key} className="flex items-center justify-between rounded-xl p-3" style={{ background: '#1a2942', border: '1px solid #2a3a52' }}>
                   <div className="flex items-center gap-3">
                     <span className="font-mono-dm text-[10px] px-2 py-0.5 rounded" style={{
                       background: flow.priority === 1 ? 'rgba(255,59,59,0.15)' : flow.priority === 2 ? 'rgba(230,126,34,0.15)' : 'rgba(136,136,136,0.15)',
@@ -436,13 +436,13 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
         </div>
 
         {/* ═══ 8. SCENARI DI CRESCITA ═══ */}
-        <div className="rounded-2xl p-6" style={{ background: '#141414', border: '1px solid #242424' }}>
+        <div className="rounded-2xl p-6" style={{ background: '#1a2942', border: '1px solid #2a3a52' }}>
           <h2 className="font-bebas text-2xl tracking-wide mb-1" style={{ color: '#ffffff' }}>SCENARI DI CRESCITA</h2>
           <p className="font-mono-dm text-[10px] mb-5" style={{ color: '#666' }}>Incremento stimato sul fatturato e-commerce totale</p>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             {/* Conservative */}
-            <div className="rounded-xl p-5" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a' }}>
+            <div className="rounded-xl p-5" style={{ background: '#1a2942', border: '1px solid #2a3a52' }}>
               <p className="font-mono-dm text-[10px] tracking-wider mb-1" style={{ color: '#2ecc71' }}>CONSERVATIVO</p>
               <p className="font-bebas text-4xl" style={{ color: '#ffffff' }}>+{r.scenarios.conservative.growthPercent}%</p>
               <p className="font-bebas text-xl mt-1" style={{ color: '#2ecc71' }}>{formatCurrency(r.scenarios.conservative.value)}<span className="font-mono-dm text-[10px]" style={{ color: '#666' }}>/mese</span></p>
@@ -451,7 +451,7 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
 
             {/* Moderate - recommended */}
             <div className="rounded-xl p-5 relative" style={{ background: 'rgba(250,180,80,0.05)', border: '2px solid #FAB450' }}>
-              <span className="absolute -top-3 left-1/2 -translate-x-1/2 font-mono-dm text-[10px] px-3 py-0.5 rounded-full" style={{ background: '#FAB450', color: '#080808' }}>CONSIGLIATO</span>
+              <span className="absolute -top-3 left-1/2 -translate-x-1/2 font-mono-dm text-[10px] px-3 py-0.5 rounded-full" style={{ background: '#FAB450', color: '#121d2b' }}>CONSIGLIATO</span>
               <p className="font-mono-dm text-[10px] tracking-wider mb-1 mt-1" style={{ color: '#FAB450' }}>MODERATO</p>
               <p className="font-bebas text-4xl" style={{ color: '#ffffff' }}>+{r.scenarios.moderate.growthPercent}%</p>
               <p className="font-bebas text-xl mt-1" style={{ color: '#FAB450' }}>{formatCurrency(r.scenarios.moderate.value)}<span className="font-mono-dm text-[10px]" style={{ color: '#888' }}>/mese</span></p>
@@ -459,7 +459,7 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
             </div>
 
             {/* Aggressive */}
-            <div className="rounded-xl p-5" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a' }}>
+            <div className="rounded-xl p-5" style={{ background: '#1a2942', border: '1px solid #2a3a52' }}>
               <p className="font-mono-dm text-[10px] tracking-wider mb-1" style={{ color: '#a78bfa' }}>AGGRESSIVO</p>
               <p className="font-bebas text-4xl" style={{ color: '#ffffff' }}>+{r.scenarios.aggressive.growthPercent}%</p>
               <p className="font-bebas text-xl mt-1" style={{ color: '#a78bfa' }}>{formatCurrency(r.scenarios.aggressive.value)}<span className="font-mono-dm text-[10px]" style={{ color: '#666' }}>/mese</span></p>
@@ -469,12 +469,12 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
         </div>
 
         {/* ═══ 9. ROADMAP 3 AZIONI ═══ */}
-        <div className="rounded-2xl p-6" style={{ background: '#141414', border: '1px solid #242424' }}>
+        <div className="rounded-2xl p-6" style={{ background: '#1a2942', border: '1px solid #2a3a52' }}>
           <h2 className="font-bebas text-2xl tracking-wide mb-5" style={{ color: '#ffffff' }}>ROADMAP: 3 AZIONI PRIORITARIE</h2>
           <div className="space-y-3">
             {r.topActions.map((action, i) => (
-              <div key={i} className="flex items-center gap-4 rounded-xl p-4" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a' }}>
-                <div className="w-10 h-10 rounded-full flex items-center justify-center font-bebas text-xl flex-shrink-0" style={{ background: '#FAB450', color: '#080808' }}>
+              <div key={i} className="flex items-center gap-4 rounded-xl p-4" style={{ background: '#1a2942', border: '1px solid #2a3a52' }}>
+                <div className="w-10 h-10 rounded-full flex items-center justify-center font-bebas text-xl flex-shrink-0" style={{ background: '#FAB450', color: '#121d2b' }}>
                   {i + 1}
                 </div>
                 <div className="flex-1">
@@ -488,7 +488,7 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
         </div>
 
         {/* ═══ 10. CASO STUDIO ═══ */}
-        <div className="rounded-2xl p-6" style={{ background: '#141414', border: '1px solid #242424' }}>
+        <div className="rounded-2xl p-6" style={{ background: '#1a2942', border: '1px solid #2a3a52' }}>
           <h2 className="font-bebas text-2xl tracking-wide mb-1" style={{ color: '#ffffff' }}>CASO STUDIO: {r.sectorBenchmark.label.toUpperCase()}</h2>
           <p className="font-mono-dm text-[10px] mb-5" style={{ color: '#666' }}>Risultati tipici per e-commerce simili dopo {caseStudy.timeframe}</p>
           <div className="grid grid-cols-2 gap-3">
@@ -522,11 +522,11 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
 
         {/* ═══ 12. SLIDER FORECAST ═══ */}
         {r.listForecast && (
-          <div className="rounded-2xl p-6" style={{ background: '#141414', border: '1px solid #242424' }}>
+          <div className="rounded-2xl p-6" style={{ background: '#1a2942', border: '1px solid #2a3a52' }}>
             <h2 className="font-bebas text-2xl tracking-wide mb-5" style={{ color: '#ffffff' }}>FORECAST: IL POTENZIALE DELLA TUA LISTA</h2>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-5">
-              <div className="rounded-xl p-4 text-center" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a' }}>
+              <div className="rounded-xl p-4 text-center" style={{ background: '#1a2942', border: '1px solid #2a3a52' }}>
                 <p className="font-mono-dm text-[10px]" style={{ color: '#888' }}>LISTA ATTUALE</p>
                 <p className="font-bebas text-2xl" style={{ color: '#fff' }}>{r.listForecast.listSize.toLocaleString('it-IT')}</p>
                 <p className="font-mono-dm text-[10px]" style={{ color: '#666' }}>iscritti</p>
@@ -539,7 +539,7 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
                   <div className="flex justify-between font-mono-dm text-[10px] mt-1" style={{ color: '#666' }}><span>0</span><span>30</span></div>
                 </div>
               </div>
-              <div className="rounded-xl p-4 text-center" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a' }}>
+              <div className="rounded-xl p-4 text-center" style={{ background: '#1a2942', border: '1px solid #2a3a52' }}>
                 <p className="font-mono-dm text-[10px]" style={{ color: '#888' }}>{r.listForecast.isCustomAov ? 'AOV REALE' : 'AOV STIMATO'}</p>
                 <p className="font-bebas text-2xl" style={{ color: r.listForecast.isCustomAov ? '#2ecc71' : '#FAB450' }}>€{r.listForecast.sectorAOV}</p>
                 <p className="font-mono-dm text-[10px]" style={{ color: '#666' }}>valore medio ordine</p>
@@ -547,10 +547,10 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
             </div>
 
             {/* Forecast table */}
-            <div className="overflow-x-auto rounded-xl" style={{ border: '1px solid #2a2a2a' }}>
+            <div className="overflow-x-auto rounded-xl" style={{ border: '1px solid #2a3a52' }}>
               <table className="w-full text-sm">
                 <thead>
-                  <tr style={{ borderBottom: '1px solid #2a2a2a' }}>
+                  <tr style={{ borderBottom: '1px solid #2a3a52' }}>
                     <th className="text-left p-3 font-mono-dm text-[10px]" style={{ color: '#666' }}></th>
                     <th className="text-center p-3 font-mono-dm text-[10px]" style={{ color: '#FAB450', background: 'rgba(250,180,80,0.05)' }}>CORRENTE</th>
                     <th className="text-center p-3 font-mono-dm text-[10px]" style={{ color: '#e67e22', background: 'rgba(230,126,34,0.05)' }}>OTTIMIZZATO</th>
@@ -564,7 +564,7 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
                     ['Rev. Newsletter', formatCurrency(liveNewsletterRev), formatCurrency(r.listForecast.optimized.newsletterRevenue), formatCurrency(r.listForecast.benchmark.newsletterRevenue)],
                     ['Rev. Automazioni', formatCurrency(liveAutomationRev), formatCurrency(r.listForecast.optimized.automationRevenue), formatCurrency(r.listForecast.benchmark.automationRevenue)],
                   ].map(([label, curr, opt, bench], i) => (
-                    <tr key={i} style={{ borderBottom: '1px solid #1a1a1a' }}>
+                    <tr key={i} style={{ borderBottom: '1px solid #1a2942' }}>
                       <td className="p-3" style={{ color: '#888' }}>{label}</td>
                       <td className="p-3 text-center font-medium" style={{ color: '#FAB450', background: 'rgba(250,180,80,0.02)' }}>{curr}</td>
                       <td className="p-3 text-center" style={{ color: '#e67e22', background: 'rgba(230,126,34,0.02)' }}>{opt}</td>
@@ -589,7 +589,7 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
 
         {/* ═══ POPUP & CRESCITA LISTA ═══ */}
         {r.popupData && r.popupData.hasPopup && (
-          <div className="rounded-2xl p-6" style={{ background: '#141414', border: '1px solid #242424' }}>
+          <div className="rounded-2xl p-6" style={{ background: '#1a2942', border: '1px solid #2a3a52' }}>
             <h2 className="font-bebas text-2xl tracking-wide mb-5" style={{ color: '#ffffff' }}>POPUP & CRESCITA LISTA</h2>
             <p className="font-mono-dm text-[10px] mb-5" style={{ color: '#666' }}>Tasso conversione {r.popupData.conversionRate}% su {r.popupData.monthlyVisitors.toLocaleString('it-IT')} visitatori/mese</p>
 
@@ -598,7 +598,7 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
                 <p className="font-mono-dm text-[10px]" style={{ color: '#FAB450' }}>NUOVI ISCRITTI/MESE</p>
                 <p className="font-bebas text-3xl" style={{ color: '#fff' }}>{r.popupData.newSubscribersPerMonth.toLocaleString('it-IT')}</p>
               </div>
-              <div className="rounded-xl p-4 text-center" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a' }}>
+              <div className="rounded-xl p-4 text-center" style={{ background: '#1a2942', border: '1px solid #2a3a52' }}>
                 <p className="font-mono-dm text-[10px]" style={{ color: '#888' }}>LISTA A 12 MESI</p>
                 <p className="font-bebas text-3xl" style={{ color: '#fff' }}>{r.popupData.projectedListSize12m.toLocaleString('it-IT')}</p>
                 <p className="font-mono-dm text-[10px]" style={{ color: '#666' }}>+{r.popupData.monthlyListGrowthRate}%/mese</p>
@@ -617,7 +617,7 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
         )}
 
         {/* ═══ PROIEZIONE FATTURATO NEL TEMPO ═══ */}
-        <div className="rounded-2xl p-6" style={{ background: '#141414', border: '1px solid #242424' }}>
+        <div className="rounded-2xl p-6" style={{ background: '#1a2942', border: '1px solid #2a3a52' }}>
           <h2 className="font-bebas text-2xl tracking-wide mb-1" style={{ color: '#ffffff' }}>PROIEZIONE FATTURATO NEL TEMPO</h2>
           <p className="font-mono-dm text-[10px] mb-5" style={{ color: '#666' }}>Scenario moderato +{r.scenarios.moderate.growthPercent}% sul fatturato e-commerce</p>
 
@@ -638,23 +638,23 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
 
             return (
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div className="rounded-xl p-4 text-center" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a' }}>
+                <div className="rounded-xl p-4 text-center" style={{ background: '#1a2942', border: '1px solid #2a3a52' }}>
                   <p className="font-mono-dm text-[10px]" style={{ color: '#888' }}>OGGI</p>
                   <p className="font-bebas text-2xl" style={{ color: '#fff' }}>{formatCurrency(totalRevenue)}</p>
                   <p className="font-mono-dm text-[10px]" style={{ color: '#666' }}>Email: {formatCurrency(emailBase)}</p>
                 </div>
-                <div className="rounded-xl p-4 text-center" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a' }}>
+                <div className="rounded-xl p-4 text-center" style={{ background: '#1a2942', border: '1px solid #2a3a52' }}>
                   <p className="font-mono-dm text-[10px]" style={{ color: '#FAB450' }}>3 MESI</p>
                   <p className="font-bebas text-2xl" style={{ color: '#fff' }}>{formatCurrency(totalAt3m)}</p>
                   <p className="font-mono-dm text-[10px]" style={{ color: '#2ecc71' }}>+{growth3.toFixed(1)}%</p>
                 </div>
-                <div className="rounded-xl p-4 text-center" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a' }}>
+                <div className="rounded-xl p-4 text-center" style={{ background: '#1a2942', border: '1px solid #2a3a52' }}>
                   <p className="font-mono-dm text-[10px]" style={{ color: '#e67e22' }}>6 MESI</p>
                   <p className="font-bebas text-2xl" style={{ color: '#fff' }}>{formatCurrency(totalAt6m)}</p>
                   <p className="font-mono-dm text-[10px]" style={{ color: '#2ecc71' }}>+{growth6.toFixed(1)}%</p>
                 </div>
                 <div className="rounded-xl p-4 text-center relative" style={{ background: 'rgba(250,180,80,0.05)', border: '2px solid rgba(250,180,80,0.3)' }}>
-                  <span className="absolute -top-2 left-1/2 -translate-x-1/2 font-mono-dm text-[9px] px-2 py-0.5 rounded-full" style={{ background: '#FAB450', color: '#080808' }}>OBIETTIVO</span>
+                  <span className="absolute -top-2 left-1/2 -translate-x-1/2 font-mono-dm text-[9px] px-2 py-0.5 rounded-full" style={{ background: '#FAB450', color: '#121d2b' }}>OBIETTIVO</span>
                   <p className="font-mono-dm text-[10px] mt-1" style={{ color: '#FAB450' }}>12 MESI</p>
                   <p className="font-bebas text-2xl" style={{ color: '#fff' }}>{formatCurrency(totalAt12m)}</p>
                   <p className="font-mono-dm text-[10px]" style={{ color: '#2ecc71' }}>+{growth12.toFixed(1)}%</p>
@@ -666,7 +666,7 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
 
         {/* ═══ INVESTIMENTO & ROI (admin only) ═══ */}
         {showInvestment && (
-          <div className="rounded-2xl p-6" style={{ background: '#141414', border: '1px solid rgba(250,180,80,0.3)' }}>
+          <div className="rounded-2xl p-6" style={{ background: '#1a2942', border: '1px solid rgba(250,180,80,0.3)' }}>
             <h2 className="font-bebas text-2xl tracking-wide mb-1" style={{ color: '#FAB450' }}>INVESTIMENTO & ROI</h2>
             <p className="font-mono-dm text-[10px] mb-5" style={{ color: '#666' }}>Inserisci i costi del servizio per calcolare break-even e ROI</p>
 
@@ -676,7 +676,7 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono-dm text-sm" style={{ color: '#666' }}>€</span>
                   <input type="number" placeholder="1500" min={0} value={setupFee} onChange={(e) => setSetupFee(e.target.value)}
-                    className="w-full rounded-lg px-3 py-2 pl-8 text-sm focus:outline-none" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a', color: '#fff' }} />
+                    className="w-full rounded-lg px-3 py-2 pl-8 text-sm focus:outline-none" style={{ background: '#1a2942', border: '1px solid #2a3a52', color: '#fff' }} />
                 </div>
               </div>
               <div>
@@ -684,14 +684,14 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono-dm text-sm" style={{ color: '#666' }}>€</span>
                   <input type="number" placeholder="800" min={0} value={monthlyFixed} onChange={(e) => setMonthlyFixed(e.target.value)}
-                    className="w-full rounded-lg px-3 py-2 pl-8 text-sm focus:outline-none" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a', color: '#fff' }} />
+                    className="w-full rounded-lg px-3 py-2 pl-8 text-sm focus:outline-none" style={{ background: '#1a2942', border: '1px solid #2a3a52', color: '#fff' }} />
                 </div>
               </div>
               <div>
                 <label className="block font-mono-dm text-[10px] mb-1.5" style={{ color: '#888' }}>COMMISSIONE % SU FATTURATO EMAIL NETTO IVA</label>
                 <div className="relative">
                   <input type="number" placeholder="10" min={0} max={100} value={monthlyPercent} onChange={(e) => setMonthlyPercent(e.target.value)}
-                    className="w-full rounded-lg px-3 py-2 pr-8 text-sm focus:outline-none" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a', color: '#fff' }} />
+                    className="w-full rounded-lg px-3 py-2 pr-8 text-sm focus:outline-none" style={{ background: '#1a2942', border: '1px solid #2a3a52', color: '#fff' }} />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 font-mono-dm text-sm" style={{ color: '#666' }}>%</span>
                 </div>
                 {monthlyPercentN > 0 && emailRevenueNetVAT > 0 && (
@@ -701,15 +701,15 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-5">
-              <div className="rounded-xl p-4 text-center" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a' }}>
+              <div className="rounded-xl p-4 text-center" style={{ background: '#1a2942', border: '1px solid #2a3a52' }}>
                 <p className="font-mono-dm text-[10px]" style={{ color: '#888' }}>SETUP</p>
                 {setupFeeN > 0 ? <p className="font-bebas text-2xl" style={{ color: '#fff' }}>{formatCurrency(setupFeeN)}</p> : <p className="font-bebas text-xl" style={{ color: '#555' }}>—</p>}
               </div>
-              <div className="rounded-xl p-4 text-center" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a' }}>
+              <div className="rounded-xl p-4 text-center" style={{ background: '#1a2942', border: '1px solid #2a3a52' }}>
                 <p className="font-mono-dm text-[10px]" style={{ color: '#888' }}>FEE MENSILE TOTALE</p>
                 {totalMonthlyFee > 0 ? <p className="font-bebas text-2xl" style={{ color: '#FAB450' }}>{formatCurrency(totalMonthlyFee)}</p> : <p className="font-bebas text-xl" style={{ color: '#555' }}>—</p>}
               </div>
-              <div className="rounded-xl p-4 text-center" style={{ background: breakEvenMonths ? 'rgba(46,204,113,0.05)' : setupFeeN > 0 ? 'rgba(255,59,59,0.05)' : '#1a1a1a', border: `1px solid ${breakEvenMonths ? 'rgba(46,204,113,0.2)' : setupFeeN > 0 ? 'rgba(255,59,59,0.2)' : '#2a2a2a'}` }}>
+              <div className="rounded-xl p-4 text-center" style={{ background: breakEvenMonths ? 'rgba(46,204,113,0.05)' : setupFeeN > 0 ? 'rgba(255,59,59,0.05)' : '#1a2942', border: `1px solid ${breakEvenMonths ? 'rgba(46,204,113,0.2)' : setupFeeN > 0 ? 'rgba(255,59,59,0.2)' : '#2a3a52'}` }}>
                 <p className="font-mono-dm text-[10px]" style={{ color: '#888' }}>BREAK-EVEN</p>
                 {setupFeeN === 0 ? <p className="font-bebas text-xl" style={{ color: '#555' }}>—</p> :
                   breakEvenMonths ? <p className="font-bebas text-2xl" style={{ color: '#2ecc71' }}>{breakEvenMonths} mesi</p> :
@@ -718,10 +718,10 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
             </div>
 
             {/* ROI 3 anni table */}
-            <div className="overflow-x-auto rounded-xl" style={{ border: '1px solid #2a2a2a' }}>
+            <div className="overflow-x-auto rounded-xl" style={{ border: '1px solid #2a3a52' }}>
               <table className="w-full text-sm">
                 <thead>
-                  <tr style={{ borderBottom: '1px solid #2a2a2a' }}>
+                  <tr style={{ borderBottom: '1px solid #2a3a52' }}>
                     <th className="text-left p-3 font-mono-dm text-[10px]" style={{ color: '#666' }}></th>
                     <th className="text-center p-3 font-mono-dm text-[10px]" style={{ color: '#fff' }}>ANNO 1</th>
                     <th className="text-center p-3 font-mono-dm text-[10px]" style={{ color: '#fff' }}>ANNO 2</th>
@@ -729,19 +729,19 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
                   </tr>
                 </thead>
                 <tbody className="font-mono-dm text-xs">
-                  <tr style={{ borderBottom: '1px solid #1a1a1a' }}>
+                  <tr style={{ borderBottom: '1px solid #1a2942' }}>
                     <td className="p-3" style={{ color: '#888' }}>Revenue aggiunto</td>
                     <td className="p-3 text-center" style={{ color: '#2ecc71' }}>{formatCurrency(annualRevAdded)}</td>
                     <td className="p-3 text-center" style={{ color: '#2ecc71' }}>{formatCurrency(annualRevAdded)}</td>
                     <td className="p-3 text-center" style={{ color: '#2ecc71' }}>{formatCurrency(annualRevAdded)}</td>
                   </tr>
-                  <tr style={{ borderBottom: '1px solid #1a1a1a' }}>
+                  <tr style={{ borderBottom: '1px solid #1a2942' }}>
                     <td className="p-3" style={{ color: '#888' }}>Costo servizio</td>
                     <td className="p-3 text-center" style={{ color: '#ff3b3b' }}>{formatCurrency(annualCostY1)}{setupFeeN > 0 && <span style={{ color: '#555' }}> (incl. setup)</span>}</td>
                     <td className="p-3 text-center" style={{ color: '#ff3b3b' }}>{formatCurrency(annualCostY2)}</td>
                     <td className="p-3 text-center" style={{ color: '#ff3b3b' }}>{formatCurrency(annualCostY3)}</td>
                   </tr>
-                  <tr style={{ borderBottom: '1px solid #1a1a1a' }}>
+                  <tr style={{ borderBottom: '1px solid #1a2942' }}>
                     <td className="p-3 font-syne font-bold" style={{ color: '#fff' }}>ROI Netto</td>
                     <td className="p-3 text-center font-bold" style={{ color: netRoiY1 >= 0 ? '#FAB450' : '#ff3b3b' }}>{formatCurrency(netRoiY1)}</td>
                     <td className="p-3 text-center font-bold" style={{ color: netRoiY2 >= 0 ? '#FAB450' : '#ff3b3b' }}>{formatCurrency(netRoiY2)}</td>
@@ -767,7 +767,7 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
             { value: '35x', label: 'ROI medio email', icon: <Zap className="w-4 h-4" /> },
             { value: '96%', label: 'Clienti soddisfatti', icon: <CheckCircle className="w-4 h-4" /> },
           ].map((stat, i) => (
-            <div key={i} className="rounded-xl p-4 text-center" style={{ background: '#141414', border: '1px solid #242424' }}>
+            <div key={i} className="rounded-xl p-4 text-center" style={{ background: '#1a2942', border: '1px solid #2a3a52' }}>
               <div className="flex justify-center mb-2" style={{ color: '#FAB450' }}>{stat.icon}</div>
               <p className="font-bebas text-2xl" style={{ color: '#fff' }}>{stat.value}</p>
               <p className="font-mono-dm text-[10px]" style={{ color: '#666' }}>{stat.label}</p>
@@ -776,18 +776,18 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
         </div>
 
         {/* ═══ DOWNLOAD PDF ═══ */}
-        <div className="rounded-2xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4" style={{ background: '#141414', border: '1px solid #242424' }}>
+        <div className="rounded-2xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4" style={{ background: '#1a2942', border: '1px solid #2a3a52' }}>
           <div>
             <h3 className="font-syne text-base font-bold" style={{ color: '#fff' }}>Scarica il tuo Report PDF</h3>
             <p className="font-mono-dm text-[10px]" style={{ color: '#666' }}>Salva per consultarlo quando vuoi</p>
           </div>
-          <Button onClick={handleDownloadPdf} disabled={isDownloading} className="rounded-full px-6 py-2.5 font-syne font-semibold text-sm" style={{ background: '#FAB450', color: '#080808' }}>
+          <Button onClick={handleDownloadPdf} disabled={isDownloading} className="rounded-full px-6 py-2.5 font-syne font-semibold text-sm" style={{ background: '#FAB450', color: '#121d2b' }}>
             {isDownloading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Generazione...</> : <><Download className="w-4 h-4 mr-2" />Scarica PDF</>}
           </Button>
         </div>
 
         {/* ═══ 14. CTA FINALE — CALENDARIO ═══ */}
-        <div className="rounded-2xl p-6 md:p-8" style={{ background: '#141414', border: '2px solid rgba(250,180,80,0.3)' }}>
+        <div className="rounded-2xl p-6 md:p-8" style={{ background: '#1a2942', border: '2px solid rgba(250,180,80,0.3)' }}>
           <div className="text-center mb-6">
             <span className="font-mono-dm text-[10px] tracking-widest px-3 py-1 rounded-full mb-3 inline-block" style={{ background: 'rgba(255,59,59,0.15)', color: '#ff3b3b', border: '1px solid rgba(255,59,59,0.3)' }}>
               POSTI LIMITATI — QUESTA SETTIMANA
@@ -810,7 +810,7 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
           </div>
 
           <div className="text-center">
-            <Button onClick={onRestart} variant="outline" className="rounded-full font-mono-dm text-xs" style={{ borderColor: '#2a2a2a', color: '#888', background: 'transparent' }}>
+            <Button onClick={onRestart} variant="outline" className="rounded-full font-mono-dm text-xs" style={{ borderColor: '#2a3a52', color: '#888', background: 'transparent' }}>
               Fai un'altra analisi
             </Button>
           </div>
@@ -822,7 +822,7 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
       <button
         onClick={() => setShowSimPanel(true)}
         className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-full shadow-2xl text-sm font-semibold transition-all hover:scale-105 active:scale-95 font-syne"
-        style={{ background: simulatedReport ? '#7c3aed' : '#141414', border: `2px solid ${simulatedReport ? '#a78bfa' : '#2a2a2a'}`, color: simulatedReport ? '#e9d5ff' : '#888' }}
+        style={{ background: simulatedReport ? '#7c3aed' : '#1a2942', border: `2px solid ${simulatedReport ? '#a78bfa' : '#2a3a52'}`, color: simulatedReport ? '#e9d5ff' : '#888' }}
         title="Simula modifiche ai dati"
       >
         <Settings className="w-4 h-4" />
@@ -833,9 +833,9 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
       {showSimPanel && (
         <>
           <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" onClick={() => setShowSimPanel(false)} />
-          <div className="fixed top-0 right-0 h-full w-full max-w-md z-50 flex flex-col overflow-hidden" style={{ background: '#0a0a0a', borderLeft: '1px solid #242424' }}>
+          <div className="fixed top-0 right-0 h-full w-full max-w-md z-50 flex flex-col overflow-hidden" style={{ background: '#121d2b', borderLeft: '1px solid #2a3a52' }}>
             {/* Header */}
-            <div className="flex items-center justify-between px-5 py-4 flex-shrink-0" style={{ borderBottom: '1px solid #242424', background: '#111' }}>
+            <div className="flex items-center justify-between px-5 py-4 flex-shrink-0" style={{ borderBottom: '1px solid #2a3a52', background: '#111' }}>
               <div className="flex items-center gap-2">
                 <Settings className="w-5 h-5" style={{ color: '#a78bfa' }} />
                 <h3 className="font-syne font-bold text-base" style={{ color: '#fff' }}>Simula modifiche</h3>
@@ -857,7 +857,7 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono-dm text-sm" style={{ color: '#666' }}>€</span>
                   <input type="number" min={0} value={simInputs.monthlyRevenue}
                     onChange={e => setSimInputs(p => ({ ...p, monthlyRevenue: parseFloat(e.target.value) || 0 }))}
-                    className="w-full rounded-lg px-3 py-2 pl-8 text-sm focus:outline-none" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a', color: '#fff' }} />
+                    className="w-full rounded-lg px-3 py-2 pl-8 text-sm focus:outline-none" style={{ background: '#1a2942', border: '1px solid #2a3a52', color: '#fff' }} />
                 </div>
               </div>
 
@@ -875,7 +875,7 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
                 <label className="block font-mono-dm text-[10px] tracking-wider mb-1.5" style={{ color: '#888' }}>DIMENSIONE LISTA</label>
                 <input type="number" min={0} value={simInputs.listSize}
                   onChange={e => setSimInputs(p => ({ ...p, listSize: parseFloat(e.target.value) || 0 }))}
-                  className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a', color: '#fff' }} />
+                  className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none" style={{ background: '#1a2942', border: '1px solid #2a3a52', color: '#fff' }} />
               </div>
 
               {/* AOV */}
@@ -885,7 +885,7 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono-dm text-sm" style={{ color: '#666' }}>€</span>
                   <input type="number" min={0} placeholder="benchmark" value={simInputs.aov}
                     onChange={e => setSimInputs(p => ({ ...p, aov: e.target.value }))}
-                    className="w-full rounded-lg px-3 py-2 pl-8 text-sm focus:outline-none" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a', color: '#fff' }} />
+                    className="w-full rounded-lg px-3 py-2 pl-8 text-sm focus:outline-none" style={{ background: '#1a2942', border: '1px solid #2a3a52', color: '#fff' }} />
                 </div>
               </div>
 
@@ -893,7 +893,7 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
               <div>
                 <label className="block font-mono-dm text-[10px] tracking-wider mb-1.5" style={{ color: '#888' }}>FREQUENZA NEWSLETTER</label>
                 <select value={simInputs.emailFrequency} onChange={e => setSimInputs(p => ({ ...p, emailFrequency: e.target.value }))}
-                  className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a', color: '#fff' }}>
+                  className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none" style={{ background: '#1a2942', border: '1px solid #2a3a52', color: '#fff' }}>
                   <option value="none">Nessuna (0/mese)</option>
                   <option value="1-2">1-2/settimana (~5/mese)</option>
                   <option value="3-4">3-4/settimana (~14/mese)</option>
@@ -912,10 +912,10 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
                       <button key={key}
                         onClick={() => setSimInputs(p => ({ ...p, activeFlows: isActive ? p.activeFlows.filter(f => f !== key) : [...p.activeFlows, key] }))}
                         className="flex items-center justify-between px-3 py-2 rounded-lg text-sm text-left transition-all"
-                        style={{ background: isActive ? 'rgba(124,58,237,0.15)' : '#1a1a1a', border: `1px solid ${isActive ? 'rgba(167,139,250,0.4)' : '#2a2a2a'}`, color: isActive ? '#c4b5fd' : '#888' }}>
+                        style={{ background: isActive ? 'rgba(124,58,237,0.15)' : '#1a2942', border: `1px solid ${isActive ? 'rgba(167,139,250,0.4)' : '#2a3a52'}`, color: isActive ? '#c4b5fd' : '#888' }}>
                         <span className="font-syne text-sm">{label}</span>
                         <span className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
-                          style={{ background: isActive ? '#7c3aed' : '#2a2a2a', color: isActive ? '#fff' : '#555' }}>
+                          style={{ background: isActive ? '#7c3aed' : '#2a3a52', color: isActive ? '#fff' : '#555' }}>
                           {isActive ? '✓' : '+'}
                         </span>
                       </button>
@@ -949,10 +949,10 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
               <div>
                 <label className="block font-mono-dm text-[10px] tracking-wider mb-2" style={{ color: '#888' }}>POPUP OPT-IN</label>
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between rounded-lg px-3 py-2" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a' }}>
+                  <div className="flex items-center justify-between rounded-lg px-3 py-2" style={{ background: '#1a2942', border: '1px solid #2a3a52' }}>
                     <span className="font-syne text-sm" style={{ color: '#ccc' }}>Popup attivo</span>
                     <button onClick={() => setSimInputs(p => ({ ...p, hasPopup: !p.hasPopup }))}
-                      className="w-10 h-5 rounded-full transition-all relative" style={{ background: simInputs.hasPopup ? '#7c3aed' : '#2a2a2a' }}>
+                      className="w-10 h-5 rounded-full transition-all relative" style={{ background: simInputs.hasPopup ? '#7c3aed' : '#2a3a52' }}>
                       <span className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all" style={{ left: simInputs.hasPopup ? '20px' : '2px' }} />
                     </button>
                   </div>
@@ -970,7 +970,7 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
                         <label className="block font-mono-dm text-[10px] mb-1" style={{ color: '#888' }}>Visitatori/mese</label>
                         <input type="number" min={0} value={simInputs.monthlyVisitors}
                           onChange={e => setSimInputs(p => ({ ...p, monthlyVisitors: parseFloat(e.target.value) || 0 }))}
-                          className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a', color: '#fff' }} />
+                          className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none" style={{ background: '#1a2942', border: '1px solid #2a3a52', color: '#fff' }} />
                       </div>
                       <div>
                         <div className="flex justify-between mb-1">
@@ -987,14 +987,14 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
             </div>
 
             {/* Footer */}
-            <div className="px-5 py-4 flex-shrink-0 space-y-2" style={{ borderTop: '1px solid #242424', background: '#111' }}>
+            <div className="px-5 py-4 flex-shrink-0 space-y-2" style={{ borderTop: '1px solid #2a3a52', background: '#111' }}>
               <Button onClick={() => { handleSimulate(); setShowSimPanel(false); }}
                 className="w-full rounded-full font-syne font-semibold py-2.5" style={{ background: '#7c3aed', color: '#fff' }}>
                 <RefreshCw className="w-4 h-4 mr-2" />Applica simulazione
               </Button>
               {simulatedReport && (
                 <Button onClick={() => { handleResetSimulation(); setShowSimPanel(false); }} variant="outline"
-                  className="w-full rounded-full font-mono-dm text-xs" style={{ borderColor: '#2a2a2a', color: '#888', background: 'transparent' }}>
+                  className="w-full rounded-full font-mono-dm text-xs" style={{ borderColor: '#2a3a52', color: '#888', background: 'transparent' }}>
                   <RotateCcw className="w-4 h-4 mr-2" />Ripristina originali
                 </Button>
               )}
