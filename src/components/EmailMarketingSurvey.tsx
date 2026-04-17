@@ -179,6 +179,20 @@ const STEPS = [
 
 const TOTAL_STEPS = STEPS.length;
 
+// ═══ Label Resolvers (per webhook payload leggibile in Make/GHL) ═════════
+
+const labelFor = (options: { value: string; label: string }[], value: string): string => {
+  if (!value) return '';
+  const opt = options.find(o => o.value === value);
+  // Strip leading emoji + space for clean CRM display
+  return (opt?.label || value).replace(/^[^\w\d]+\s/, '').trim();
+};
+
+const labelsFor = (options: { value: string; label: string }[], values: string[]): string[] => {
+  if (!values?.length) return [];
+  return values.map(v => labelFor(options, v));
+};
+
 // ═══ Analysis Screen ═════════════════════════════════════════════════════
 
 const AnalysisScreen: React.FC<{ sectorLabel: string; onComplete: () => void }> = ({ sectorLabel, onComplete }) => {
@@ -466,23 +480,57 @@ const EmailMarketingSurvey: React.FC = () => {
         source: 'email-marketing-quiz',
         reportUrl,
         quickSummary: {
+          // ─── Lead Contact ───
           leadName: formData.fullName,
           leadEmail: formData.email,
           leadPhone: formData.phone,
           companyName: '',
           website: normalizedWebsite,
+          acceptedTerms: true,
+
+          // ─── Business Profile ───
           sector: advancedReport.sectorBenchmark.label,
+          sectorRaw: formData.sector,
+          customSector: formData.sector === 'other' ? formData.customSector : null,
           monthlyRevenue: advancedReport.monthlyRevenue,
+          monthlyRevenueLabel: labelFor(revenueOptions, formData.monthlyRevenue),
+          monthlyRevenueRaw: formData.monthlyRevenue,
+
+          // ─── Tech Stack ───
           platform: formData.platform,
+          platformLabel: labelFor(platformOptions, formData.platform),
           emailTool: formData.emailTool,
+          emailToolLabel: labelFor(emailToolOptions, formData.emailTool),
+
+          // ─── Email Marketing Setup ───
+          emailRevenuePercentage: formData.emailRevenuePercentage,
+          emailRevenuePercentageLabel: labelFor(emailRevenueOptions, formData.emailRevenuePercentage),
+          activeFlows: formData.activeFlows,
+          activeFlowsLabels: labelsFor(automationOptions, formData.activeFlows),
+          activeFlowsCount: formData.activeFlows.filter(f => f !== 'none').length,
           segmentation: formData.segmentation,
-          emailHealthScore: advancedReport.emailHealthScore,
-          yearlyPotential: advancedReport.yearlyPotential,
-          leadQuality: adminReport.consultingNotes.leadQuality,
-          priorityLevel: adminReport.consultingNotes.priorityLevel,
+          segmentationLabel: labelFor(segmentationOptions, formData.segmentation),
+          emailFrequency: formData.emailFrequency,
+          emailFrequencyLabel: labelFor(frequencyOptions, formData.emailFrequency),
+          listSize: formData.listSize,
+          listSizeLabel: labelFor(listSizeOptions, formData.listSize),
+
+          // ─── Motivation ───
           motivation: formData.motivation,
           motivationLabel: adminReport.quizResponses.motivationLabel,
-          acceptedTerms: true,
+
+          // ─── Calculated Report Metrics ───
+          emailHealthScore: advancedReport.emailHealthScore,
+          yearlyPotential: advancedReport.yearlyPotential,
+          currentEmailRevenue: advancedReport.currentEmailRevenue,
+          benchmarkEmailRevenue: advancedReport.benchmarkEmailRevenue,
+          revenueGap: advancedReport.revenueGap,
+
+          // ─── Lead Scoring ───
+          leadQuality: adminReport.consultingNotes.leadQuality,
+          priorityLevel: adminReport.consultingNotes.priorityLevel,
+
+          // ─── Links ───
           reportUrl,
         },
         adminReport,
