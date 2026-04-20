@@ -49,17 +49,27 @@ const AdminReport: React.FC = () => {
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      (_event, session) => {
         console.log('AdminReport: onAuthStateChange event:', _event, 'session:', !!session);
         if (!mounted) return;
         if (session) {
-          const isAdmin = await checkAdmin(session.user.id);
-          console.log('AdminReport: isAdmin after auth change:', isAdmin);
-          if (mounted) setAuthenticated(isAdmin);
+          // Defer Supabase calls to avoid deadlock inside the auth callback
+          setTimeout(async () => {
+            const isAdmin = await checkAdmin(session.user.id);
+            console.log('AdminReport: isAdmin after auth change:', isAdmin);
+            if (mounted) {
+              setAuthenticated(isAdmin);
+              setLoading(false);
+              clearTimeout(timeout);
+            }
+          }, 0);
         } else {
-          if (mounted) setAuthenticated(false);
+          if (mounted) {
+            setAuthenticated(false);
+            setLoading(false);
+            clearTimeout(timeout);
+          }
         }
-        if (mounted) { setLoading(false); clearTimeout(timeout); }
       }
     );
 
