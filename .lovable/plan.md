@@ -1,34 +1,57 @@
 
 
-L'utente vuole conferma che il webhook Make.com sia configurato correttamente e che riceva i test.
+## Problema: login admin appeso, mai risolto
 
-## Analisi
+### Diagnosi (confermata da DB + log)
 
-**Webhook URL fornito:** `https://hook.eu1.make.com/xvxim6odwyk6vtcdh14qezglimin8opc`
+1. ✅ L'utente `info@mailift.com` esiste e ha ruolo `admin` in `user_roles`
+2. ✅ Il login Supabase va a buon fine (`200 OK` su `/token`)
+3. ✅ La RPC `has_role` invocata direttamente sul DB ritorna `true`
+4. ❌ Lato client, dopo `SIGNED_IN`, la chiamata `supabase.rpc('has_role', ...)` **non risolve mai** → scatta il safety timeout dopo 5s e `authenticated` resta `false` → schermata di login mostrata di nuovo
 
-Questo URL corrisponde esattamente a quello documentato nella memoria `mem://integrations/webhooks` ed è quello configurato nel secret `MAKE_WEBHOOK_URL` lato Lovable Cloud.
+### Causa tecnica
 
-## Diagnosi del problema "test non arrivato su Make"
+In `src/pages/AdminReport.tsx` la chiamata `await supabase.rpc(...)` viene fatta **dentro** il callback di `onAuthStateChange`. Questo è un anti-pattern documentato del client Supabase: il callback gira dentro il lock interno di GoTrue, e qualsiasi await su un'altra chiamata Supabase rimane appesa fino al timeout, causando il deadlock che vediamo nei log.
 
-Il webhook è configurato correttamente lato codice (`supabase/functions/submit-webhook/index.ts`). I motivi possibili per cui il test non arriva:
+### Fix (1 file, 1 modifica chirurgica)
 
-1. **Lo scenario su Make.com non è attivo** (toggle ON in alto a destra). Se il modulo "Custom Webhook" è in stato "Listening for data" ma lo scenario è OFF, i payload vengono ignorati.
-2. **Il webhook su Make ha "Determine data structure" attivo** e sta aspettando un payload diverso → in tal caso lo riceve ma non lo mostra nella history finché non clicchi "Redetermine".
-3. **Non è ancora stato fatto un submit reale** dal quiz dopo le modifiche al payload (l'unico modo per generare un evento è completare il form).
-4. **Cache cold-start dell'edge function**: la prima chiamata dopo deploy può tardare 5-10s.
-5. **Errore lato edge function** non visibile lato client (es. timeout, validazione fallita).
+In `src/pages/AdminReport.tsx`, deferire le chiamate Supabase fatte dentro `onAuthStateChange` con `setTimeout(..., 0)`:
 
-## Piano d'azione (quando si esce da plan mode)
+```ts
+const { data: { subscription } } = supabase.auth.onAuthStateChange(
+  (_event, session) => {
+    if (!mounted) return;
+    if (session) {
+      // Defer Supabase calls to avoid deadlock inside the auth callback
+      setTimeout(async () => {
+        const isAdmin = await checkAdmin(session.user.id);
+        if (mounted) {
+          setAuthenticated(isAdmin);
+          setLoading(false);
+          clearTimeout(timeout);
+        }
+      }, 0);
+    } else {
+      setAuthenticated(false);
+      setLoading(false);
+      clearTimeout(timeout);
+    }
+  }
+);
+```
 
-1. **Lanciare un test diretto** all'edge function `submit-webhook` con `supabase--curl_edge_functions`, passando un payload di esempio realistico (struttura `admin_report` con `quickSummary` completo come da messaggio precedente). Questo simula esattamente cosa il browser invia, senza dover compilare il quiz.
-2. **Leggere i log edge function** con `supabase--edge_function_logs` per il function `submit-webhook`, filtrando sugli ultimi minuti, per vedere:
-   - Se la chiamata è arrivata
-   - Se la validazione è passata
-   - Se `Make webhook sent successfully` o `Make webhook failed with status: XXX`
-3. **Riportare il risultato all'utente** con diagnosi precisa:
-   - Se Make risponde 200 → il problema è lato Make (scenario OFF / data structure)
-   - Se Make risponde 4xx/5xx → il problema è il payload o l'URL
-   - Se la edge function fallisce prima di chiamare Make → fix lato codice
+Stessa logica resta valida per `getSession().then(...)` che già è fuori dal callback, quindi non ha bisogno di modifiche.
 
-Nessuna modifica di file necessaria in questa fase: solo diagnosi via tool. Eventuali fix arrivano dopo aver letto i log.
+### Risultato atteso
+
+Dopo il fix:
+- Login con `info@mailift.com` / `mailift2024`
+- `onAuthStateChange` parte → `setTimeout` deferisce → `has_role` risolve in pochi ms → `authenticated = true` → entri nel pannello admin senza più vedere il safety timeout warning nei log.
+
+### Nessun'altra modifica richiesta
+
+- Le RLS e la funzione `has_role` sono corrette
+- Il ruolo nel DB è corretto
+- Le credenziali sono corrette
+- Il bypass token è stato giustamente rimosso nel fix di sicurezza precedente, non va ripristinato
 
