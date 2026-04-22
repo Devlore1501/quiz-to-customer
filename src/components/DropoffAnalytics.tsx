@@ -106,6 +106,7 @@ interface VersionData {
   total: number;
   completed: number;
   steps: StepData[];
+  timing: TimingStats;
 }
 
 type Period = '1d' | '7d' | '30d' | 'all';
