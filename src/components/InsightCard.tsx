@@ -71,7 +71,7 @@ export function getInsightForStep(step: number, formData: Record<string, unknown
         statText: `Il benchmark di settore per l'email marketing è del 35% sul fatturato totale.`,
       };
     }
-    case 4: {
+    case 6: {
       const pct = formData.emailRevenuePercentage as string;
       const isLow = pct === 'dont-know' || pct === '0-10' || pct === '10-20';
       return {
