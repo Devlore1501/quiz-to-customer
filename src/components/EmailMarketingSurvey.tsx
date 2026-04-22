@@ -675,6 +675,11 @@ const EmailMarketingSurvey: React.FC = () => {
 
   // ═══ Phase Rendering ═══════════════════════════════════════════════
 
+  // Intro (welcome screen with CTA)
+  if (phase === 'intro') {
+    return <IntroScreen onStart={() => setPhase('quiz')} />;
+  }
+
   // Analysis
   if (phase === 'analyzing') {
     return <AnalysisScreen sectorLabel={getSectorLabel()} onComplete={() => setPhase('gate')} />;
