@@ -440,7 +440,7 @@ const EmailMarketingSurvey: React.FC = () => {
     try {
       const { data, error } = await supabase.from('survey_submissions')
         .insert({
-          company_name: '',
+          company_name: formData.companyName?.trim() || '',
           full_name: formData.fullName,
           email: formData.email,
           phone: formData.phone || null,
@@ -487,7 +487,7 @@ const EmailMarketingSurvey: React.FC = () => {
           leadName: formData.fullName,
           leadEmail: formData.email,
           leadPhone: formData.phone,
-          companyName: '',
+          companyName: formData.companyName?.trim() || '',
           website: normalizedWebsite,
           acceptedTerms: true,
 
@@ -566,7 +566,7 @@ const EmailMarketingSurvey: React.FC = () => {
         await supabase.from('survey_submissions').update(updateData as never).eq('id', newLeadId);
       } else {
         await supabase.from('survey_submissions').insert({
-          company_name: '', full_name: formData.fullName, email: formData.email,
+          company_name: formData.companyName?.trim() || '', full_name: formData.fullName, email: formData.email,
           phone: formData.phone || null, website: normalizedWebsite, ...updateData,
         } as never);
       }
@@ -575,7 +575,7 @@ const EmailMarketingSurvey: React.FC = () => {
       trackCompleteRegistration({
         sector: advancedReport.sectorBenchmark.label,
         email: formData.email,
-        companyName: '',
+        companyName: formData.companyName?.trim() || '',
       });
 
       // Webhook
@@ -608,7 +608,7 @@ const EmailMarketingSurvey: React.FC = () => {
   const handleRestart = useCallback(() => {
     setCurrentStep(0);
     setReport(null);
-    setPhase('quiz');
+    setPhase('intro');
     setIsSubmitting(false);
     setLeadId(null);
     setEmailValidation({ status: 'idle' });
