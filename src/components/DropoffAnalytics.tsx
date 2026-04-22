@@ -285,13 +285,15 @@ const DropoffAnalytics: React.FC = () => {
       <div className="flex gap-1 bg-slate-800 rounded-lg p-1">
         {VERSIONS.map(v => {
           const vd = versionData[v.id];
-          const count = vd?.total || 0;
+          const real = vd?.realAttempts || 0;
+          const total = vd?.total || 0;
           return (
             <button key={v.id} onClick={() => setActiveVersion(v.id)}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${activeVersion === v.id ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'}`}>
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${activeVersion === v.id ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'}`}
+              title={`${total} page loads · ${real} tentativi reali`}>
               {v.label}
               <span className={`text-xs px-1.5 py-0.5 rounded-full ${activeVersion === v.id ? 'bg-orange/20 text-orange' : 'bg-slate-700 text-slate-500'}`}>
-                {count}
+                {real}
               </span>
             </button>
           );
