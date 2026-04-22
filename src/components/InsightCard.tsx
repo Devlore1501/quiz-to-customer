@@ -57,8 +57,9 @@ export const InsightCard: React.FC<InsightCardProps> = ({ data, onContinue }) =>
 };
 
 export function getInsightForStep(step: number, formData: Record<string, unknown>): InsightData | null {
+  // New quiz order indices: 3=Fatturato, 6=Revenue Email, 7=Automazioni
   switch (step) {
-    case 0: {
+    case 3: {
       const rev = formData.monthlyRevenue as string;
       const revLabel = rev === 'under-10k' ? 'sotto i 10k' : rev === '300k+' ? 'oltre 300k' : rev?.replace('-', '–') + '€';
       return {
@@ -70,7 +71,7 @@ export function getInsightForStep(step: number, formData: Record<string, unknown
         statText: `Il benchmark di settore per l'email marketing è del 35% sul fatturato totale.`,
       };
     }
-    case 4: {
+    case 6: {
       const pct = formData.emailRevenuePercentage as string;
       const isLow = pct === 'dont-know' || pct === '0-10' || pct === '10-20';
       return {
@@ -86,7 +87,7 @@ export function getInsightForStep(step: number, formData: Record<string, unknown
           : 'Anche con buone performance, ottimizzare i flussi può aggiungere un +15-20% extra.',
       };
     }
-    case 5: {
+    case 7: {
       const flows = formData.activeFlows as string[];
       const count = flows?.filter(f => f !== 'none').length || 0;
       return {
