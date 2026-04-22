@@ -125,7 +125,7 @@ const DropoffAnalytics: React.FC = () => {
     setLoading(true);
     try {
       let query = supabase.from('partial_submissions')
-        .select('current_step, current_step_name, abandoned, completed, started_at, total_steps')
+        .select('current_step, current_step_name, abandoned, completed, started_at, updated_at, total_steps')
         .eq('survey_type', 'email_marketing');
 
       if (period !== 'all') {
