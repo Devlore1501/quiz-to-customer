@@ -251,8 +251,9 @@ const AnalysisScreen: React.FC<{ sectorLabel: string; onComplete: () => void }> 
   const dashOffset = circumference - (progress / 100) * circumference;
 
   return (
-    <div className="min-h-screen bg-[#121d2b] flex flex-col items-center justify-center px-4 font-['Syne',sans-serif]">
-      <div className="w-full max-w-lg">
+    <div className="min-h-screen bg-[#121d2b] flex flex-col items-center justify-center px-4 font-['Syne',sans-serif] relative">
+      <GridBackground />
+      <div className="w-full max-w-lg relative z-[1]">
         <div className="bg-[#1a2942] border border-[#2a3a52] rounded-[18px] p-9 text-center">
           {/* Circular progress */}
           <div className="relative w-[120px] h-[120px] mx-auto mb-6">
@@ -303,8 +304,9 @@ const AnalysisScreen: React.FC<{ sectorLabel: string; onComplete: () => void }> 
 // ═══ Disqualified Screen ═════════════════════════════════════════════════
 
 const DisqualifiedScreen: React.FC = () => (
-  <div className="min-h-screen bg-[#121d2b] flex flex-col items-center justify-center px-4 font-['Syne',sans-serif]">
-    <div className="w-full max-w-md text-center">
+  <div className="min-h-screen bg-[#121d2b] flex flex-col items-center justify-center px-4 font-['Syne',sans-serif] relative">
+    <GridBackground />
+    <div className="w-full max-w-md text-center relative z-[1]">
       <div className="text-6xl mb-6">😔</div>
       <h1 className="text-2xl font-bold text-[#f0f0eb] mb-4">
         Al momento non siamo il partner giusto per te
@@ -371,18 +373,8 @@ const IntroScreen: React.FC<{ onStart: () => void }> = ({ onStart }) => {
   ];
 
   return (
-    <div className="min-h-screen bg-[#121d2b] font-['Syne',sans-serif] text-[#f0f0eb]">
-      {/* subtle grid background */}
-      <div
-        className="fixed inset-0 pointer-events-none opacity-[0.06]"
-        style={{
-          backgroundImage:
-            'linear-gradient(#FAB450 1px, transparent 1px), linear-gradient(90deg, #FAB450 1px, transparent 1px)',
-          backgroundSize: '48px 48px',
-          maskImage: 'radial-gradient(ellipse at center, black 30%, transparent 75%)',
-          WebkitMaskImage: 'radial-gradient(ellipse at center, black 30%, transparent 75%)',
-        }}
-      />
+    <div className="min-h-screen bg-[#121d2b] font-['Syne',sans-serif] text-[#f0f0eb] relative">
+      <GridBackground />
 
       <div className="relative z-[1]">
         {/* HERO */}
