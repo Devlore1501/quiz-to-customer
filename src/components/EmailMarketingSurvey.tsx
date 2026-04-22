@@ -921,8 +921,9 @@ const EmailMarketingSurvey: React.FC = () => {
     const fmtYear = yearlyGap.toLocaleString('it-IT', { maximumFractionDigits: 0 });
 
     return (
-      <div className="min-h-screen bg-[#121d2b] flex flex-col items-center justify-center px-4 font-['Syne',sans-serif]">
-        <div className="w-full max-w-[680px] mx-auto">
+      <div className="min-h-screen bg-[#121d2b] flex flex-col items-center justify-center px-4 font-['Syne',sans-serif] relative">
+        <GridBackground />
+        <div className="w-full max-w-[680px] mx-auto relative z-[1]">
           <div className="bg-[#1a2942] border border-[#2a3a52] rounded-[18px] overflow-hidden">
             {/* Top section */}
             <div className="bg-gradient-to-br from-[#0d1623] to-[#111] p-8 text-center relative overflow-hidden">
@@ -1040,8 +1041,9 @@ const EmailMarketingSurvey: React.FC = () => {
     const insightData = getInsightForStep(currentStep, formData as unknown as Record<string, unknown>);
     if (!insightData) { handleInsightContinue(); return null; }
     return (
-      <div className="min-h-screen bg-[#121d2b] flex flex-col items-center justify-center px-4 font-['Syne',sans-serif]">
-        <div className="w-full max-w-[680px] mx-auto">
+      <div className="min-h-screen bg-[#121d2b] flex flex-col items-center justify-center px-4 font-['Syne',sans-serif] relative">
+        <GridBackground />
+        <div className="w-full max-w-[680px] mx-auto relative z-[1]">
           <div className="bg-[#1a2942] border border-[#2a3a52] rounded-[18px] overflow-hidden">
             {/* Progress */}
             <div className="h-1 bg-[#2a3a52] rounded-t-[18px] overflow-hidden">
@@ -1067,7 +1069,8 @@ const EmailMarketingSurvey: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#121d2b] font-['Syne',sans-serif] text-[#f0f0eb]">
+    <div className="min-h-screen bg-[#121d2b] font-['Syne',sans-serif] text-[#f0f0eb] relative">
+      <GridBackground />
       <div className="max-w-[680px] mx-auto px-[18px] relative z-[1]">
         {/* Header */}
         <header className="pt-6 text-center">
