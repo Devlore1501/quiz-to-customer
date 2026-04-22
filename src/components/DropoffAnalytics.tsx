@@ -38,7 +38,7 @@ const VERSIONS = [
   },
   {
     id: 'v2',
-    label: 'Quiz v2 (attuale)',
+    label: 'Quiz v2 (precedente)',
     detectFn: (row: any) => row.total_steps === 11,
     stepOrder: ['monthlyRevenue', 'sector', 'platform', 'emailTool', 'emailRevenuePercentage', 'activeFlows', 'segmentation', 'emailFrequency', 'listSize', 'motivation', 'website'],
     stepLabels: {
@@ -55,7 +55,44 @@ const VERSIONS = [
       website: 'URL Store',
     } as Record<string, string>,
   },
+  {
+    id: 'v3',
+    label: 'Quiz v3 (attuale)',
+    detectFn: (row: any) => row.total_steps === 12,
+    stepOrder: ['companyName', 'website', 'sector', 'monthlyRevenue', 'platform', 'emailTool', 'emailRevenuePercentage', 'activeFlows', 'segmentation', 'emailFrequency', 'listSize', 'motivation'],
+    stepLabels: {
+      companyName: 'Brand',
+      website: 'Sito Web',
+      sector: 'Settore',
+      monthlyRevenue: 'Fatturato',
+      platform: 'Piattaforma',
+      emailTool: 'Email Tool',
+      emailRevenuePercentage: 'Revenue Email',
+      activeFlows: 'Automazioni',
+      segmentation: 'Segmentazione',
+      emailFrequency: 'Frequenza',
+      listSize: 'Lista Email',
+      motivation: 'Obiettivo',
+    } as Record<string, string>,
+  },
 ];
+
+interface TimingStats {
+  avg: number;
+  median: number;
+  min: number;
+  max: number;
+  count: number;
+}
+
+const formatDuration = (ms: number): string => {
+  if (!ms || ms <= 0) return '—';
+  const totalSec = Math.round(ms / 1000);
+  const m = Math.floor(totalSec / 60);
+  const s = totalSec % 60;
+  if (m === 0) return `${s}s`;
+  return `${m}m ${s.toString().padStart(2, '0')}s`;
+};
 
 interface StepData {
   stepName: string;
@@ -69,6 +106,7 @@ interface VersionData {
   total: number;
   completed: number;
   steps: StepData[];
+  timing: TimingStats;
 }
 
 type Period = '1d' | '7d' | '30d' | 'all';
@@ -77,7 +115,7 @@ const DropoffAnalytics: React.FC = () => {
   const [versionData, setVersionData] = useState<Record<string, VersionData>>({});
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<Period>('7d');
-  const [activeVersion, setActiveVersion] = useState(VERSIONS[0].id);
+  const [activeVersion, setActiveVersion] = useState(VERSIONS[VERSIONS.length - 1].id);
 
   useEffect(() => {
     fetchData();
@@ -87,7 +125,7 @@ const DropoffAnalytics: React.FC = () => {
     setLoading(true);
     try {
       let query = supabase.from('partial_submissions')
-        .select('current_step, current_step_name, abandoned, completed, started_at, total_steps')
+        .select('current_step, current_step_name, abandoned, completed, started_at, updated_at, total_steps')
         .eq('survey_type', 'email_marketing');
 
       if (period !== 'all') {
@@ -170,7 +208,24 @@ const DropoffAnalytics: React.FC = () => {
           }
         });
 
-        result[version.id] = { total, completed, steps };
+        // Compute timing stats from completed sessions
+        const durations: number[] = [];
+        vRows.forEach(row => {
+          if (!row.completed || !row.started_at || !row.updated_at) return;
+          const ms = new Date(row.updated_at).getTime() - new Date(row.started_at).getTime();
+          // Filter outliers: <10s (bots/test) or >30min (left open)
+          if (ms >= 10_000 && ms <= 30 * 60_000) durations.push(ms);
+        });
+        durations.sort((a, b) => a - b);
+        const timing: TimingStats = {
+          count: durations.length,
+          avg: durations.length ? durations.reduce((s, v) => s + v, 0) / durations.length : 0,
+          median: durations.length ? durations[Math.floor(durations.length / 2)] : 0,
+          min: durations.length ? durations[0] : 0,
+          max: durations.length ? durations[durations.length - 1] : 0,
+        };
+
+        result[version.id] = { total, completed, steps, timing };
       }
 
       setVersionData(result);
@@ -245,6 +300,36 @@ const DropoffAnalytics: React.FC = () => {
               <p className="text-slate-400 text-xs mb-1">Tasso completamento</p>
               <p className="text-2xl font-bold text-orange">{completionRate}%</p>
             </div>
+          </div>
+
+          {/* Timing */}
+          <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-white font-semibold">⏱ Tempo di completamento</h3>
+              <span className="text-xs text-slate-500">su {current.timing.count} sessioni completate</span>
+            </div>
+            {current.timing.count > 0 ? (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="bg-slate-900/50 rounded-lg p-3 border border-slate-700">
+                  <p className="text-slate-400 text-xs mb-1">Medio</p>
+                  <p className="text-lg font-bold text-white">{formatDuration(current.timing.avg)}</p>
+                </div>
+                <div className="bg-slate-900/50 rounded-lg p-3 border border-slate-700">
+                  <p className="text-slate-400 text-xs mb-1">Mediano</p>
+                  <p className="text-lg font-bold text-white">{formatDuration(current.timing.median)}</p>
+                </div>
+                <div className="bg-slate-900/50 rounded-lg p-3 border border-slate-700">
+                  <p className="text-slate-400 text-xs mb-1">Più veloce</p>
+                  <p className="text-lg font-bold text-green-400">{formatDuration(current.timing.min)}</p>
+                </div>
+                <div className="bg-slate-900/50 rounded-lg p-3 border border-slate-700">
+                  <p className="text-slate-400 text-xs mb-1">Più lento</p>
+                  <p className="text-lg font-bold text-yellow-400">{formatDuration(current.timing.max)}</p>
+                </div>
+              </div>
+            ) : (
+              <p className="text-slate-500 text-sm">Nessuna sessione completata nel periodo (outlier &lt;10s o &gt;30min esclusi).</p>
+            )}
           </div>
 
           {/* Funnel */}
