@@ -15,6 +15,7 @@ import mailiftLogo from '@/assets/mailift-logo.png';
 // ═══ Types ═══════════════════════════════════════════════════════════════
 
 interface FormData {
+  companyName: string;
   monthlyRevenue: string;
   sector: string;
   customSector: string;
