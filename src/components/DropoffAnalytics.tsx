@@ -306,52 +306,83 @@ const DropoffAnalytics: React.FC = () => {
         </div>
       ) : current && current.total > 0 ? (
         <>
-          {/* Summary */}
+          {/* Engagement: page loads vs real attempts */}
           <div className="grid grid-cols-3 gap-3">
             <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
-              <p className="text-slate-400 text-xs mb-1">Sessioni totali</p>
+              <p className="text-slate-400 text-xs mb-1">Page loads</p>
               <p className="text-2xl font-bold text-white">{current.total}</p>
+              <p className="text-slate-500 text-[11px] mt-1">tutte le sessioni create</p>
             </div>
             <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
-              <p className="text-slate-400 text-xs mb-1">Completate</p>
-              <p className="text-2xl font-bold text-green-400">{current.completed}</p>
+              <p className="text-slate-400 text-xs mb-1">Tentativi reali</p>
+              <p className="text-2xl font-bold text-white">{current.realAttempts}</p>
+              <p className="text-slate-500 text-[11px] mt-1">utenti che hanno interagito</p>
             </div>
             <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
-              <p className="text-slate-400 text-xs mb-1">Tasso completamento</p>
-              <p className="text-2xl font-bold text-orange">{completionRate}%</p>
+              <p className="text-slate-400 text-xs mb-1">Engagement</p>
+              <p className="text-2xl font-bold text-orange">{engagementRate}%</p>
+              <p className="text-slate-500 text-[11px] mt-1">tentativi / page loads</p>
             </div>
           </div>
 
-          {/* Timing */}
-          <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-white font-semibold">⏱ Tempo di completamento</h3>
-              <span className="text-xs text-slate-500">su {current.timing.count} sessioni completate</span>
+          {current.realAttempts === 0 ? (
+            <div className="bg-slate-800 rounded-xl p-8 border border-slate-700 text-center">
+              <p className="text-slate-400">Nessun utente ha ancora interagito con il quiz in questa versione.</p>
+              <p className="text-slate-500 text-xs mt-2">Le {current.total} sessioni esistenti sono solo aperture di pagina senza interazione.</p>
             </div>
-            {current.timing.count > 0 ? (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div className="bg-slate-900/50 rounded-lg p-3 border border-slate-700">
-                  <p className="text-slate-400 text-xs mb-1">Medio</p>
-                  <p className="text-lg font-bold text-white">{formatDuration(current.timing.avg)}</p>
+          ) : (
+            <>
+              {/* Summary su tentativi reali */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
+                  <p className="text-slate-400 text-xs mb-1">Completate</p>
+                  <p className="text-2xl font-bold text-green-400">{current.completed}</p>
+                  <p className="text-slate-500 text-[11px] mt-1">su {current.realAttempts} tentativi reali</p>
                 </div>
-                <div className="bg-slate-900/50 rounded-lg p-3 border border-slate-700">
-                  <p className="text-slate-400 text-xs mb-1">Mediano</p>
-                  <p className="text-lg font-bold text-white">{formatDuration(current.timing.median)}</p>
-                </div>
-                <div className="bg-slate-900/50 rounded-lg p-3 border border-slate-700">
-                  <p className="text-slate-400 text-xs mb-1">Più veloce</p>
-                  <p className="text-lg font-bold text-green-400">{formatDuration(current.timing.min)}</p>
-                </div>
-                <div className="bg-slate-900/50 rounded-lg p-3 border border-slate-700">
-                  <p className="text-slate-400 text-xs mb-1">Più lento</p>
-                  <p className="text-lg font-bold text-yellow-400">{formatDuration(current.timing.max)}</p>
+                <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
+                  <p className="text-slate-400 text-xs mb-1">Tasso completamento</p>
+                  <p className="text-2xl font-bold text-orange">{completionRate}%</p>
+                  <p className="text-slate-500 text-[11px] mt-1">completate / tentativi reali</p>
                 </div>
               </div>
-            ) : (
-              <p className="text-slate-500 text-sm">Nessuna sessione completata nel periodo (outlier &lt;10s o &gt;30min esclusi).</p>
-            )}
-          </div>
 
+              {/* Timing */}
+              <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-white font-semibold">⏱ Tempo di completamento</h3>
+                  <span className="text-xs text-slate-500">su {current.timing.count} sessioni completate</span>
+                </div>
+                {current.timing.count === 0 ? (
+                  <p className="text-slate-500 text-sm">Nessuna sessione completata nel periodo (outlier &lt;10s o &gt;30min esclusi).</p>
+                ) : current.timing.count < 3 ? (
+                  <div className="bg-slate-900/50 rounded-lg p-3 border border-slate-700 inline-block">
+                    <p className="text-slate-400 text-xs mb-1">Tempo</p>
+                    <p className="text-lg font-bold text-white">{formatDuration(current.timing.avg)}</p>
+                    <p className="text-slate-500 text-[11px] mt-1">dati insufficienti per medio/min/max</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div className="bg-slate-900/50 rounded-lg p-3 border border-slate-700">
+                      <p className="text-slate-400 text-xs mb-1">Medio</p>
+                      <p className="text-lg font-bold text-white">{formatDuration(current.timing.avg)}</p>
+                    </div>
+                    <div className="bg-slate-900/50 rounded-lg p-3 border border-slate-700">
+                      <p className="text-slate-400 text-xs mb-1">Mediano</p>
+                      <p className="text-lg font-bold text-white">{formatDuration(current.timing.median)}</p>
+                    </div>
+                    <div className="bg-slate-900/50 rounded-lg p-3 border border-slate-700">
+                      <p className="text-slate-400 text-xs mb-1">Più veloce</p>
+                      <p className="text-lg font-bold text-green-400">{formatDuration(current.timing.min)}</p>
+                    </div>
+                    <div className="bg-slate-900/50 rounded-lg p-3 border border-slate-700">
+                      <p className="text-slate-400 text-xs mb-1">Più lento</p>
+                      <p className="text-lg font-bold text-yellow-400">{formatDuration(current.timing.max)}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
           {/* Funnel */}
           <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
             <h3 className="text-white font-semibold mb-4">Funnel per domanda</h3>
