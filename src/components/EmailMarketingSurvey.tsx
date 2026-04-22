@@ -199,6 +199,21 @@ const labelsFor = (options: { value: string; label: string }[], values: string[]
   return values.map(v => labelFor(options, v));
 };
 
+// ═══ Shared Grid Background ══════════════════════════════════════════════
+
+const GridBackground: React.FC = () => (
+  <div
+    className="fixed inset-0 pointer-events-none opacity-[0.06] z-0"
+    style={{
+      backgroundImage:
+        'linear-gradient(#FAB450 1px, transparent 1px), linear-gradient(90deg, #FAB450 1px, transparent 1px)',
+      backgroundSize: '48px 48px',
+      maskImage: 'radial-gradient(ellipse at center, black 30%, transparent 75%)',
+      WebkitMaskImage: 'radial-gradient(ellipse at center, black 30%, transparent 75%)',
+    }}
+  />
+);
+
 // ═══ Analysis Screen ═════════════════════════════════════════════════════
 
 const AnalysisScreen: React.FC<{ sectorLabel: string; onComplete: () => void }> = ({ sectorLabel, onComplete }) => {
@@ -236,8 +251,9 @@ const AnalysisScreen: React.FC<{ sectorLabel: string; onComplete: () => void }> 
   const dashOffset = circumference - (progress / 100) * circumference;
 
   return (
-    <div className="min-h-screen bg-[#121d2b] flex flex-col items-center justify-center px-4 font-['Syne',sans-serif]">
-      <div className="w-full max-w-lg">
+    <div className="min-h-screen bg-[#121d2b] flex flex-col items-center justify-center px-4 font-['Syne',sans-serif] relative">
+      <GridBackground />
+      <div className="w-full max-w-lg relative z-[1]">
         <div className="bg-[#1a2942] border border-[#2a3a52] rounded-[18px] p-9 text-center">
           {/* Circular progress */}
           <div className="relative w-[120px] h-[120px] mx-auto mb-6">
@@ -288,8 +304,9 @@ const AnalysisScreen: React.FC<{ sectorLabel: string; onComplete: () => void }> 
 // ═══ Disqualified Screen ═════════════════════════════════════════════════
 
 const DisqualifiedScreen: React.FC = () => (
-  <div className="min-h-screen bg-[#121d2b] flex flex-col items-center justify-center px-4 font-['Syne',sans-serif]">
-    <div className="w-full max-w-md text-center">
+  <div className="min-h-screen bg-[#121d2b] flex flex-col items-center justify-center px-4 font-['Syne',sans-serif] relative">
+    <GridBackground />
+    <div className="w-full max-w-md text-center relative z-[1]">
       <div className="text-6xl mb-6">😔</div>
       <h1 className="text-2xl font-bold text-[#f0f0eb] mb-4">
         Al momento non siamo il partner giusto per te
@@ -356,18 +373,8 @@ const IntroScreen: React.FC<{ onStart: () => void }> = ({ onStart }) => {
   ];
 
   return (
-    <div className="min-h-screen bg-[#121d2b] font-['Syne',sans-serif] text-[#f0f0eb]">
-      {/* subtle grid background */}
-      <div
-        className="fixed inset-0 pointer-events-none opacity-[0.06]"
-        style={{
-          backgroundImage:
-            'linear-gradient(#FAB450 1px, transparent 1px), linear-gradient(90deg, #FAB450 1px, transparent 1px)',
-          backgroundSize: '48px 48px',
-          maskImage: 'radial-gradient(ellipse at center, black 30%, transparent 75%)',
-          WebkitMaskImage: 'radial-gradient(ellipse at center, black 30%, transparent 75%)',
-        }}
-      />
+    <div className="min-h-screen bg-[#121d2b] font-['Syne',sans-serif] text-[#f0f0eb] relative">
+      <GridBackground />
 
       <div className="relative z-[1]">
         {/* HERO */}
@@ -914,8 +921,9 @@ const EmailMarketingSurvey: React.FC = () => {
     const fmtYear = yearlyGap.toLocaleString('it-IT', { maximumFractionDigits: 0 });
 
     return (
-      <div className="min-h-screen bg-[#121d2b] flex flex-col items-center justify-center px-4 font-['Syne',sans-serif]">
-        <div className="w-full max-w-[680px] mx-auto">
+      <div className="min-h-screen bg-[#121d2b] flex flex-col items-center justify-center px-4 font-['Syne',sans-serif] relative">
+        <GridBackground />
+        <div className="w-full max-w-[680px] mx-auto relative z-[1]">
           <div className="bg-[#1a2942] border border-[#2a3a52] rounded-[18px] overflow-hidden">
             {/* Top section */}
             <div className="bg-gradient-to-br from-[#0d1623] to-[#111] p-8 text-center relative overflow-hidden">
@@ -1033,8 +1041,9 @@ const EmailMarketingSurvey: React.FC = () => {
     const insightData = getInsightForStep(currentStep, formData as unknown as Record<string, unknown>);
     if (!insightData) { handleInsightContinue(); return null; }
     return (
-      <div className="min-h-screen bg-[#121d2b] flex flex-col items-center justify-center px-4 font-['Syne',sans-serif]">
-        <div className="w-full max-w-[680px] mx-auto">
+      <div className="min-h-screen bg-[#121d2b] flex flex-col items-center justify-center px-4 font-['Syne',sans-serif] relative">
+        <GridBackground />
+        <div className="w-full max-w-[680px] mx-auto relative z-[1]">
           <div className="bg-[#1a2942] border border-[#2a3a52] rounded-[18px] overflow-hidden">
             {/* Progress */}
             <div className="h-1 bg-[#2a3a52] rounded-t-[18px] overflow-hidden">
@@ -1060,7 +1069,8 @@ const EmailMarketingSurvey: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#121d2b] font-['Syne',sans-serif] text-[#f0f0eb]">
+    <div className="min-h-screen bg-[#121d2b] font-['Syne',sans-serif] text-[#f0f0eb] relative">
+      <GridBackground />
       <div className="max-w-[680px] mx-auto px-[18px] relative z-[1]">
         {/* Header */}
         <header className="pt-6 text-center">
