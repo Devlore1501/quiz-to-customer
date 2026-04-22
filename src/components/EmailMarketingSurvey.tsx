@@ -316,61 +316,213 @@ const DisqualifiedScreen: React.FC = () => (
 
 // ═══ Intro Screen ════════════════════════════════════════════════════════
 
-const IntroScreen: React.FC<{ onStart: () => void }> = ({ onStart }) => (
-  <div className="min-h-screen bg-[#121d2b] font-['Syne',sans-serif] text-[#f0f0eb]">
-    <div className="max-w-[680px] mx-auto px-[18px] relative z-[1]">
-      <header className="pt-6 text-center">
-        <img src={mailiftLogo} alt="Mailift" className="h-10 w-auto mx-auto" />
-      </header>
-
-      <div className="pt-9 pb-7 text-center">
-        <div className="inline-flex items-center gap-2 bg-[rgba(250,180,80,0.1)] border border-[rgba(250,180,80,0.25)] rounded-full px-[14px] py-[5px] text-[11px] font-semibold tracking-[2px] uppercase text-[#FAB450] mb-5">
-          <span className="w-[6px] h-[6px] bg-[#FAB450] rounded-full animate-pulse" />
-          Revenue Leak Audit
-        </div>
-        <h1 className="font-['Bebas_Neue',sans-serif] text-[clamp(48px,11vw,80px)] leading-[0.92] tracking-wider mb-4">
-          Quanto stai<span className="text-[#FAB450] block">perdendo ogni mese?</span>
-        </h1>
-        <p className="text-[16px] text-[#888] max-w-[460px] mx-auto mb-8 leading-relaxed">
-          Scopri in <strong className="text-[#f0f0eb]">2 minuti</strong> quanta revenue stai lasciando sul tavolo
-          e ricevi un report personalizzato con il tuo piano d'azione.
-        </p>
-      </div>
-
-      <div className="bg-[#1a2942] border border-[#2a3a52] rounded-[18px] p-6 mb-8">
-        <div className="flex flex-col gap-3 mb-6">
-          {[
-            { icon: '📊', text: 'Report personalizzato sul tuo eCommerce' },
-            { icon: '⏱️', text: 'Solo 2 minuti, 12 domande' },
-            { icon: '🎁', text: '100% gratuito, senza impegno' },
-          ].map((item, i) => (
-            <div key={i} className="flex items-center gap-3 py-2">
-              <div className="w-9 h-9 bg-[rgba(250,180,80,0.1)] border border-[rgba(250,180,80,0.3)] rounded-full flex items-center justify-center text-[18px] flex-shrink-0">
-                {item.icon}
-              </div>
-              <span className="text-[14px] text-[#f0f0eb]">{item.text}</span>
-            </div>
-          ))}
-        </div>
-
-        <button
-          onClick={onStart}
-          className="w-full py-[18px] bg-[#FAB450] text-[#121d2b] rounded-[12px] font-['Syne',sans-serif] text-[17px] font-bold flex items-center justify-center gap-2 hover:bg-[#fbbf6a] hover:-translate-y-[1px] transition-all shadow-[0_8px_24px_rgba(250,180,80,0.25)]">
-          Inizia il quiz
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-        </button>
-
-        <p className="text-center text-[#5a5a5a] text-[12px] mt-4">
-          🔒 Dati riservati. Nessuno spam.
-        </p>
-      </div>
-
-      <footer className="text-center pb-9 text-[11px] text-[#5a5a5a]">
-        © 2025 <span className="text-[#FAB450]">Mailift</span>. Revenue Leak Audit.
-      </footer>
-    </div>
-  </div>
+const ArrowIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
 );
+
+const CtaButton: React.FC<{ onClick: () => void; label?: string; className?: string }> = ({ onClick, label = 'Inizia il quiz', className = '' }) => (
+  <button
+    onClick={onClick}
+    className={`group inline-flex items-center justify-center gap-2 px-8 py-[18px] bg-[#FAB450] text-[#121d2b] rounded-full font-['Syne',sans-serif] text-[17px] font-bold hover:bg-[#fbbf6a] hover:-translate-y-[2px] transition-all shadow-[0_10px_30px_rgba(250,180,80,0.35)] hover:shadow-[0_14px_40px_rgba(250,180,80,0.5)] ${className}`}
+  >
+    {label}
+    <span className="transition-transform group-hover:translate-x-1"><ArrowIcon /></span>
+  </button>
+);
+
+const IntroScreen: React.FC<{ onStart: () => void }> = ({ onStart }) => {
+  const benefits = [
+    { icon: '📊', title: 'Diagnosi completa', desc: 'Analisi delle 6 aree chiave del tuo email marketing.' },
+    { icon: '🎯', title: 'Piano d\u2019azione 90 giorni', desc: 'Task prioritizzate per impatto e velocità.' },
+    { icon: '💰', title: 'Stima revenue persa', desc: 'Quanto stai lasciando sul tavolo ogni mese.' },
+  ];
+
+  const steps = [
+    { n: '01', title: 'Rispondi al quiz', desc: '12 domande veloci, solo 2 minuti del tuo tempo.' },
+    { n: '02', title: 'Ricevi il report', desc: 'Personalizzato sul tuo eCommerce, on-screen e via email.' },
+    { n: '03', title: 'Prenota una call', desc: 'Opzionale e gratuita per discutere i risultati.' },
+  ];
+
+  const areas = [
+    { icon: '👥', label: 'Lista & Segmentazione' },
+    { icon: '⚙️', label: 'Automazioni & Flow' },
+    { icon: '✉️', label: 'Campagne & Newsletter' },
+    { icon: '📬', label: 'Deliverability' },
+    { icon: '📈', label: 'Revenue & ROI' },
+    { icon: '🧭', label: 'Strategia & Crescita' },
+  ];
+
+  return (
+    <div className="min-h-screen bg-[#121d2b] font-['Syne',sans-serif] text-[#f0f0eb]">
+      {/* subtle grid background */}
+      <div
+        className="fixed inset-0 pointer-events-none opacity-[0.06]"
+        style={{
+          backgroundImage:
+            'linear-gradient(#FAB450 1px, transparent 1px), linear-gradient(90deg, #FAB450 1px, transparent 1px)',
+          backgroundSize: '48px 48px',
+          maskImage: 'radial-gradient(ellipse at center, black 30%, transparent 75%)',
+          WebkitMaskImage: 'radial-gradient(ellipse at center, black 30%, transparent 75%)',
+        }}
+      />
+
+      <div className="relative z-[1]">
+        {/* Header */}
+        <header className="max-w-[1100px] mx-auto px-5 pt-6 flex items-center justify-between">
+          <img src={mailiftLogo} alt="Mailift" className="h-9 w-auto" />
+          <span className="text-[11px] tracking-[2px] uppercase text-[#888] hidden sm:block">
+            Email Revenue Audit
+          </span>
+        </header>
+
+        {/* HERO */}
+        <section className="max-w-[720px] mx-auto px-5 pt-12 pb-20 text-center">
+          <div className="relative inline-block mb-7">
+            <div className="absolute inset-0 rounded-full bg-[#FAB450] opacity-20 blur-2xl scale-125" />
+            <div className="relative w-24 h-24 rounded-full bg-[#1a2942] border-2 border-[#FAB450] shadow-[0_0_0_6px_rgba(250,180,80,0.12),0_0_40px_rgba(250,180,80,0.35)] flex items-center justify-center">
+              <img src={mailiftLogo} alt="Mailift" className="h-8 w-auto" />
+            </div>
+          </div>
+
+          <div className="inline-flex items-center gap-2 bg-[rgba(250,180,80,0.1)] border border-[rgba(250,180,80,0.25)] rounded-full px-[14px] py-[5px] text-[11px] font-semibold tracking-[2px] uppercase text-[#FAB450] mb-6">
+            <span className="w-[6px] h-[6px] bg-[#FAB450] rounded-full animate-pulse" />
+            Revenue Leak Audit
+          </div>
+
+          <h1 className="font-['Bebas_Neue',sans-serif] text-[clamp(48px,10vw,84px)] leading-[0.95] tracking-wider mb-5">
+            Scopri quanta revenue stai lasciando sul tavolo.{' '}
+            <span className="text-[#FAB450]">Gratis.</span>
+          </h1>
+
+          <p className="text-[17px] text-[#9aa3b0] max-w-[560px] mx-auto mb-9 leading-relaxed">
+            Rispondi a 12 domande e ricevi in 2 minuti il report personalizzato sulle{' '}
+            <strong className="text-[#f0f0eb]">6 aree chiave</strong> del tuo email marketing.
+          </p>
+
+          <CtaButton onClick={onStart} />
+
+          <p className="text-[#5a5a5a] text-[12px] mt-5">
+            🔒 Dati riservati. Nessuno spam.
+          </p>
+        </section>
+
+        {/* COSA OTTERRAI */}
+        <section className="max-w-[1100px] mx-auto px-5 py-16">
+          <h2 className="font-['Bebas_Neue',sans-serif] text-[clamp(32px,5vw,48px)] tracking-wider text-center mb-3">
+            Cosa otterrai dal report
+          </h2>
+          <p className="text-center text-[#888] mb-12 max-w-[520px] mx-auto">
+            Un audit concreto sul tuo email marketing, pronto da usare.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {benefits.map((b, i) => (
+              <div
+                key={i}
+                className="bg-[#1a2942] border border-[#2a3a52] rounded-[18px] p-7 hover:border-[rgba(250,180,80,0.4)] transition-colors"
+              >
+                <div className="w-12 h-12 rounded-full bg-[rgba(250,180,80,0.12)] border border-[rgba(250,180,80,0.3)] flex items-center justify-center text-[22px] mb-4">
+                  {b.icon}
+                </div>
+                <h3 className="text-[18px] font-bold mb-2 text-[#f0f0eb]">{b.title}</h3>
+                <p className="text-[14px] text-[#9aa3b0] leading-relaxed">{b.desc}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* COME FUNZIONA */}
+        <section className="max-w-[1100px] mx-auto px-5 py-16">
+          <h2 className="font-['Bebas_Neue',sans-serif] text-[clamp(32px,5vw,48px)] tracking-wider text-center mb-12">
+            Come funziona
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
+            {steps.map((s, i) => (
+              <div key={i} className="relative text-center md:text-left">
+                <div className="font-['Bebas_Neue',sans-serif] text-[64px] leading-none text-[#FAB450] mb-3">
+                  {s.n}
+                </div>
+                <h3 className="text-[18px] font-bold mb-2 text-[#f0f0eb]">{s.title}</h3>
+                <p className="text-[14px] text-[#9aa3b0] leading-relaxed max-w-[280px] mx-auto md:mx-0">
+                  {s.desc}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* AREE ANALIZZATE */}
+        <section className="max-w-[1100px] mx-auto px-5 py-16">
+          <h2 className="font-['Bebas_Neue',sans-serif] text-[clamp(32px,5vw,48px)] tracking-wider text-center mb-3">
+            Le 6 aree analizzate
+          </h2>
+          <p className="text-center text-[#888] mb-12 max-w-[520px] mx-auto">
+            Tutto ciò che serve per capire dove stai perdendo revenue.
+          </p>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {areas.map((a, i) => (
+              <div
+                key={i}
+                className="flex items-center gap-3 bg-[#1a2942] border border-[#2a3a52] rounded-full px-5 py-3 hover:border-[rgba(250,180,80,0.4)] transition-colors"
+              >
+                <span className="w-8 h-8 rounded-full bg-[rgba(250,180,80,0.12)] border border-[rgba(250,180,80,0.3)] flex items-center justify-center text-[16px] flex-shrink-0">
+                  {a.icon}
+                </span>
+                <span className="text-[14px] font-semibold text-[#f0f0eb]">{a.label}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* SOCIAL PROOF */}
+        <section className="max-w-[1100px] mx-auto px-5 py-16">
+          <div className="bg-[#1a2942] border border-[#2a3a52] rounded-[24px] px-6 py-10 text-center">
+            <p className="text-[13px] tracking-[2px] uppercase text-[#FAB450] font-semibold mb-3">
+              Trusted by
+            </p>
+            <p className="text-[20px] md:text-[24px] font-bold text-[#f0f0eb] mb-8 max-w-[640px] mx-auto leading-snug">
+              Già usato da <span className="text-[#FAB450]">+200 brand</span> eCommerce italiani per scoprire revenue nascosta.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-[760px] mx-auto">
+              {[
+                { v: '200+', l: 'audit completati' },
+                { v: '€2.5M+', l: 'revenue recuperata' },
+                { v: '2 min', l: 'di tempo richiesto' },
+              ].map((s, i) => (
+                <div key={i}>
+                  <div className="font-['Bebas_Neue',sans-serif] text-[44px] leading-none text-[#FAB450] mb-1">
+                    {s.v}
+                  </div>
+                  <div className="text-[13px] text-[#9aa3b0] uppercase tracking-wider">{s.l}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* CTA FINALE */}
+        <section className="max-w-[720px] mx-auto px-5 py-20 text-center">
+          <h2 className="font-['Bebas_Neue',sans-serif] text-[clamp(36px,7vw,64px)] tracking-wider leading-[0.95] mb-5">
+            Pronto a scoprire quanto puoi <span className="text-[#FAB450]">crescere?</span>
+          </h2>
+          <p className="text-[16px] text-[#9aa3b0] max-w-[480px] mx-auto mb-9">
+            Bastano 2 minuti per ricevere il tuo report personalizzato.
+          </p>
+          <CtaButton onClick={onStart} />
+          <p className="text-[#5a5a5a] text-[12px] mt-5">
+            🔒 Gratis · No spam · 2 minuti
+          </p>
+        </section>
+
+        {/* FOOTER */}
+        <footer className="border-t border-[#2a3a52] mt-8">
+          <div className="max-w-[1100px] mx-auto px-5 py-7 text-center text-[12px] text-[#5a5a5a]">
+            © 2025 <span className="text-[#FAB450] font-semibold">Mailift</span> · Email Revenue Audit
+          </div>
+        </footer>
+      </div>
+    </div>
+  );
+};
 
 // ═══ Main Component ══════════════════════════════════════════════════════
 
