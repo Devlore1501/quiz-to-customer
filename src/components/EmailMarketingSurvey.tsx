@@ -942,20 +942,25 @@ const EmailMarketingSurvey: React.FC = () => {
           </AnimatePresence>
 
           {/* Footer buttons */}
-          {(step.type === 'checkbox' || step.type === 'input') && (
-            <div className="px-5 pb-5">
-              <button onClick={() => {
-                if (step.type === 'checkbox' && formData.activeFlows.length === 0) return;
-                if (step.type === 'input' && !formData.website.trim()) return;
-                advanceFromCurrentStep();
-              }}
-                disabled={(step.type === 'checkbox' && formData.activeFlows.length === 0) || (step.type === 'input' && !formData.website.trim())}
-                className="w-full py-4 bg-[#FAB450] text-[#121d2b] rounded-[10px] font-['Syne',sans-serif] text-[15px] font-bold flex items-center justify-center gap-2 hover:bg-[#fbbf6a] transition-all disabled:opacity-50 disabled:cursor-not-allowed">
-                Continua
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-              </button>
-            </div>
-          )}
+          {(step.type === 'checkbox' || step.type === 'input') && (() => {
+            const inputValue = step.type === 'input'
+              ? ((formData[step.field as keyof FormData] as string) || '').trim()
+              : '';
+            const disabled =
+              (step.type === 'checkbox' && formData.activeFlows.length === 0) ||
+              (step.type === 'input' && !inputValue);
+            return (
+              <div className="px-5 pb-5">
+                <button
+                  onClick={() => { if (!disabled) advanceFromCurrentStep(); }}
+                  disabled={disabled}
+                  className="w-full py-4 bg-[#FAB450] text-[#121d2b] rounded-[10px] font-['Syne',sans-serif] text-[15px] font-bold flex items-center justify-center gap-2 hover:bg-[#fbbf6a] transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                  Continua
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                </button>
+              </div>
+            );
+          })()}
         </div>
 
         {/* Footer */}
