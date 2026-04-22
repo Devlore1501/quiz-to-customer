@@ -922,15 +922,20 @@ const EmailMarketingSurvey: React.FC = () => {
                 </div>
               )}
 
-              {/* Input (URL) */}
+              {/* Input (text/URL) */}
               {step.type === 'input' && (
                 <div>
-                  <input value={formData.website} onChange={e => handleInputChange('website', e.target.value)}
-                    placeholder="www.tuosito.com"
+                  <input
+                    value={(formData[step.field as keyof FormData] as string) || ''}
+                    onChange={e => handleInputChange(step.field as keyof FormData, e.target.value)}
+                    placeholder={(step as { placeholder?: string }).placeholder || ''}
+                    autoFocus
                     className="w-full py-[13px] px-[15px] bg-[#121d2b] border border-[#2a3a52] rounded-[10px] text-[#f0f0eb] font-['Syne',sans-serif] text-[14px] font-medium outline-none focus:border-[rgba(250,180,80,0.45)] transition-colors placeholder:text-[#252525]" />
-                  <p className="mt-[6px] text-[11px] text-[#5a5a5a]">
-                    Puoi scrivere "privato" se preferisci non condividerlo.
-                  </p>
+                  {(step as { helper?: string }).helper && (
+                    <p className="mt-[6px] text-[11px] text-[#5a5a5a]">
+                      {(step as { helper?: string }).helper}
+                    </p>
+                  )}
                 </div>
               )}
             </motion.div>
