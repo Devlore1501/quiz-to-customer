@@ -11,6 +11,9 @@ import { trackQuizCompleted, trackCompleteRegistration } from '@/lib/facebookPix
 import { usePartialTracking } from '@/hooks/usePartialTracking';
 import { InsightCard, getInsightForStep } from '@/components/InsightCard';
 import mailiftLogo from '@/assets/mailift-logo.png';
+import previewScore from '@/assets/report-preview-score.png';
+import previewRevenue from '@/assets/report-preview-revenue.png';
+import previewActions from '@/assets/report-preview-actions.png';
 
 // ═══ Types ═══════════════════════════════════════════════════════════════
 
@@ -471,6 +474,56 @@ const IntroScreen: React.FC<{ onStart: () => void }> = ({ onStart }) => {
               </div>
             ))}
           </div>
+        </section>
+
+        {/* ANTEPRIMA REPORT */}
+        <section className="max-w-[1100px] mx-auto px-5 py-16">
+          <h2 className="font-['Bebas_Neue',sans-serif] text-[clamp(32px,5vw,48px)] tracking-wider text-center mb-3">
+            Anteprima del report che riceverai
+          </h2>
+          <p className="text-center text-[#888] mb-12 max-w-[600px] mx-auto">
+            Ecco un esempio di cosa troverai dentro — dati reali, formule chiare, azioni prioritizzate.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[
+              { src: previewScore, alt: 'Diagnosi & Score', label: 'Diagnosi & Score' },
+              { src: previewRevenue, alt: 'Stima revenue persa', label: 'Stima revenue persa' },
+              { src: previewActions, alt: "Piano d'azione 90 giorni", label: "Piano d'azione 90 giorni" },
+            ].map((p, i) => (
+              <div
+                key={i}
+                className="group bg-[#1a2942] border border-[#2a3a52] rounded-[14px] overflow-hidden shadow-[0_10px_40px_rgba(0,0,0,0.35)] hover:border-[rgba(250,180,80,0.5)] hover:shadow-[0_20px_60px_rgba(250,180,80,0.15)] hover:-translate-y-1 transition-all duration-300"
+              >
+                {/* macOS title bar */}
+                <div className="flex items-center gap-1.5 px-3 py-2.5 bg-[#0f1825] border-b border-[#2a3a52]">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#ff5f57]" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#febc2e]" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#28c840]" />
+                  <span className="ml-3 text-[10px] text-[#5a6577] tracking-wider uppercase truncate">
+                    mailift.com/report
+                  </span>
+                </div>
+                <div className="bg-white">
+                  <img
+                    src={p.src}
+                    alt={p.alt}
+                    width={1024}
+                    height={768}
+                    loading="lazy"
+                    className="w-full h-auto block"
+                  />
+                </div>
+                <div className="px-4 py-3 bg-[#0f1825] border-t border-[#2a3a52] text-center">
+                  <span className="text-[12px] font-semibold text-[#FAB450] tracking-wider uppercase">
+                    {p.label}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className="text-center text-[#888] text-[14px] mt-10">
+            ↓ Ottieni il <span className="text-[#FAB450] font-semibold">tuo report personalizzato</span> in 2 minuti
+          </p>
         </section>
 
         {/* SOCIAL PROOF */}
