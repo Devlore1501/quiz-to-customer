@@ -199,6 +199,21 @@ const labelsFor = (options: { value: string; label: string }[], values: string[]
   return values.map(v => labelFor(options, v));
 };
 
+// ═══ Shared Grid Background ══════════════════════════════════════════════
+
+const GridBackground: React.FC = () => (
+  <div
+    className="fixed inset-0 pointer-events-none opacity-[0.06] z-0"
+    style={{
+      backgroundImage:
+        'linear-gradient(#FAB450 1px, transparent 1px), linear-gradient(90deg, #FAB450 1px, transparent 1px)',
+      backgroundSize: '48px 48px',
+      maskImage: 'radial-gradient(ellipse at center, black 30%, transparent 75%)',
+      WebkitMaskImage: 'radial-gradient(ellipse at center, black 30%, transparent 75%)',
+    }}
+  />
+);
+
 // ═══ Analysis Screen ═════════════════════════════════════════════════════
 
 const AnalysisScreen: React.FC<{ sectorLabel: string; onComplete: () => void }> = ({ sectorLabel, onComplete }) => {
