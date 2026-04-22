@@ -103,11 +103,21 @@ interface StepData {
 }
 
 interface VersionData {
-  total: number;
+  total: number;          // page loads (all sessions)
+  realAttempts: number;   // sessions with actual interaction
   completed: number;
   steps: StepData[];
   timing: TimingStats;
 }
+
+const isGhostSession = (row: any): boolean => {
+  // Ghost = page load with no interaction at all
+  if (row.completed) return false;
+  if ((row.current_step ?? 0) > 0) return false;
+  const fd = row.form_data;
+  const hasData = fd && typeof fd === 'object' && Object.keys(fd).length > 0;
+  return !hasData;
+};
 
 type Period = '1d' | '7d' | '30d' | 'all';
 
