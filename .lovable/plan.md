@@ -1,32 +1,56 @@
 
 
-## Fix header schermata intro
+## Aggiornamento Drop-off Analytics: Quiz v3 + tempo di completamento
 
-Due piccoli fix all'inizio della landing intro:
+### 1. Aggiungere Quiz v3 (versione attuale, 12 step)
 
-### 1. Rimuovere il logo in alto a sinistra
-Attualmente in `IntroScreen` c'è un `<header>` con il logo Mailift in alto a sinistra + scritta "Email Revenue Audit" a destra. Lo rimuovo completamente. Resta **solo il logo centrale dentro l'avatar tondo dell'hero**.
+Il quiz è cambiato di nuovo: ora ha **12 step** e parte da `companyName` (nuovo: chiediamo il brand all'inizio). Aggiungo una nuova entry `v3` nell'array `VERSIONS` di `src/components/DropoffAnalytics.tsx`:
 
-### 2. Spostare la pill "Revenue Leak Audit" sotto il logo
-Oggi visivamente la pill arancione `REVENUE LEAK AUDIT` finisce affiancata al logo (perché l'avatar è `inline-block` e la pill è `inline-flex`). La rendo **block centrata sotto il logo**, in modo che l'ordine verticale sia:
+- **id**: `v3`
+- **label**: `Quiz v3 (attuale)`
+- **detectFn**: `row.total_steps === 12`
+- **stepOrder** (12 step nell'ordine reale del codice):
+  1. `companyName` → "Brand"
+  2. `website` → "Sito Web"
+  3. `sector` → "Settore"
+  4. `monthlyRevenue` → "Fatturato"
+  5. `platform` → "Piattaforma"
+  6. `emailTool` → "Email Tool"
+  7. `emailRevenuePercentage` → "Revenue Email"
+  8. `activeFlows` → "Automazioni"
+  9. `segmentation` → "Segmentazione"
+  10. `emailFrequency` → "Frequenza"
+  11. `listSize` → "Lista Email"
+  12. `motivation` → "Obiettivo"
+
+Aggiorno anche `v2 (precedente)` invece di "attuale" nella label, e imposto `v3` come tab di default selezionato.
+
+### 2. Aggiungere metrica "Tempo di completamento"
+
+Sfrutto `started_at` e `updated_at` (già presenti su `partial_submissions`) per calcolare la durata di ogni sessione. Aggiungo alla query: `started_at, updated_at`.
+
+**Nuove statistiche per versione**, calcolate solo sulle sessioni `completed=true`:
+- **Tempo medio** (mean)
+- **Tempo mediano** (median, più resistente agli outlier)
+- **Tempo più veloce** / **più lento** (min/max)
+
+Filtro outlier: ignoro durate < 10 secondi (bot/test) e > 30 minuti (sessioni lasciate aperte).
+
+### 3. UI: nuova card "⏱ Tempo di completamento"
+
+Sotto la card "Sessioni totali / Completate / Tasso completamento", aggiungo una **seconda riga di 4 mini-stat card**:
 
 ```
-       [ Avatar tondo con logo Mailift centrato ]
-              [ pill: REVENUE LEAK AUDIT ]
-       [ H1 "Scopri quanta revenue... Gratis." ]
-                  [ Sottotitolo ]
-              [ CTA "Inizia il quiz →" ]
-            [ 🔒 Dati riservati. Nessuno spam. ]
+[ ⏱ Medio: 2m 45s ] [ Mediano: 2m 30s ] [ Più veloce: 1m 12s ] [ Più lento: 8m 04s ]
 ```
 
-### Modifiche tecniche
-- `src/components/EmailMarketingSurvey.tsx`, dentro `IntroScreen`:
-  - Rimuovo l'intero blocco `<header>` (righe ~373-379)
-  - Nell'hero: l'avatar diventa un `<div className="flex justify-center">` invece di `inline-block`, così la pill sottostante va naturalmente a capo centrata
-  - Aggiungo un piccolo padding-top all'hero per compensare l'header rimosso
+Stesso stile delle card esistenti (`bg-slate-800`, `rounded-xl`, etichetta piccola sopra in `text-slate-400 text-xs`, valore grande sotto). Helper `formatDuration(ms)` che restituisce `"2m 45s"` o `"45s"` se < 1 min.
+
+### File modificato
+- `src/components/DropoffAnalytics.tsx` (unico file)
 
 ### Cosa NON cambia
-- Tutte le sezioni sottostanti (Cosa otterrai, Come funziona, 6 aree, Anteprima report, social proof, CTA finale, footer)
-- Palette, gradient arancione, tipografia, animazioni
-- Logica quiz, webhook, tracking, report
+- Schema DB, hook `usePartialTracking`, RLS, edge functions
+- Logica del quiz e ordine domande
+- Layout generale del pannello admin (filtri periodo, funnel, tabs versione)
 
