@@ -3,6 +3,7 @@ import type { Session } from '@supabase/supabase-js';
 import { Input } from '@/components/ui/input';
 import { AdminSurvey } from '@/components/AdminSurvey';
 import DropoffAnalytics from '@/components/DropoffAnalytics';
+import AdminWebhookTester from '@/components/AdminWebhookTester';
 import { Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
