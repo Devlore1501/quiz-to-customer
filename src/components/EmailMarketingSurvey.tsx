@@ -321,7 +321,7 @@ const EmailMarketingSurvey: React.FC = () => {
   const [direction, setDirection] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [report, setReport] = useState<AdvancedReport | null>(null);
-  const [phase, setPhase] = useState<'quiz' | 'insight' | 'analyzing' | 'gate' | 'report' | 'disqualified'>('quiz');
+  const [phase, setPhase] = useState<'intro' | 'quiz' | 'insight' | 'analyzing' | 'gate' | 'report' | 'disqualified'>('intro');
   const [leadId, setLeadId] = useState<string | null>(null);
   const [selectedValue, setSelectedValue] = useState<string | null>(null);
   const [emailValidation, setEmailValidation] = useState<EmailValidation>({ status: 'idle' });
