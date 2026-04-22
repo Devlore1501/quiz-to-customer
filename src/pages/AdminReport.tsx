@@ -1,9 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import type { Session } from '@supabase/supabase-js';
 import { Input } from '@/components/ui/input';
 import { AdminSurvey } from '@/components/AdminSurvey';
 import DropoffAnalytics from '@/components/DropoffAnalytics';
 import { Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+
+const ROLE_CHECK_TIMEOUT_MS = 8000;
+
 const AdminReport: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -13,116 +17,222 @@ const AdminReport: React.FC = () => {
   const [error, setError] = useState('');
   const [adminTab, setAdminTab] = useState<'survey' | 'dropoff'>('survey');
 
-  useEffect(() => {
-    let mounted = true;
-    const timeout = setTimeout(() => {
-      console.warn('AdminReport: safety timeout reached, forcing loading=false');
-      if (mounted) setLoading(false);
-    }, 5000);
+  // Anti-race guards
+  const isMountedRef = useRef(true);
+  const verificationInFlightRef = useRef(false);
+  const lastCheckIdRef = useRef(0);
+  const manualLoginInFlightRef = useRef(false);
 
-    const checkAdmin = async (userId: string) => {
-      try {
-        console.log('AdminReport: checking admin role for', userId);
-        const { data, error: rpcError } = await supabase.rpc('has_role', {
-          _user_id: userId,
-          _role: 'admin' as const,
-        });
-        console.log('AdminReport: has_role result:', data, 'error:', rpcError);
-        return !!data;
-      } catch (err) {
-        console.error('AdminReport: has_role exception:', err);
+  const safeSet = useCallback(<T,>(setter: React.Dispatch<React.SetStateAction<T>>, value: T) => {
+    if (isMountedRef.current) setter(value);
+  }, []);
+
+  const verifyAdminAccess = useCallback(async (
+    session: Session,
+    source: 'mount' | 'manual-login' | 'listener'
+  ): Promise<boolean> => {
+    // Block concurrent verifications
+    if (verificationInFlightRef.current) {
+      console.log(`[AdminReport] verifyAdminAccess(${source}) skipped: already in flight`);
+      return false;
+    }
+    verificationInFlightRef.current = true;
+    const checkId = ++lastCheckIdRef.current;
+
+    safeSet(setLoading, true);
+    safeSet(setError, '');
+
+    const isStillCurrent = () => isMountedRef.current && lastCheckIdRef.current === checkId;
+
+    try {
+      // 1. Server-side user confirmation
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError || !userData?.user) {
+        console.warn('[AdminReport] getUser failed:', userError);
+        if (isStillCurrent()) {
+          safeSet(setAuthenticated, false);
+          safeSet(setError, 'Sessione non valida. Effettua di nuovo l\'accesso.');
+          safeSet(setLoading, false);
+        }
         return false;
       }
-    };
 
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      console.log('AdminReport: getSession result, session:', !!session);
-      if (!mounted) return;
-      if (session) {
-        const isAdmin = await checkAdmin(session.user.id);
-        if (mounted) setAuthenticated(isAdmin);
+      const userId = userData.user.id;
+
+      // 2. RPC has_role with timeout
+      const rpcPromise = supabase.rpc('has_role', {
+        _user_id: userId,
+        _role: 'admin' as const,
+      });
+
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('ROLE_CHECK_TIMEOUT')), ROLE_CHECK_TIMEOUT_MS)
+      );
+
+      let isAdmin = false;
+      try {
+        const result = await Promise.race([rpcPromise, timeoutPromise]) as
+          | { data: boolean | null; error: { message: string } | null }
+          | never;
+
+        if (result.error) {
+          console.error('[AdminReport] has_role RPC error:', result.error);
+          if (isStillCurrent()) {
+            safeSet(setAuthenticated, false);
+            safeSet(setError, 'Errore verifica permessi. Riprova.');
+            safeSet(setLoading, false);
+          }
+          return false;
+        }
+        isAdmin = !!result.data;
+      } catch (timeoutErr) {
+        console.error('[AdminReport] has_role timeout:', timeoutErr);
+        if (isStillCurrent()) {
+          safeSet(setAuthenticated, false);
+          safeSet(setError, 'Verifica permessi non riuscita, riprova');
+          safeSet(setLoading, false);
+        }
+        return false;
       }
-      if (mounted) { setLoading(false); clearTimeout(timeout); }
-    }).catch((err) => {
-      console.error('AdminReport: getSession error:', err);
-      if (mounted) { setLoading(false); clearTimeout(timeout); }
+
+      if (!isStillCurrent()) return isAdmin;
+
+      if (isAdmin) {
+        safeSet(setAuthenticated, true);
+        safeSet(setError, '');
+        safeSet(setLoading, false);
+        return true;
+      }
+
+      // Not admin: sign out and show clear error
+      try {
+        await supabase.auth.signOut();
+      } catch (signOutErr) {
+        console.warn('[AdminReport] signOut after non-admin failed:', signOutErr);
+      }
+      if (isStillCurrent()) {
+        safeSet(setAuthenticated, false);
+        safeSet(setError, 'Non hai i permessi per accedere a questa area');
+        safeSet(setLoading, false);
+      }
+      return false;
+    } catch (err) {
+      console.error(`[AdminReport] verifyAdminAccess(${source}) exception:`, err);
+      if (isStillCurrent()) {
+        safeSet(setAuthenticated, false);
+        safeSet(setError, 'Errore durante la verifica. Riprova.');
+        safeSet(setLoading, false);
+      }
+      return false;
+    } finally {
+      verificationInFlightRef.current = false;
+    }
+  }, [safeSet]);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+
+    // Register listener BEFORE getSession
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('[AdminReport] auth event:', event, 'has session:', !!session);
+
+      if (event === 'SIGNED_OUT') {
+        if (!isMountedRef.current) return;
+        // Invalidate any in-flight check
+        lastCheckIdRef.current++;
+        verificationInFlightRef.current = false;
+        safeSet(setAuthenticated, false);
+        safeSet(setError, '');
+        safeSet(setLoading, false);
+        return;
+      }
+
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        // Skip if manual login is driving the flow
+        if (manualLoginInFlightRef.current) {
+          console.log('[AdminReport] listener skipped: manual login in flight');
+          return;
+        }
+        // Skip if a verification is already running
+        if (verificationInFlightRef.current) {
+          console.log('[AdminReport] listener skipped: verification in flight');
+          return;
+        }
+        if (!session) return;
+        // Defer to avoid running inside the auth callback
+        setTimeout(() => {
+          if (!isMountedRef.current) return;
+          if (verificationInFlightRef.current) return;
+          void verifyAdminAccess(session, 'listener');
+        }, 0);
+      }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        console.log('AdminReport: onAuthStateChange event:', _event, 'session:', !!session);
-        if (!mounted) return;
-        if (session) {
-          // Defer Supabase calls to avoid deadlock inside the auth callback
-          setTimeout(async () => {
-            const isAdmin = await checkAdmin(session.user.id);
-            console.log('AdminReport: isAdmin after auth change:', isAdmin);
-            if (mounted) {
-              setAuthenticated(isAdmin);
-              setLoading(false);
-              clearTimeout(timeout);
-            }
-          }, 0);
-        } else {
-          if (mounted) {
-            setAuthenticated(false);
-            setLoading(false);
-            clearTimeout(timeout);
-          }
-        }
+    // Initial session check
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!isMountedRef.current) return;
+      if (!session) {
+        safeSet(setLoading, false);
+        safeSet(setAuthenticated, false);
+        return;
       }
-    );
+      void verifyAdminAccess(session, 'mount');
+    }).catch((err) => {
+      console.error('[AdminReport] getSession error:', err);
+      if (isMountedRef.current) {
+        safeSet(setLoading, false);
+        safeSet(setAuthenticated, false);
+      }
+    });
 
     return () => {
-      mounted = false;
-      clearTimeout(timeout);
+      isMountedRef.current = false;
       subscription.unsubscribe();
     };
-  }, []);
+  }, [verifyAdminAccess, safeSet]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setError('');
+
+    safeSet(setLoading, true);
+    safeSet(setError, '');
+    safeSet(setAuthenticated, false);
+    manualLoginInFlightRef.current = true;
 
     try {
-      const { error: authError } = await supabase.auth.signInWithPassword({
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (authError) {
-        setError('Credenziali non valide. Riprova.');
-        setLoading(false);
+      if (authError || !data?.session) {
+        console.warn('[AdminReport] signIn error:', authError);
+        safeSet(setAuthenticated, false);
+        safeSet(setError, 'Credenziali non valide');
+        safeSet(setLoading, false);
         return;
       }
 
-      // onAuthStateChange gestirà la verifica admin e setAuthenticated/setLoading
-      setTimeout(() => {
-        setLoading(prev => {
-          if (prev) {
-            console.warn('Admin login: timeout after signIn, forcing loading=false');
-            return false;
-          }
-          return prev;
-        });
-      }, 8000);
+      // Drive verification immediately from the returned session
+      await verifyAdminAccess(data.session, 'manual-login');
     } catch (err) {
-      console.error('Admin login error:', err);
-      setError('Errore durante il login. Riprova.');
-      setLoading(false);
+      console.error('[AdminReport] login exception:', err);
+      safeSet(setError, 'Errore durante il login. Riprova.');
+      safeSet(setAuthenticated, false);
+      safeSet(setLoading, false);
+    } finally {
+      manualLoginInFlightRef.current = false;
     }
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center gap-3">
         <Loader2 className="w-8 h-8 text-orange animate-spin" />
+        <p className="text-slate-400 text-sm">Verifica accesso admin...</p>
       </div>
     );
   }
-
-  // adminTab state moved to top of component
 
   if (authenticated) {
     return (
@@ -151,7 +261,6 @@ const AdminReport: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-900 flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
-        {/* Logo / header */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-orange/10 border border-orange/30 mb-4">
             <Lock className="w-8 h-8 text-orange" />
@@ -162,7 +271,6 @@ const AdminReport: React.FC = () => {
           </p>
         </div>
 
-        {/* Login form */}
         <form onSubmit={handleLogin} className="bg-slate-800 rounded-2xl border border-slate-700 p-6 shadow-xl space-y-5">
           <div>
             <label className="block text-slate-300 text-sm font-medium mb-2">
