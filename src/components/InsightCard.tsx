@@ -87,7 +87,7 @@ export function getInsightForStep(step: number, formData: Record<string, unknown
           : 'Anche con buone performance, ottimizzare i flussi può aggiungere un +15-20% extra.',
       };
     }
-    case 5: {
+    case 7: {
       const flows = formData.activeFlows as string[];
       const count = flows?.filter(f => f !== 'none').length || 0;
       return {
