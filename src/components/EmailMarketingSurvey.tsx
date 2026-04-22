@@ -67,10 +67,11 @@ function validatePhone(phone: string): { valid: boolean; message?: string } {
 
 // ═══ Constants ═══════════════════════════════════════════════════════════
 
-const INSIGHT_AFTER_STEPS = [0, 4, 5];
+// Insight steps in NEW order: after Fatturato (3), Revenue Email (6), Automazioni (7)
+const INSIGHT_AFTER_STEPS = [3, 6, 7];
 
 const INITIAL_FORM: FormData = {
-  monthlyRevenue: '', sector: '', customSector: '', platform: '', emailTool: '',
+  companyName: '', monthlyRevenue: '', sector: '', customSector: '', platform: '', emailTool: '',
   emailRevenuePercentage: '', activeFlows: [], segmentation: '', emailFrequency: '',
   listSize: '', motivation: '', website: '', fullName: '', phone: '', email: '',
   acceptTerms: false, _hp_field: '',
@@ -163,10 +164,12 @@ const motivationOptions = [
   { id: 'm5', label: 'Sto valutando di cambiare agenzia/consulente', value: 'change_agency' },
 ];
 
-// Step definitions
+// Step definitions — NEW ORDER: Brand → Sito → Settore → Fatturato → resto invariato
 const STEPS = [
-  { cat: 'Fatturato', title: "Qual è il fatturato mensile medio del tuo eCommerce?", type: 'radio' as const, field: 'monthlyRevenue' as const, options: revenueOptions },
+  { cat: 'Brand', title: "Come si chiama il tuo brand?", type: 'input' as const, field: 'companyName' as const, options: [], placeholder: 'Es. Mailift', helper: '' },
+  { cat: 'Il tuo store', title: "Qual è l'URL del tuo store?", type: 'input' as const, field: 'website' as const, options: [], placeholder: 'www.tuosito.com', helper: 'Puoi scrivere "privato" se preferisci non condividerlo.' },
   { cat: 'Settore', title: "In quale settore opera il tuo eCommerce?", type: 'radio' as const, field: 'sector' as const, options: sectorOptions },
+  { cat: 'Fatturato', title: "Qual è il fatturato mensile medio del tuo eCommerce?", type: 'radio' as const, field: 'monthlyRevenue' as const, options: revenueOptions },
   { cat: 'Piattaforma', title: "Su quale piattaforma gira il tuo store?", type: 'radio' as const, field: 'platform' as const, options: platformOptions },
   { cat: 'Email Tool', title: "Quale strumento usi per inviare le email?", type: 'radio' as const, field: 'emailTool' as const, options: emailToolOptions },
   { cat: 'Revenue Email', title: "Quanto fatturato proviene attualmente dalle email?", type: 'radio' as const, field: 'emailRevenuePercentage' as const, options: emailRevenueOptions },
@@ -175,7 +178,6 @@ const STEPS = [
   { cat: 'Frequenza', title: "Quante email invii a settimana?", type: 'radio' as const, field: 'emailFrequency' as const, options: frequencyOptions },
   { cat: 'Lista Email', title: "Quanti iscritti ha la tua lista email?", type: 'radio' as const, field: 'listSize' as const, options: listSizeOptions },
   { cat: 'Obiettivo', title: "Perché vuoi analizzare il tuo email marketing?", type: 'radio' as const, field: 'motivation' as const, options: motivationOptions },
-  { cat: 'Il tuo store', title: "Qual è l'URL del tuo store?", type: 'input' as const, field: 'website' as const, options: [] },
 ];
 
 const TOTAL_STEPS = STEPS.length;
