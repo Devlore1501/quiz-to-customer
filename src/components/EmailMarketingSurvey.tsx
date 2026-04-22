@@ -314,6 +314,64 @@ const DisqualifiedScreen: React.FC = () => (
   </div>
 );
 
+// ═══ Intro Screen ════════════════════════════════════════════════════════
+
+const IntroScreen: React.FC<{ onStart: () => void }> = ({ onStart }) => (
+  <div className="min-h-screen bg-[#121d2b] font-['Syne',sans-serif] text-[#f0f0eb]">
+    <div className="max-w-[680px] mx-auto px-[18px] relative z-[1]">
+      <header className="pt-6 text-center">
+        <img src={mailiftLogo} alt="Mailift" className="h-10 w-auto mx-auto" />
+      </header>
+
+      <div className="pt-9 pb-7 text-center">
+        <div className="inline-flex items-center gap-2 bg-[rgba(250,180,80,0.1)] border border-[rgba(250,180,80,0.25)] rounded-full px-[14px] py-[5px] text-[11px] font-semibold tracking-[2px] uppercase text-[#FAB450] mb-5">
+          <span className="w-[6px] h-[6px] bg-[#FAB450] rounded-full animate-pulse" />
+          Revenue Leak Audit
+        </div>
+        <h1 className="font-['Bebas_Neue',sans-serif] text-[clamp(48px,11vw,80px)] leading-[0.92] tracking-wider mb-4">
+          Quanto stai<span className="text-[#FAB450] block">perdendo ogni mese?</span>
+        </h1>
+        <p className="text-[16px] text-[#888] max-w-[460px] mx-auto mb-8 leading-relaxed">
+          Scopri in <strong className="text-[#f0f0eb]">2 minuti</strong> quanta revenue stai lasciando sul tavolo
+          e ricevi un report personalizzato con il tuo piano d'azione.
+        </p>
+      </div>
+
+      <div className="bg-[#1a2942] border border-[#2a3a52] rounded-[18px] p-6 mb-8">
+        <div className="flex flex-col gap-3 mb-6">
+          {[
+            { icon: '📊', text: 'Report personalizzato sul tuo eCommerce' },
+            { icon: '⏱️', text: 'Solo 2 minuti, 12 domande' },
+            { icon: '🎁', text: '100% gratuito, senza impegno' },
+          ].map((item, i) => (
+            <div key={i} className="flex items-center gap-3 py-2">
+              <div className="w-9 h-9 bg-[rgba(250,180,80,0.1)] border border-[rgba(250,180,80,0.3)] rounded-full flex items-center justify-center text-[18px] flex-shrink-0">
+                {item.icon}
+              </div>
+              <span className="text-[14px] text-[#f0f0eb]">{item.text}</span>
+            </div>
+          ))}
+        </div>
+
+        <button
+          onClick={onStart}
+          className="w-full py-[18px] bg-[#FAB450] text-[#121d2b] rounded-[12px] font-['Syne',sans-serif] text-[17px] font-bold flex items-center justify-center gap-2 hover:bg-[#fbbf6a] hover:-translate-y-[1px] transition-all shadow-[0_8px_24px_rgba(250,180,80,0.25)]">
+          Inizia il quiz
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+        </button>
+
+        <p className="text-center text-[#5a5a5a] text-[12px] mt-4">
+          🔒 Dati riservati. Nessuno spam.
+        </p>
+      </div>
+
+      <footer className="text-center pb-9 text-[11px] text-[#5a5a5a]">
+        © 2025 <span className="text-[#FAB450]">Mailift</span>. Revenue Leak Audit.
+      </footer>
+    </div>
+  </div>
+);
+
 // ═══ Main Component ══════════════════════════════════════════════════════
 
 const EmailMarketingSurvey: React.FC = () => {
