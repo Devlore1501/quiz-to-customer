@@ -1,56 +1,42 @@
 
 
-## Aggiornamento Drop-off Analytics: Quiz v3 + tempo di completamento
+## Drop-off v3: includere il completamento esistente nel calcolo
 
-### 1. Aggiungere Quiz v3 (versione attuale, 12 step)
+### Diagnosi rivista
 
-Il quiz è cambiato di nuovo: ora ha **12 step** e parte da `companyName` (nuovo: chiediamo il brand all'inizio). Aggiungo una nuova entry `v3` nell'array `VERSIONS` di `src/components/DropoffAnalytics.tsx`:
+Hai ragione: c'è **1 sessione v3 completata** in DB, non zero. Il mio piano precedente partiva dal presupposto sbagliato che fossero tutte ferme su `companyName`. In realtà:
 
-- **id**: `v3`
-- **label**: `Quiz v3 (attuale)`
-- **detectFn**: `row.total_steps === 12`
-- **stepOrder** (12 step nell'ordine reale del codice):
-  1. `companyName` → "Brand"
-  2. `website` → "Sito Web"
-  3. `sector` → "Settore"
-  4. `monthlyRevenue` → "Fatturato"
-  5. `platform` → "Piattaforma"
-  6. `emailTool` → "Email Tool"
-  7. `emailRevenuePercentage` → "Revenue Email"
-  8. `activeFlows` → "Automazioni"
-  9. `segmentation` → "Segmentazione"
-  10. `emailFrequency` → "Frequenza"
-  11. `listSize` → "Lista Email"
-  12. `motivation` → "Obiettivo"
+- Sessioni v3 totali: 6 (non 5)
+- Almeno 1 ha `completed = true` con dati reali
+- Le altre 5 sono visite/abbandoni precoci
 
-Aggiorno anche `v2 (precedente)` invece di "attuale" nella label, e imposto `v3` come tab di default selezionato.
+Il problema quindi NON è "nessun dato": è che il funnel attuale **mescola visite-fantasma con tentativi reali**, schiacciando le metriche e nascondendo l'unico completamento valido in mezzo al rumore.
 
-### 2. Aggiungere metrica "Tempo di completamento"
+### Cosa cambio in `src/components/DropoffAnalytics.tsx`
 
-Sfrutto `started_at` e `updated_at` (già presenti su `partial_submissions`) per calcolare la durata di ogni sessione. Aggiungo alla query: `started_at, updated_at`.
+**1. Distinzione visite vs tentativi reali**  
+Aggiungo `form_data` alla query e classifico ogni sessione:
+- **Visita-fantasma**: `current_step = 0` AND `form_data` vuoto AND `completed = false`
+- **Tentativo reale**: tutto il resto (incluse abbandonate dopo aver digitato e ovviamente le completate)
 
-**Nuove statistiche per versione**, calcolate solo sulle sessioni `completed=true`:
-- **Tempo medio** (mean)
-- **Tempo mediano** (median, più resistente agli outlier)
-- **Tempo più veloce** / **più lento** (min/max)
+**2. Nuova mini-stat sopra il funnel**  
+Una riga di 3 card piccole:
+- **Page loads**: totale sessioni create
+- **Tentativi reali**: chi ha interagito davvero
+- **Engagement**: % tentativi / page loads
 
-Filtro outlier: ignoro durate < 10 secondi (bot/test) e > 30 minuti (sessioni lasciate aperte).
+**3. Funnel e tasso completamento ricalcolati sui tentativi reali**  
+Così l'unica sessione v3 completata risulta visibile (es. "1 completata su 1 tentativo reale = 100%") invece di sparire (1/6 = 17%). La barra "Brand" del funnel parte dai tentativi reali, non dalle visite.
 
-### 3. UI: nuova card "⏱ Tempo di completamento"
+**4. Timing usa anche la sessione completata esistente**  
+Il blocco "⏱ Tempo di completamento" già previsto userà il dato della sessione v3 completata (started_at → updated_at). Con 1 sola sessione mostro solo "Tempo: Xm Ys" invece delle 4 card medio/mediano/min/max (che hanno senso da ≥3 completamenti in su).
 
-Sotto la card "Sessioni totali / Completate / Tasso completamento", aggiungo una **seconda riga di 4 mini-stat card**:
-
-```
-[ ⏱ Medio: 2m 45s ] [ Mediano: 2m 30s ] [ Più veloce: 1m 12s ] [ Più lento: 8m 04s ]
-```
-
-Stesso stile delle card esistenti (`bg-slate-800`, `rounded-xl`, etichetta piccola sopra in `text-slate-400 text-xs`, valore grande sotto). Helper `formatDuration(ms)` che restituisce `"2m 45s"` o `"45s"` se < 1 min.
+**5. Default tab intelligente**  
+Se v3 ha <10 tentativi reali, il default torna a v2; il tab v3 resta cliccabile col badge che mostra il conteggio reale di tentativi (non di visite).
 
 ### File modificato
-- `src/components/DropoffAnalytics.tsx` (unico file)
+- `src/components/DropoffAnalytics.tsx` (unico)
 
 ### Cosa NON cambia
-- Schema DB, hook `usePartialTracking`, RLS, edge functions
-- Logica del quiz e ordine domande
-- Layout generale del pannello admin (filtri periodo, funnel, tabs versione)
+- Hook `usePartialTracking`, schema DB, RLS, edge functions, trigger webhook, logica del quiz
 
