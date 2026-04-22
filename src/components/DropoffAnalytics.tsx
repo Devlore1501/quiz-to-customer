@@ -302,6 +302,36 @@ const DropoffAnalytics: React.FC = () => {
             </div>
           </div>
 
+          {/* Timing */}
+          <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-white font-semibold">⏱ Tempo di completamento</h3>
+              <span className="text-xs text-slate-500">su {current.timing.count} sessioni completate</span>
+            </div>
+            {current.timing.count > 0 ? (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="bg-slate-900/50 rounded-lg p-3 border border-slate-700">
+                  <p className="text-slate-400 text-xs mb-1">Medio</p>
+                  <p className="text-lg font-bold text-white">{formatDuration(current.timing.avg)}</p>
+                </div>
+                <div className="bg-slate-900/50 rounded-lg p-3 border border-slate-700">
+                  <p className="text-slate-400 text-xs mb-1">Mediano</p>
+                  <p className="text-lg font-bold text-white">{formatDuration(current.timing.median)}</p>
+                </div>
+                <div className="bg-slate-900/50 rounded-lg p-3 border border-slate-700">
+                  <p className="text-slate-400 text-xs mb-1">Più veloce</p>
+                  <p className="text-lg font-bold text-green-400">{formatDuration(current.timing.min)}</p>
+                </div>
+                <div className="bg-slate-900/50 rounded-lg p-3 border border-slate-700">
+                  <p className="text-slate-400 text-xs mb-1">Più lento</p>
+                  <p className="text-lg font-bold text-yellow-400">{formatDuration(current.timing.max)}</p>
+                </div>
+              </div>
+            ) : (
+              <p className="text-slate-500 text-sm">Nessuna sessione completata nel periodo (outlier &lt;10s o &gt;30min esclusi).</p>
+            )}
+          </div>
+
           {/* Funnel */}
           <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
             <h3 className="text-white font-semibold mb-4">Funnel per domanda</h3>
