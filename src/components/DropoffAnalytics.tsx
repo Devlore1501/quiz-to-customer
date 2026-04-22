@@ -103,11 +103,21 @@ interface StepData {
 }
 
 interface VersionData {
-  total: number;
+  total: number;          // page loads (all sessions)
+  realAttempts: number;   // sessions with actual interaction
   completed: number;
   steps: StepData[];
   timing: TimingStats;
 }
+
+const isGhostSession = (row: any): boolean => {
+  // Ghost = page load with no interaction at all
+  if (row.completed) return false;
+  if ((row.current_step ?? 0) > 0) return false;
+  const fd = row.form_data;
+  const hasData = fd && typeof fd === 'object' && Object.keys(fd).length > 0;
+  return !hasData;
+};
 
 type Period = '1d' | '7d' | '30d' | 'all';
 
@@ -125,7 +135,7 @@ const DropoffAnalytics: React.FC = () => {
     setLoading(true);
     try {
       let query = supabase.from('partial_submissions')
-        .select('current_step, current_step_name, abandoned, completed, started_at, updated_at, total_steps')
+        .select('current_step, current_step_name, abandoned, completed, started_at, updated_at, total_steps, form_data')
         .eq('survey_type', 'email_marketing');
 
       if (period !== 'all') {
@@ -140,8 +150,11 @@ const DropoffAnalytics: React.FC = () => {
       const result: Record<string, VersionData> = {};
 
       for (const version of VERSIONS) {
-        const vRows = (rows || []).filter(r => version.detectFn(r));
-        const total = vRows.length;
+        const allRows = (rows || []).filter(r => version.detectFn(r));
+        const total = allRows.length;
+        // Filter ghost sessions for funnel + completion calculations
+        const vRows = allRows.filter(r => !isGhostSession(r));
+        const realAttempts = vRows.length;
         const completed = vRows.filter(r => r.completed).length;
 
         // Build step map from version config
@@ -158,19 +171,17 @@ const DropoffAnalytics: React.FC = () => {
           }
         });
 
-        // Calculate reached and abandoned
+        // Calculate reached and abandoned (real attempts only)
         vRows.forEach(row => {
           const name = row.current_step_name || `step_${row.current_step}`;
           const stepIdx = version.stepOrder.indexOf(name);
           
-          // Mark all steps up to current as reached
           if (stepIdx >= 0) {
             for (let i = 0; i <= stepIdx; i++) {
               const s = stepMap.get(version.stepOrder[i]);
               if (s) s.reached++;
             }
           } else {
-            // Unknown step, just count itself
             const s = stepMap.get(name);
             if (s) s.reached++;
           }
@@ -182,7 +193,6 @@ const DropoffAnalytics: React.FC = () => {
         });
 
         const steps: StepData[] = [];
-        // Ordered steps first
         for (const name of version.stepOrder) {
           const val = stepMap.get(name);
           if (val) {
@@ -195,7 +205,6 @@ const DropoffAnalytics: React.FC = () => {
             });
           }
         }
-        // Then any extra steps not in config
         stepMap.forEach((val, name) => {
           if (!version.stepOrder.includes(name)) {
             steps.push({
@@ -213,7 +222,6 @@ const DropoffAnalytics: React.FC = () => {
         vRows.forEach(row => {
           if (!row.completed || !row.started_at || !row.updated_at) return;
           const ms = new Date(row.updated_at).getTime() - new Date(row.started_at).getTime();
-          // Filter outliers: <10s (bots/test) or >30min (left open)
           if (ms >= 10_000 && ms <= 30 * 60_000) durations.push(ms);
         });
         durations.sort((a, b) => a - b);
@@ -225,15 +233,20 @@ const DropoffAnalytics: React.FC = () => {
           max: durations.length ? durations[durations.length - 1] : 0,
         };
 
-        result[version.id] = { total, completed, steps, timing };
+        result[version.id] = { total, realAttempts, completed, steps, timing };
       }
 
       setVersionData(result);
       
-      // Auto-select first version with data
-      const firstWithData = VERSIONS.find(v => (result[v.id]?.total || 0) > 0);
-      if (firstWithData && !result[activeVersion]?.total) {
-        setActiveVersion(firstWithData.id);
+      // Smart default tab: prefer the latest version with ≥10 real attempts,
+      // otherwise fall back to whichever has the most real attempts.
+      const currentHasData = (result[activeVersion]?.realAttempts || 0) > 0;
+      if (!currentHasData) {
+        const reversed = [...VERSIONS].reverse();
+        const preferred = reversed.find(v => (result[v.id]?.realAttempts || 0) >= 10)
+          || reversed.find(v => (result[v.id]?.realAttempts || 0) > 0)
+          || reversed.find(v => (result[v.id]?.total || 0) > 0);
+        if (preferred) setActiveVersion(preferred.id);
       }
     } catch (err) {
       console.error(err);
@@ -243,7 +256,12 @@ const DropoffAnalytics: React.FC = () => {
 
   const current = versionData[activeVersion];
   const maxReached = current ? Math.max(...current.steps.map(d => d.reached), 1) : 1;
-  const completionRate = current && current.total > 0 ? ((current.completed / current.total) * 100).toFixed(1) : '0';
+  const completionRate = current && current.realAttempts > 0
+    ? ((current.completed / current.realAttempts) * 100).toFixed(1)
+    : '0';
+  const engagementRate = current && current.total > 0
+    ? ((current.realAttempts / current.total) * 100).toFixed(0)
+    : '0';
 
   return (
     <div className="space-y-6">
@@ -267,13 +285,15 @@ const DropoffAnalytics: React.FC = () => {
       <div className="flex gap-1 bg-slate-800 rounded-lg p-1">
         {VERSIONS.map(v => {
           const vd = versionData[v.id];
-          const count = vd?.total || 0;
+          const real = vd?.realAttempts || 0;
+          const total = vd?.total || 0;
           return (
             <button key={v.id} onClick={() => setActiveVersion(v.id)}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${activeVersion === v.id ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'}`}>
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${activeVersion === v.id ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'}`}
+              title={`${total} page loads · ${real} tentativi reali`}>
               {v.label}
               <span className={`text-xs px-1.5 py-0.5 rounded-full ${activeVersion === v.id ? 'bg-orange/20 text-orange' : 'bg-slate-700 text-slate-500'}`}>
-                {count}
+                {real}
               </span>
             </button>
           );
@@ -286,85 +306,117 @@ const DropoffAnalytics: React.FC = () => {
         </div>
       ) : current && current.total > 0 ? (
         <>
-          {/* Summary */}
+          {/* Engagement: page loads vs real attempts */}
           <div className="grid grid-cols-3 gap-3">
             <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
-              <p className="text-slate-400 text-xs mb-1">Sessioni totali</p>
+              <p className="text-slate-400 text-xs mb-1">Page loads</p>
               <p className="text-2xl font-bold text-white">{current.total}</p>
+              <p className="text-slate-500 text-[11px] mt-1">tutte le sessioni create</p>
             </div>
             <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
-              <p className="text-slate-400 text-xs mb-1">Completate</p>
-              <p className="text-2xl font-bold text-green-400">{current.completed}</p>
+              <p className="text-slate-400 text-xs mb-1">Tentativi reali</p>
+              <p className="text-2xl font-bold text-white">{current.realAttempts}</p>
+              <p className="text-slate-500 text-[11px] mt-1">utenti che hanno interagito</p>
             </div>
             <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
-              <p className="text-slate-400 text-xs mb-1">Tasso completamento</p>
-              <p className="text-2xl font-bold text-orange">{completionRate}%</p>
+              <p className="text-slate-400 text-xs mb-1">Engagement</p>
+              <p className="text-2xl font-bold text-orange">{engagementRate}%</p>
+              <p className="text-slate-500 text-[11px] mt-1">tentativi / page loads</p>
             </div>
           </div>
 
-          {/* Timing */}
-          <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-white font-semibold">⏱ Tempo di completamento</h3>
-              <span className="text-xs text-slate-500">su {current.timing.count} sessioni completate</span>
+          {current.realAttempts === 0 ? (
+            <div className="bg-slate-800 rounded-xl p-8 border border-slate-700 text-center">
+              <p className="text-slate-400">Nessun utente ha ancora interagito con il quiz in questa versione.</p>
+              <p className="text-slate-500 text-xs mt-2">Le {current.total} sessioni esistenti sono solo aperture di pagina senza interazione.</p>
             </div>
-            {current.timing.count > 0 ? (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div className="bg-slate-900/50 rounded-lg p-3 border border-slate-700">
-                  <p className="text-slate-400 text-xs mb-1">Medio</p>
-                  <p className="text-lg font-bold text-white">{formatDuration(current.timing.avg)}</p>
+          ) : (
+            <>
+              {/* Summary su tentativi reali */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
+                  <p className="text-slate-400 text-xs mb-1">Completate</p>
+                  <p className="text-2xl font-bold text-green-400">{current.completed}</p>
+                  <p className="text-slate-500 text-[11px] mt-1">su {current.realAttempts} tentativi reali</p>
                 </div>
-                <div className="bg-slate-900/50 rounded-lg p-3 border border-slate-700">
-                  <p className="text-slate-400 text-xs mb-1">Mediano</p>
-                  <p className="text-lg font-bold text-white">{formatDuration(current.timing.median)}</p>
-                </div>
-                <div className="bg-slate-900/50 rounded-lg p-3 border border-slate-700">
-                  <p className="text-slate-400 text-xs mb-1">Più veloce</p>
-                  <p className="text-lg font-bold text-green-400">{formatDuration(current.timing.min)}</p>
-                </div>
-                <div className="bg-slate-900/50 rounded-lg p-3 border border-slate-700">
-                  <p className="text-slate-400 text-xs mb-1">Più lento</p>
-                  <p className="text-lg font-bold text-yellow-400">{formatDuration(current.timing.max)}</p>
+                <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
+                  <p className="text-slate-400 text-xs mb-1">Tasso completamento</p>
+                  <p className="text-2xl font-bold text-orange">{completionRate}%</p>
+                  <p className="text-slate-500 text-[11px] mt-1">completate / tentativi reali</p>
                 </div>
               </div>
-            ) : (
-              <p className="text-slate-500 text-sm">Nessuna sessione completata nel periodo (outlier &lt;10s o &gt;30min esclusi).</p>
-            )}
-          </div>
 
-          {/* Funnel */}
-          <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
-            <h3 className="text-white font-semibold mb-4">Funnel per domanda</h3>
-            <div className="space-y-3">
-              {current.steps.map((d, idx) => (
-                <div key={d.stepName} className="flex items-center gap-3">
-                  <span className="text-slate-400 text-xs w-6 text-right flex-shrink-0">{idx + 1}</span>
-                  <span className="text-slate-300 text-sm w-28 flex-shrink-0 truncate">{d.label}</span>
-                  <div className="flex-1 relative h-6">
-                    <div className="absolute inset-y-0 left-0 bg-orange/30 rounded"
-                      style={{ width: `${(d.reached / maxReached) * 100}%` }} />
-                    {d.abandoned > 0 && (
-                      <div className="absolute inset-y-0 bg-red-500/40 rounded-r"
-                        style={{
-                          left: `${((d.reached - d.abandoned) / maxReached) * 100}%`,
-                          width: `${(d.abandoned / maxReached) * 100}%`
-                        }} />
-                    )}
-                    <div className="absolute inset-0 flex items-center px-2">
-                      <span className="text-xs text-white font-medium">{d.reached}</span>
+              {/* Timing */}
+              <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-white font-semibold">⏱ Tempo di completamento</h3>
+                  <span className="text-xs text-slate-500">su {current.timing.count} sessioni completate</span>
+                </div>
+                {current.timing.count === 0 ? (
+                  <p className="text-slate-500 text-sm">Nessuna sessione completata nel periodo (outlier &lt;10s o &gt;30min esclusi).</p>
+                ) : current.timing.count < 3 ? (
+                  <div className="bg-slate-900/50 rounded-lg p-3 border border-slate-700 inline-block">
+                    <p className="text-slate-400 text-xs mb-1">Tempo</p>
+                    <p className="text-lg font-bold text-white">{formatDuration(current.timing.avg)}</p>
+                    <p className="text-slate-500 text-[11px] mt-1">dati insufficienti per medio/min/max</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div className="bg-slate-900/50 rounded-lg p-3 border border-slate-700">
+                      <p className="text-slate-400 text-xs mb-1">Medio</p>
+                      <p className="text-lg font-bold text-white">{formatDuration(current.timing.avg)}</p>
+                    </div>
+                    <div className="bg-slate-900/50 rounded-lg p-3 border border-slate-700">
+                      <p className="text-slate-400 text-xs mb-1">Mediano</p>
+                      <p className="text-lg font-bold text-white">{formatDuration(current.timing.median)}</p>
+                    </div>
+                    <div className="bg-slate-900/50 rounded-lg p-3 border border-slate-700">
+                      <p className="text-slate-400 text-xs mb-1">Più veloce</p>
+                      <p className="text-lg font-bold text-green-400">{formatDuration(current.timing.min)}</p>
+                    </div>
+                    <div className="bg-slate-900/50 rounded-lg p-3 border border-slate-700">
+                      <p className="text-slate-400 text-xs mb-1">Più lento</p>
+                      <p className="text-lg font-bold text-yellow-400">{formatDuration(current.timing.max)}</p>
                     </div>
                   </div>
-                  <span className={`text-xs font-medium w-12 text-right flex-shrink-0 ${d.abandonRate > 20 ? 'text-red-400' : d.abandonRate > 10 ? 'text-yellow-400' : 'text-green-400'}`}>
-                    {d.abandonRate.toFixed(0)}% ✕
-                  </span>
+                )}
+              </div>
+
+              {/* Funnel */}
+              <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
+                <h3 className="text-white font-semibold mb-4">Funnel per domanda <span className="text-xs text-slate-500 font-normal">(su {current.realAttempts} tentativi reali)</span></h3>
+                <div className="space-y-3">
+                  {current.steps.map((d, idx) => (
+                    <div key={d.stepName} className="flex items-center gap-3">
+                      <span className="text-slate-400 text-xs w-6 text-right flex-shrink-0">{idx + 1}</span>
+                      <span className="text-slate-300 text-sm w-28 flex-shrink-0 truncate">{d.label}</span>
+                      <div className="flex-1 relative h-6">
+                        <div className="absolute inset-y-0 left-0 bg-orange/30 rounded"
+                          style={{ width: `${(d.reached / maxReached) * 100}%` }} />
+                        {d.abandoned > 0 && (
+                          <div className="absolute inset-y-0 bg-red-500/40 rounded-r"
+                            style={{
+                              left: `${((d.reached - d.abandoned) / maxReached) * 100}%`,
+                              width: `${(d.abandoned / maxReached) * 100}%`
+                            }} />
+                        )}
+                        <div className="absolute inset-0 flex items-center px-2">
+                          <span className="text-xs text-white font-medium">{d.reached}</span>
+                        </div>
+                      </div>
+                      <span className={`text-xs font-medium w-12 text-right flex-shrink-0 ${d.abandonRate > 20 ? 'text-red-400' : d.abandonRate > 10 ? 'text-yellow-400' : 'text-green-400'}`}>
+                        {d.abandonRate.toFixed(0)}% ✕
+                      </span>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-            <div className="flex items-center gap-4 mt-4 text-xs text-slate-500">
-              <span className="flex items-center gap-1"><span className="w-3 h-3 bg-orange/30 rounded" /> Raggiunti</span>
-              <span className="flex items-center gap-1"><span className="w-3 h-3 bg-red-500/40 rounded" /> Abbandonati</span>
-            </div>
-          </div>
+                <div className="flex items-center gap-4 mt-4 text-xs text-slate-500">
+                  <span className="flex items-center gap-1"><span className="w-3 h-3 bg-orange/30 rounded" /> Raggiunti</span>
+                  <span className="flex items-center gap-1"><span className="w-3 h-3 bg-red-500/40 rounded" /> Abbandonati</span>
+                </div>
+              </div>
+            </>
+          )}
         </>
       ) : (
         <div className="bg-slate-800 rounded-xl p-8 border border-slate-700 text-center">
