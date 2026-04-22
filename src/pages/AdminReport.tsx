@@ -3,6 +3,7 @@ import type { Session } from '@supabase/supabase-js';
 import { Input } from '@/components/ui/input';
 import { AdminSurvey } from '@/components/AdminSurvey';
 import DropoffAnalytics from '@/components/DropoffAnalytics';
+import AdminWebhookTester from '@/components/AdminWebhookTester';
 import { Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -15,7 +16,7 @@ const AdminReport: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [authenticated, setAuthenticated] = useState(false);
   const [error, setError] = useState('');
-  const [adminTab, setAdminTab] = useState<'survey' | 'dropoff'>('survey');
+  const [adminTab, setAdminTab] = useState<'survey' | 'dropoff' | 'webhook'>('survey');
 
   // Anti-race guards
   const isMountedRef = useRef(true);
@@ -238,7 +239,7 @@ const AdminReport: React.FC = () => {
     return (
       <div className="min-h-screen bg-slate-900">
         <div className="max-w-6xl mx-auto px-4 pt-4">
-          <div className="flex gap-1 bg-slate-800 rounded-lg p-1 mb-6 w-fit">
+          <div className="flex gap-1 bg-slate-800 rounded-lg p-1 mb-6 w-fit flex-wrap">
             <button onClick={() => setAdminTab('survey')}
               className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${adminTab === 'survey' ? 'bg-orange text-white' : 'text-slate-400 hover:text-white'}`}>
               📋 Report Generator
@@ -247,11 +248,19 @@ const AdminReport: React.FC = () => {
               className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${adminTab === 'dropoff' ? 'bg-orange text-white' : 'text-slate-400 hover:text-white'}`}>
               📊 Drop-off Analytics
             </button>
+            <button onClick={() => setAdminTab('webhook')}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${adminTab === 'webhook' ? 'bg-orange text-white' : 'text-slate-400 hover:text-white'}`}>
+              🔔 Test Webhook
+            </button>
           </div>
         </div>
-        {adminTab === 'survey' ? <AdminSurvey /> : (
+        {adminTab === 'survey' ? <AdminSurvey /> : adminTab === 'dropoff' ? (
           <div className="max-w-6xl mx-auto px-4 pb-8">
             <DropoffAnalytics />
+          </div>
+        ) : (
+          <div className="max-w-6xl mx-auto px-4 pb-8">
+            <AdminWebhookTester />
           </div>
         )}
       </div>
