@@ -57,8 +57,9 @@ export const InsightCard: React.FC<InsightCardProps> = ({ data, onContinue }) =>
 };
 
 export function getInsightForStep(step: number, formData: Record<string, unknown>): InsightData | null {
+  // New quiz order indices: 3=Fatturato, 6=Revenue Email, 7=Automazioni
   switch (step) {
-    case 0: {
+    case 3: {
       const rev = formData.monthlyRevenue as string;
       const revLabel = rev === 'under-10k' ? 'sotto i 10k' : rev === '300k+' ? 'oltre 300k' : rev?.replace('-', '–') + '€';
       return {
