@@ -208,7 +208,24 @@ const DropoffAnalytics: React.FC = () => {
           }
         });
 
-        result[version.id] = { total, completed, steps };
+        // Compute timing stats from completed sessions
+        const durations: number[] = [];
+        vRows.forEach(row => {
+          if (!row.completed || !row.started_at || !row.updated_at) return;
+          const ms = new Date(row.updated_at).getTime() - new Date(row.started_at).getTime();
+          // Filter outliers: <10s (bots/test) or >30min (left open)
+          if (ms >= 10_000 && ms <= 30 * 60_000) durations.push(ms);
+        });
+        durations.sort((a, b) => a - b);
+        const timing: TimingStats = {
+          count: durations.length,
+          avg: durations.length ? durations.reduce((s, v) => s + v, 0) / durations.length : 0,
+          median: durations.length ? durations[Math.floor(durations.length / 2)] : 0,
+          min: durations.length ? durations[0] : 0,
+          max: durations.length ? durations[durations.length - 1] : 0,
+        };
+
+        result[version.id] = { total, completed, steps, timing };
       }
 
       setVersionData(result);
