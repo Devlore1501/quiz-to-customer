@@ -16,7 +16,7 @@ const AdminReport: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [authenticated, setAuthenticated] = useState(false);
   const [error, setError] = useState('');
-  const [adminTab, setAdminTab] = useState<'survey' | 'dropoff'>('survey');
+  const [adminTab, setAdminTab] = useState<'survey' | 'dropoff' | 'webhook'>('survey');
 
   // Anti-race guards
   const isMountedRef = useRef(true);
