@@ -1,80 +1,65 @@
 
 
-## Obiettivo
-Ridurre l'abbandono iniziale del quiz aggiungendo:
-1. Una **schermata intro** con CTA grande "Inizia il quiz"
-2. Una **nuova prima domanda** sul nome del brand
-3. **Riordinare** le prime domande: Brand → Sito → Settore → Fatturato → resto invariato
+## Restyle completo schermata intro — sezione hero + sezioni sottostanti
 
-## Modifiche previste
+Estendo il restyle a **tutta la landing intro**, non solo la sezione hero in alto. Mantengo la palette attuale (bianco/slate + arancione Mailift).
 
-### 1. Nuova schermata intro (welcome)
-Prima ancora di mostrare la prima domanda, l'utente vede una landing page dedicata con:
-- Logo Mailift
-- Titolo grande e sottotitolo (riprendendo lo stile attuale "Quanto stai perdendo ogni mese?")
-- 3 bullet rapidi che spiegano cosa otterrà (es: "report personalizzato", "in 2 minuti", "100% gratuito")
-- Pulsante CTA grande arancione **"Inizia il quiz →"**
-- Nota in basso "🔒 Dati riservati, nessuno spam"
+### Struttura completa della nuova schermata `intro`
 
-Solo al click sul pulsante parte la prima domanda. Questo riduce gli abbandoni passivi di chi atterra senza capire cosa sta vedendo.
+**1. Hero (top)** — già descritto prima
+- Avatar Mailift tondo con doppio glow arancione
+- Pill `REVENUE LEAK AUDIT`
+- H1 grande con `Gratis.` in arancione
+- Sottotitolo
+- CTA pill arancione "Inizia il quiz →"
+- Microcopy `🔒 Dati riservati. Nessuno spam.`
 
-### 2. Nuova domanda "Brand"
-Aggiunta come **prima domanda del quiz** (step 0):
-- Categoria: "Brand"
-- Titolo: "Come si chiama il tuo brand?"
-- Tipo: input testo obbligatorio
-- Pulsante "Continua" attivo solo se il campo non è vuoto
-- Salvato nel campo `company_name` già esistente nel DB e inviato a Make.com / GoHighLevel come `companyName` nel payload del webhook (oggi viene mandato vuoto)
+**2. Sezione "Cosa otterrai dal report"** (3 colonne)
+Card chiare con icona arancione + titolo + descrizione breve:
+- 📊 **Diagnosi completa** — Analisi delle 6 aree chiave del tuo email marketing
+- 🎯 **Piano d'azione 90 giorni** — Task prioritizzate per impatto
+- 💰 **Stima revenue persa** — Quanto stai lasciando sul tavolo ogni mese
 
-### 3. Riordino delle prime domande
-Nuovo ordine:
+**3. Sezione "Come funziona"** (3 step orizzontali)
+Numeri grandi arancione + titolo + descrizione:
+1. **Rispondi al quiz** (2 minuti, 12 domande veloci)
+2. **Ricevi il report personalizzato** (via email + on-screen)
+3. **Prenota una call gratuita** (opzionale, per discutere i risultati)
 
-| # | Domanda | Prima era |
-|---|---|---|
-| 1 | **Brand** (nuovo) | — |
-| 2 | **Sito web** | era ultima |
-| 3 | **Settore** | era 2ª |
-| 4 | **Fatturato** | era 1ª |
-| 5 | Piattaforma | invariato |
-| 6 | Email Tool | invariato |
-| 7 | Revenue Email | invariato |
-| 8 | Automazioni | invariato |
-| 9 | Segmentazione | invariato |
-| 10 | Frequenza | invariato |
-| 11 | Lista Email | invariato |
-| 12 | Obiettivo | invariato |
+**4. Sezione "Le 6 aree analizzate"** (grid 2x3 o 3x2)
+Tag/badge con icona arancione outline:
+- Lista & Segmentazione
+- Automazioni & Flow
+- Campagne & Newsletter
+- Deliverability
+- Revenue & ROI
+- Strategia & Crescita
 
-Totale: 12 domande (oggi sono 11).
+**5. Sezione social proof / trust** (riga orizzontale)
+- "Già usato da +200 brand e-commerce italiani"
+- Mini stats: `200+ audit completati` · `€2.5M+ revenue recuperata` · `2 min di tempo`
+- (Niente loghi finti — solo numeri/testimonial testuali per ora)
 
-### 4. Logica esistente da preservare
-- **Squalifica fatturato <10k€**: continua a funzionare, scatta dallo step 4 invece che dallo step 1
-- **Insight cards** (oggi mostrate dopo gli step 0, 4, 5): aggiornate ai nuovi indici per mantenere lo stesso punto narrativo del quiz
-- **Settore "Altro" + custom input**: invariato
-- **Tracking parziale** (`partial_submissions`): continua a funzionare con i nuovi step name
-- **Webhook payload Make/GHL**: ora `companyName` non sarà più vuoto
+**6. CTA finale ripetuta**
+Stesso bottone pill arancione "Inizia il quiz →" + microcopy `🔒 Gratis · No spam · 2 minuti`
 
-## File coinvolti
-- `src/components/EmailMarketingSurvey.tsx` (unico file da modificare)
+**7. Footer minimale**
+`© 2025 Mailift · Email Revenue Audit`
 
-## Dettagli tecnici
+### Stile generale (palette attuale)
+- Sfondo: `bg-slate-50` con sottile pattern griglia chiaro
+- Card: `bg-white border border-slate-200 rounded-2xl shadow-sm`
+- Accent: gradient arancione Mailift (già usato nei CTA del quiz)
+- Spacing generoso tra sezioni (py-16/24)
+- Mobile-first, max-width 1100px container, hero più stretto (~680px)
+- Animazioni leggere fade-in/slide-up al scroll (opzionale, CSS only)
 
-```text
-Phase machine attuale: quiz → insight → analyzing → gate → report
-Phase machine nuova:   intro → quiz → insight → analyzing → gate → report
-                       ↑ nuovo
+### File modificato
+- `src/components/EmailMarketingSurvey.tsx` → solo il componente `IntroScreen` viene riscritto in modo completo (hero + tutte le sezioni sottostanti). Resto del file invariato.
 
-FormData:
-  companyName: string (nuovo campo, obbligatorio)
-
-STEPS array (nuovo ordine):
-  [0] Brand        (input,  field: companyName)   ← nuovo
-  [1] Sito web     (input,  field: website)       ← spostato
-  [2] Settore      (radio,  field: sector)
-  [3] Fatturato    (radio,  field: monthlyRevenue) ← squalifica qui
-  [4..11] resto invariato
-
-INSIGHT_AFTER_STEPS: aggiornato per allinearsi al nuovo ordine
-```
-
-Nessuna modifica a database, RLS, edge function, webhook structure o calcolo report.
+### Cosa NON cambia
+- Logica `phase === 'intro'` → `quiz` (il click su qualsiasi CTA fa partire il quiz)
+- Domande, ordine, validazione, squalifica
+- Report, webhook Make/GHL, Facebook Pixel, partial tracking
+- Schermata di gating contatti, calendario GHL, area admin
 
