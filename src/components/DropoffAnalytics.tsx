@@ -381,41 +381,42 @@ const DropoffAnalytics: React.FC = () => {
                   </div>
                 )}
               </div>
+
+              {/* Funnel */}
+              <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
+                <h3 className="text-white font-semibold mb-4">Funnel per domanda <span className="text-xs text-slate-500 font-normal">(su {current.realAttempts} tentativi reali)</span></h3>
+                <div className="space-y-3">
+                  {current.steps.map((d, idx) => (
+                    <div key={d.stepName} className="flex items-center gap-3">
+                      <span className="text-slate-400 text-xs w-6 text-right flex-shrink-0">{idx + 1}</span>
+                      <span className="text-slate-300 text-sm w-28 flex-shrink-0 truncate">{d.label}</span>
+                      <div className="flex-1 relative h-6">
+                        <div className="absolute inset-y-0 left-0 bg-orange/30 rounded"
+                          style={{ width: `${(d.reached / maxReached) * 100}%` }} />
+                        {d.abandoned > 0 && (
+                          <div className="absolute inset-y-0 bg-red-500/40 rounded-r"
+                            style={{
+                              left: `${((d.reached - d.abandoned) / maxReached) * 100}%`,
+                              width: `${(d.abandoned / maxReached) * 100}%`
+                            }} />
+                        )}
+                        <div className="absolute inset-0 flex items-center px-2">
+                          <span className="text-xs text-white font-medium">{d.reached}</span>
+                        </div>
+                      </div>
+                      <span className={`text-xs font-medium w-12 text-right flex-shrink-0 ${d.abandonRate > 20 ? 'text-red-400' : d.abandonRate > 10 ? 'text-yellow-400' : 'text-green-400'}`}>
+                        {d.abandonRate.toFixed(0)}% ✕
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex items-center gap-4 mt-4 text-xs text-slate-500">
+                  <span className="flex items-center gap-1"><span className="w-3 h-3 bg-orange/30 rounded" /> Raggiunti</span>
+                  <span className="flex items-center gap-1"><span className="w-3 h-3 bg-red-500/40 rounded" /> Abbandonati</span>
+                </div>
+              </div>
             </>
           )}
-          {/* Funnel */}
-          <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
-            <h3 className="text-white font-semibold mb-4">Funnel per domanda</h3>
-            <div className="space-y-3">
-              {current.steps.map((d, idx) => (
-                <div key={d.stepName} className="flex items-center gap-3">
-                  <span className="text-slate-400 text-xs w-6 text-right flex-shrink-0">{idx + 1}</span>
-                  <span className="text-slate-300 text-sm w-28 flex-shrink-0 truncate">{d.label}</span>
-                  <div className="flex-1 relative h-6">
-                    <div className="absolute inset-y-0 left-0 bg-orange/30 rounded"
-                      style={{ width: `${(d.reached / maxReached) * 100}%` }} />
-                    {d.abandoned > 0 && (
-                      <div className="absolute inset-y-0 bg-red-500/40 rounded-r"
-                        style={{
-                          left: `${((d.reached - d.abandoned) / maxReached) * 100}%`,
-                          width: `${(d.abandoned / maxReached) * 100}%`
-                        }} />
-                    )}
-                    <div className="absolute inset-0 flex items-center px-2">
-                      <span className="text-xs text-white font-medium">{d.reached}</span>
-                    </div>
-                  </div>
-                  <span className={`text-xs font-medium w-12 text-right flex-shrink-0 ${d.abandonRate > 20 ? 'text-red-400' : d.abandonRate > 10 ? 'text-yellow-400' : 'text-green-400'}`}>
-                    {d.abandonRate.toFixed(0)}% ✕
-                  </span>
-                </div>
-              ))}
-            </div>
-            <div className="flex items-center gap-4 mt-4 text-xs text-slate-500">
-              <span className="flex items-center gap-1"><span className="w-3 h-3 bg-orange/30 rounded" /> Raggiunti</span>
-              <span className="flex items-center gap-1"><span className="w-3 h-3 bg-red-500/40 rounded" /> Abbandonati</span>
-            </div>
-          </div>
         </>
       ) : (
         <div className="bg-slate-800 rounded-xl p-8 border border-slate-700 text-center">
