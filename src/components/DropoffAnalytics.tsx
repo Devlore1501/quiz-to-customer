@@ -115,7 +115,7 @@ const DropoffAnalytics: React.FC = () => {
   const [versionData, setVersionData] = useState<Record<string, VersionData>>({});
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<Period>('7d');
-  const [activeVersion, setActiveVersion] = useState(VERSIONS[0].id);
+  const [activeVersion, setActiveVersion] = useState(VERSIONS[VERSIONS.length - 1].id);
 
   useEffect(() => {
     fetchData();
