@@ -135,7 +135,7 @@ const DropoffAnalytics: React.FC = () => {
     setLoading(true);
     try {
       let query = supabase.from('partial_submissions')
-        .select('current_step, current_step_name, abandoned, completed, started_at, updated_at, total_steps')
+        .select('current_step, current_step_name, abandoned, completed, started_at, updated_at, total_steps, form_data')
         .eq('survey_type', 'email_marketing');
 
       if (period !== 'all') {
@@ -150,8 +150,11 @@ const DropoffAnalytics: React.FC = () => {
       const result: Record<string, VersionData> = {};
 
       for (const version of VERSIONS) {
-        const vRows = (rows || []).filter(r => version.detectFn(r));
-        const total = vRows.length;
+        const allRows = (rows || []).filter(r => version.detectFn(r));
+        const total = allRows.length;
+        // Filter ghost sessions for funnel + completion calculations
+        const vRows = allRows.filter(r => !isGhostSession(r));
+        const realAttempts = vRows.length;
         const completed = vRows.filter(r => r.completed).length;
 
         // Build step map from version config
@@ -168,19 +171,17 @@ const DropoffAnalytics: React.FC = () => {
           }
         });
 
-        // Calculate reached and abandoned
+        // Calculate reached and abandoned (real attempts only)
         vRows.forEach(row => {
           const name = row.current_step_name || `step_${row.current_step}`;
           const stepIdx = version.stepOrder.indexOf(name);
           
-          // Mark all steps up to current as reached
           if (stepIdx >= 0) {
             for (let i = 0; i <= stepIdx; i++) {
               const s = stepMap.get(version.stepOrder[i]);
               if (s) s.reached++;
             }
           } else {
-            // Unknown step, just count itself
             const s = stepMap.get(name);
             if (s) s.reached++;
           }
@@ -192,7 +193,6 @@ const DropoffAnalytics: React.FC = () => {
         });
 
         const steps: StepData[] = [];
-        // Ordered steps first
         for (const name of version.stepOrder) {
           const val = stepMap.get(name);
           if (val) {
@@ -205,7 +205,6 @@ const DropoffAnalytics: React.FC = () => {
             });
           }
         }
-        // Then any extra steps not in config
         stepMap.forEach((val, name) => {
           if (!version.stepOrder.includes(name)) {
             steps.push({
@@ -223,7 +222,6 @@ const DropoffAnalytics: React.FC = () => {
         vRows.forEach(row => {
           if (!row.completed || !row.started_at || !row.updated_at) return;
           const ms = new Date(row.updated_at).getTime() - new Date(row.started_at).getTime();
-          // Filter outliers: <10s (bots/test) or >30min (left open)
           if (ms >= 10_000 && ms <= 30 * 60_000) durations.push(ms);
         });
         durations.sort((a, b) => a - b);
@@ -235,15 +233,20 @@ const DropoffAnalytics: React.FC = () => {
           max: durations.length ? durations[durations.length - 1] : 0,
         };
 
-        result[version.id] = { total, completed, steps, timing };
+        result[version.id] = { total, realAttempts, completed, steps, timing };
       }
 
       setVersionData(result);
       
-      // Auto-select first version with data
-      const firstWithData = VERSIONS.find(v => (result[v.id]?.total || 0) > 0);
-      if (firstWithData && !result[activeVersion]?.total) {
-        setActiveVersion(firstWithData.id);
+      // Smart default tab: prefer the latest version with ≥10 real attempts,
+      // otherwise fall back to whichever has the most real attempts.
+      const currentHasData = (result[activeVersion]?.realAttempts || 0) > 0;
+      if (!currentHasData) {
+        const reversed = [...VERSIONS].reverse();
+        const preferred = reversed.find(v => (result[v.id]?.realAttempts || 0) >= 10)
+          || reversed.find(v => (result[v.id]?.realAttempts || 0) > 0)
+          || reversed.find(v => (result[v.id]?.total || 0) > 0);
+        if (preferred) setActiveVersion(preferred.id);
       }
     } catch (err) {
       console.error(err);
@@ -253,7 +256,12 @@ const DropoffAnalytics: React.FC = () => {
 
   const current = versionData[activeVersion];
   const maxReached = current ? Math.max(...current.steps.map(d => d.reached), 1) : 1;
-  const completionRate = current && current.total > 0 ? ((current.completed / current.total) * 100).toFixed(1) : '0';
+  const completionRate = current && current.realAttempts > 0
+    ? ((current.completed / current.realAttempts) * 100).toFixed(1)
+    : '0';
+  const engagementRate = current && current.total > 0
+    ? ((current.realAttempts / current.total) * 100).toFixed(0)
+    : '0';
 
   return (
     <div className="space-y-6">
