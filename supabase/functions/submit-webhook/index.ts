@@ -313,6 +313,31 @@ serve(async (req) => {
 
     console.log('Webhook results:', { makeResult, ghlResult });
 
+    // Persist sync flags so the Postgres trigger doesn't re-fire and admins can see status
+    if (submissionId) {
+      try {
+        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+        const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+        const supabase = createClient(supabaseUrl, supabaseServiceKey);
+        const updates: Record<string, boolean> = {};
+        if (makeResult?.success) updates.make_synced = true;
+        if (ghlResult?.success) updates.ghl_synced = true;
+        if (Object.keys(updates).length > 0) {
+          const { error: updateError } = await supabase
+            .from('survey_submissions')
+            .update(updates)
+            .eq('id', submissionId);
+          if (updateError) {
+            console.error('Failed to update sync flags:', updateError);
+          } else {
+            console.log('Sync flags updated:', updates);
+          }
+        }
+      } catch (e) {
+        console.error('Error updating sync flags:', e);
+      }
+    }
+
     return new Response(
       JSON.stringify({ 
         success: true, 
