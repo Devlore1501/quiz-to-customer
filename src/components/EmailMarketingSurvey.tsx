@@ -370,20 +370,14 @@ const IntroScreen: React.FC<{ onStart: () => void }> = ({ onStart }) => {
       />
 
       <div className="relative z-[1]">
-        {/* Header */}
-        <header className="max-w-[1100px] mx-auto px-5 pt-6 flex items-center justify-between">
-          <img src={mailiftLogo} alt="Mailift" className="h-9 w-auto" />
-          <span className="text-[11px] tracking-[2px] uppercase text-[#888] hidden sm:block">
-            Email Revenue Audit
-          </span>
-        </header>
-
         {/* HERO */}
-        <section className="max-w-[720px] mx-auto px-5 pt-12 pb-20 text-center">
-          <div className="relative inline-block mb-7">
-            <div className="absolute inset-0 rounded-full bg-[#FAB450] opacity-20 blur-2xl scale-125" />
-            <div className="relative w-24 h-24 rounded-full bg-[#1a2942] border-2 border-[#FAB450] shadow-[0_0_0_6px_rgba(250,180,80,0.12),0_0_40px_rgba(250,180,80,0.35)] flex items-center justify-center">
-              <img src={mailiftLogo} alt="Mailift" className="h-8 w-auto" />
+        <section className="max-w-[720px] mx-auto px-5 pt-20 pb-20 text-center">
+          <div className="flex justify-center mb-6">
+            <div className="relative">
+              <div className="absolute inset-0 rounded-full bg-[#FAB450] opacity-20 blur-2xl scale-125" />
+              <div className="relative w-24 h-24 rounded-full bg-[#1a2942] border-2 border-[#FAB450] shadow-[0_0_0_6px_rgba(250,180,80,0.12),0_0_40px_rgba(250,180,80,0.35)] flex items-center justify-center">
+                <img src={mailiftLogo} alt="Mailift" className="h-8 w-auto" />
+              </div>
             </div>
           </div>
 
