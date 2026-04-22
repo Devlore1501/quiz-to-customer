@@ -38,7 +38,7 @@ const VERSIONS = [
   },
   {
     id: 'v2',
-    label: 'Quiz v2 (attuale)',
+    label: 'Quiz v2 (precedente)',
     detectFn: (row: any) => row.total_steps === 11,
     stepOrder: ['monthlyRevenue', 'sector', 'platform', 'emailTool', 'emailRevenuePercentage', 'activeFlows', 'segmentation', 'emailFrequency', 'listSize', 'motivation', 'website'],
     stepLabels: {
@@ -55,7 +55,44 @@ const VERSIONS = [
       website: 'URL Store',
     } as Record<string, string>,
   },
+  {
+    id: 'v3',
+    label: 'Quiz v3 (attuale)',
+    detectFn: (row: any) => row.total_steps === 12,
+    stepOrder: ['companyName', 'website', 'sector', 'monthlyRevenue', 'platform', 'emailTool', 'emailRevenuePercentage', 'activeFlows', 'segmentation', 'emailFrequency', 'listSize', 'motivation'],
+    stepLabels: {
+      companyName: 'Brand',
+      website: 'Sito Web',
+      sector: 'Settore',
+      monthlyRevenue: 'Fatturato',
+      platform: 'Piattaforma',
+      emailTool: 'Email Tool',
+      emailRevenuePercentage: 'Revenue Email',
+      activeFlows: 'Automazioni',
+      segmentation: 'Segmentazione',
+      emailFrequency: 'Frequenza',
+      listSize: 'Lista Email',
+      motivation: 'Obiettivo',
+    } as Record<string, string>,
+  },
 ];
+
+interface TimingStats {
+  avg: number;
+  median: number;
+  min: number;
+  max: number;
+  count: number;
+}
+
+const formatDuration = (ms: number): string => {
+  if (!ms || ms <= 0) return '—';
+  const totalSec = Math.round(ms / 1000);
+  const m = Math.floor(totalSec / 60);
+  const s = totalSec % 60;
+  if (m === 0) return `${s}s`;
+  return `${m}m ${s.toString().padStart(2, '0')}s`;
+};
 
 interface StepData {
   stepName: string;
