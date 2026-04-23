@@ -591,6 +591,14 @@ const EmailMarketingSurvey: React.FC = () => {
   const [emailValidation, setEmailValidation] = useState<EmailValidation>({ status: 'idle' });
   const [formData, setFormData] = useState<FormData>({ ...INITIAL_FORM });
 
+  // Facebook Pixel: ViewContent — fires once on quiz mount
+  const viewContentSentRef = useRef(false);
+  useEffect(() => {
+    if (viewContentSentRef.current) return;
+    viewContentSentRef.current = true;
+    trackViewContent();
+  }, []);
+
   // Partial tracking
   const currentStepName = STEPS[currentStep]?.field || 'unknown';
   const { markCompleted } = usePartialTracking({
