@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Input } from '@/components/ui/input';
 import { toast } from '@/hooks/use-toast';
@@ -7,7 +7,7 @@ import { generateAdminReport } from '@/lib/adminReportGenerator';
 import AdvancedReportComponent from '@/components/AdvancedReport';
 import { ChevronLeft, Loader2, CheckCircle2, Circle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { trackQuizCompleted, trackCompleteRegistration } from '@/lib/facebookPixel';
+import { trackQuizCompleted, trackCompleteRegistration, trackViewContent } from '@/lib/facebookPixel';
 import { usePartialTracking } from '@/hooks/usePartialTracking';
 import { InsightCard, getInsightForStep } from '@/components/InsightCard';
 import mailiftLogo from '@/assets/mailift-logo.png';
@@ -590,6 +590,14 @@ const EmailMarketingSurvey: React.FC = () => {
   const [selectedValue, setSelectedValue] = useState<string | null>(null);
   const [emailValidation, setEmailValidation] = useState<EmailValidation>({ status: 'idle' });
   const [formData, setFormData] = useState<FormData>({ ...INITIAL_FORM });
+
+  // Facebook Pixel: ViewContent — fires once on quiz mount
+  const viewContentSentRef = useRef(false);
+  useEffect(() => {
+    if (viewContentSentRef.current) return;
+    viewContentSentRef.current = true;
+    trackViewContent();
+  }, []);
 
   // Partial tracking
   const currentStepName = STEPS[currentStep]?.field || 'unknown';
