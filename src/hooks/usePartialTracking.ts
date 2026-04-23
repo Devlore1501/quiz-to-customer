@@ -13,11 +13,29 @@ interface UsePartialTrackingOptions {
 }
 
 /**
- * Helper: all partial_submissions requests pass x-session-id header
- * so the RLS policy can restrict access to the caller's own session.
+ * Generate a high-entropy random secret (32 bytes, hex-encoded) used to prove
+ * ownership of a partial_submissions row. Only its SHA-256 hash is stored in DB.
+ */
+function generateSessionSecret(): string {
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function sha256Hex(input: string): Promise<string> {
+  const data = new TextEncoder().encode(input);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(hashBuffer), (b) =>
+    b.toString(16).padStart(2, '0'),
+  ).join('');
+}
+
+/**
+ * Helper: all partial_submissions requests pass `x-session-secret` so the RLS
+ * policy can hash it and compare against the stored `session_secret_hash`.
  */
 function partialFetch(
-  sessionId: string,
+  sessionSecret: string,
   method: 'POST' | 'PATCH',
   body: Record<string, unknown>,
   filter?: string,
@@ -31,7 +49,7 @@ function partialFetch(
       apikey: SUPABASE_KEY,
       Authorization: `Bearer ${SUPABASE_KEY}`,
       Prefer: 'return=minimal',
-      'x-session-id': sessionId,
+      'x-session-secret': sessionSecret,
     },
     body: JSON.stringify(body),
     keepalive,
@@ -47,6 +65,7 @@ export function usePartialTracking({
   enabled = true,
 }: UsePartialTrackingOptions) {
   const sessionIdRef = useRef<string>(crypto.randomUUID());
+  const sessionSecretRef = useRef<string>(generateSessionSecret());
   const recordCreatedRef = useRef(false);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const formDataRef = useRef(formData);
@@ -56,19 +75,23 @@ export function usePartialTracking({
     formDataRef.current = formData;
   }, [formData]);
 
-  // Create initial record
+  // Create initial record (with hashed secret)
   useEffect(() => {
     if (!enabled || recordCreatedRef.current) return;
     recordCreatedRef.current = true;
 
-    partialFetch(sessionIdRef.current, 'POST', {
-      session_id: sessionIdRef.current,
-      survey_type: surveyType,
-      current_step: 0,
-      current_step_name: stepName,
-      total_steps: totalSteps,
-      form_data: {},
-    }).catch((err) => console.error('Partial tracking insert error:', err));
+    (async () => {
+      const secretHash = await sha256Hex(sessionSecretRef.current);
+      partialFetch(sessionSecretRef.current, 'POST', {
+        session_id: sessionIdRef.current,
+        session_secret_hash: secretHash,
+        survey_type: surveyType,
+        current_step: 0,
+        current_step_name: stepName,
+        total_steps: totalSteps,
+        form_data: {},
+      }).catch((err) => console.error('Partial tracking insert error:', err));
+    })();
   }, [enabled, surveyType]);
 
   // Debounced update on step OR formData change
@@ -78,7 +101,7 @@ export function usePartialTracking({
     if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
     debounceTimerRef.current = setTimeout(() => {
       partialFetch(
-        sessionIdRef.current,
+        sessionSecretRef.current,
         'PATCH',
         {
           current_step: currentStep,
@@ -97,7 +120,7 @@ export function usePartialTracking({
     if (!enabled) return;
     const handler = () => {
       partialFetch(
-        sessionIdRef.current,
+        sessionSecretRef.current,
         'PATCH',
         {
           abandoned: true,
@@ -115,7 +138,7 @@ export function usePartialTracking({
   // Mark completed
   const markCompleted = useCallback(async (submissionId?: string) => {
     await partialFetch(
-      sessionIdRef.current,
+      sessionSecretRef.current,
       'PATCH',
       {
         completed: true,

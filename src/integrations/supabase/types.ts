@@ -23,6 +23,7 @@ export type Database = {
           form_data: Json | null
           id: string
           session_id: string
+          session_secret_hash: string | null
           started_at: string
           submission_id: string | null
           survey_type: string
@@ -37,6 +38,7 @@ export type Database = {
           form_data?: Json | null
           id?: string
           session_id: string
+          session_secret_hash?: string | null
           started_at?: string
           submission_id?: string | null
           survey_type: string
@@ -51,6 +53,7 @@ export type Database = {
           form_data?: Json | null
           id?: string
           session_id?: string
+          session_secret_hash?: string | null
           started_at?: string
           submission_id?: string | null
           survey_type?: string
@@ -183,6 +186,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      current_session_secret_hash: { Args: never; Returns: string }
       get_report_by_id: { Args: { report_id: string }; Returns: Json }
       has_role: {
         Args: {
