@@ -7,7 +7,7 @@ import { generateAdminReport } from '@/lib/adminReportGenerator';
 import AdvancedReportComponent from '@/components/AdvancedReport';
 import { ChevronLeft, Loader2, CheckCircle2, Circle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { trackQuizCompleted, trackCompleteRegistration } from '@/lib/facebookPixel';
+import { trackQuizCompleted, trackCompleteRegistration, trackViewContent } from '@/lib/facebookPixel';
 import { usePartialTracking } from '@/hooks/usePartialTracking';
 import { InsightCard, getInsightForStep } from '@/components/InsightCard';
 import mailiftLogo from '@/assets/mailift-logo.png';
