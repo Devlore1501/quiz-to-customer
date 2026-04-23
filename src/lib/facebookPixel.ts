@@ -22,6 +22,19 @@ export const trackFacebookEvent = (
 };
 
 /**
+ * Track quiz view as ViewContent standard event
+ * Fires once when the user lands on the quiz (first question visible)
+ */
+export const trackViewContent = (parameters?: Record<string, unknown>): void => {
+  trackFacebookEvent('ViewContent', {
+    content_name: 'Email Marketing Quiz',
+    content_category: 'quiz_start',
+    content_type: 'product',
+    ...parameters,
+  });
+};
+
+/**
  * Track form completion as CompleteRegistration event
  * This fires immediately when the form is submitted
  */
