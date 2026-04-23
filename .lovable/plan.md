@@ -1,42 +1,32 @@
 
 
-## Drop-off v3: includere il completamento esistente nel calcolo
+## Aggiungere evento Facebook "ViewContent" al quiz
 
-### Diagnosi rivista
+### Obiettivo
+Tracciare l'evento standard `ViewContent` di Facebook Pixel quando l'utente atterra/inizia il quiz, in modo da popolare il funnel pubblicitario tra `PageView` (già attivo) e `CompleteRegistration` (già attivo a fine quiz).
 
-Hai ragione: c'è **1 sessione v3 completata** in DB, non zero. Il mio piano precedente partiva dal presupposto sbagliato che fossero tutte ferme su `companyName`. In realtà:
+### Quando deve scattare
+**Al mount del componente quiz, una sola volta per sessione**, quando l'utente vede effettivamente la prima domanda (Brand/companyName). Questo è il momento equivalente a "ha aperto il contenuto del quiz" — più affidabile del primo click, perché:
+- Cattura anche chi legge la domanda senza interagire
+- Allinea v3 (12 step) con il momento esatto di apertura del quiz
+- Evita doppi invii se l'utente clicca più volte
 
-- Sessioni v3 totali: 6 (non 5)
-- Almeno 1 ha `completed = true` con dati reali
-- Le altre 5 sono visite/abbandoni precoci
+### Cosa cambio
 
-Il problema quindi NON è "nessun dato": è che il funnel attuale **mescola visite-fantasma con tentativi reali**, schiacciando le metriche e nascondendo l'unico completamento valido in mezzo al rumore.
+**1. `src/lib/facebookPixel.ts`** — aggiungo helper dedicato:
+```ts
+trackViewContent({ content_name: 'Email Marketing Quiz', content_category: 'quiz_start' })
+```
+Usa l'evento standard `ViewContent` di Facebook (riconosciuto nativamente per ottimizzazione campagne, non un custom event).
 
-### Cosa cambio in `src/components/DropoffAnalytics.tsx`
-
-**1. Distinzione visite vs tentativi reali**  
-Aggiungo `form_data` alla query e classifico ogni sessione:
-- **Visita-fantasma**: `current_step = 0` AND `form_data` vuoto AND `completed = false`
-- **Tentativo reale**: tutto il resto (incluse abbandonate dopo aver digitato e ovviamente le completate)
-
-**2. Nuova mini-stat sopra il funnel**  
-Una riga di 3 card piccole:
-- **Page loads**: totale sessioni create
-- **Tentativi reali**: chi ha interagito davvero
-- **Engagement**: % tentativi / page loads
-
-**3. Funnel e tasso completamento ricalcolati sui tentativi reali**  
-Così l'unica sessione v3 completata risulta visibile (es. "1 completata su 1 tentativo reale = 100%") invece di sparire (1/6 = 17%). La barra "Brand" del funnel parte dai tentativi reali, non dalle visite.
-
-**4. Timing usa anche la sessione completata esistente**  
-Il blocco "⏱ Tempo di completamento" già previsto userà il dato della sessione v3 completata (started_at → updated_at). Con 1 sola sessione mostro solo "Tempo: Xm Ys" invece delle 4 card medio/mediano/min/max (che hanno senso da ≥3 completamenti in su).
-
-**5. Default tab intelligente**  
-Se v3 ha <10 tentativi reali, il default torna a v2; il tab v3 resta cliccabile col badge che mostra il conteggio reale di tentativi (non di visite).
-
-### File modificato
-- `src/components/DropoffAnalytics.tsx` (unico)
+**2. `src/components/EmailMarketingSurvey.tsx`** — chiamo `trackViewContent` dentro un `useEffect` con dependency vuota (`[]`) e un `useRef` di guardia per garantire un solo invio anche con re-render/StrictMode.
 
 ### Cosa NON cambia
-- Hook `usePartialTracking`, schema DB, RLS, edge functions, trigger webhook, logica del quiz
+- `index.html` (Pixel base già caricato)
+- `CompleteRegistration` e `Lead` esistenti
+- Quiz logic, partial tracking, webhook
+
+### File modificati
+- `src/lib/facebookPixel.ts`
+- `src/components/EmailMarketingSurvey.tsx`
 
