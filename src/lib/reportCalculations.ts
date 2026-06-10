@@ -274,9 +274,11 @@ const _calculateReport = (
   
   const currentEmailRevenue = monthlyRevenue * (currentEmailPercent / 100);
   const currentRevenuePerSub = listSize > 0 ? currentEmailRevenue / listSize : 0;
-  
-  const fixedBenchmarkPercent = 35;
-  const benchmarkEmailRevenue = monthlyRevenue * (fixedBenchmarkPercent / 100);
+
+  // Benchmark coerente col settore (sectorBenchmarks.emailShare), non un 35% flat:
+  // lo stesso valore alimenta hero, gauge, score e PDF — un solo modello sorgente.
+  const benchmarkPercent = sectorBenchmark.emailShare;
+  const benchmarkEmailRevenue = monthlyRevenue * (benchmarkPercent / 100);
   const benchmarkRevenuePerSub = sectorBenchmark.revenuePerSub;
   
   const revenueGap = Math.max(0, benchmarkEmailRevenue - currentEmailRevenue);
@@ -312,26 +314,27 @@ const _calculateReport = (
   
   const totalFlowGap = missingFlows.reduce((sum, f) => sum + f.impactValue, 0);
   
-  const conservPct = scenarioOverrides?.conservative ?? 15;
-  const moderatePct = scenarioOverrides?.moderate ?? 35;
-  const aggressPct = scenarioOverrides?.aggressive ?? 60;
+  // Scenari ancorati al revenue gap (un solo modello: chiusura del leak),
+  // così il "potenziale annuo" coincide con il Revenue Leak in hero.
+  // Gli override admin restano espressi come % sul fatturato totale.
+  const mkScenario = (pctOverride: number | undefined, gapShare: number, label: string) => {
+    const value = pctOverride !== undefined
+      ? monthlyRevenue * (pctOverride / 100)
+      : revenueGap * gapShare;
+    const growthPercent = monthlyRevenue > 0 ? Math.round((value / monthlyRevenue) * 100) : 0;
+    return {
+      growthPercent,
+      value,
+      description: pctOverride !== undefined
+        ? `Crescita del ${growthPercent}% sul fatturato e-commerce totale`
+        : `${label} (+${growthPercent}% sul fatturato totale)`
+    };
+  };
 
   const scenarios = {
-    conservative: {
-      growthPercent: conservPct,
-      value: monthlyRevenue * (conservPct / 100),
-      description: `Crescita del ${conservPct}% sul fatturato e-commerce totale`
-    },
-    moderate: {
-      growthPercent: moderatePct,
-      value: monthlyRevenue * (moderatePct / 100),
-      description: `Crescita del ${moderatePct}% sul fatturato e-commerce totale`
-    },
-    aggressive: {
-      growthPercent: aggressPct,
-      value: monthlyRevenue * (aggressPct / 100),
-      description: `Crescita del ${aggressPct}% sul fatturato e-commerce totale`
-    }
+    conservative: mkScenario(scenarioOverrides?.conservative, 0.5, 'Recupero del 50% del gap vs benchmark'),
+    moderate: mkScenario(scenarioOverrides?.moderate, 1.0, 'Allineamento completo al benchmark di settore'),
+    aggressive: mkScenario(scenarioOverrides?.aggressive, 1.3, 'Oltre il benchmark — fascia top performer'),
   };
   
   const topActions: AdvancedReport['topActions'] = [];
@@ -361,12 +364,12 @@ const _calculateReport = (
   const percentScore = Math.min(100, (currentEmailPercent / sectorBenchmark.emailShare) * 100);
   const automationScore = automationCoverage;
   const emailHealthScore = Math.round((percentScore * 0.6) + (automationScore * 0.4));
-  const yearlyPotential = monthlyRevenue * (moderatePct / 100) * 12;
+  const yearlyPotential = scenarios.moderate.value * 12;
   
   const formatCurrencyInternal = (value: number) => `€${Math.round(value).toLocaleString('it-IT')}`;
   const performanceLevel = emailHealthScore >= 60 ? 'discreta' : emailHealthScore >= 40 ? 'sotto le aspettative' : 'critica';
   
-  const currentSituation = `Il tuo e-commerce nel settore ${sectorBenchmark.label} mostra una performance email ${performanceLevel}. Attualmente generi il ${currentEmailPercent}% del fatturato mensile dall'email marketing (${formatCurrencyInternal(currentEmailRevenue)}/mese), contro un benchmark di settore del 35%. ${
+  const currentSituation = `Il tuo e-commerce nel settore ${sectorBenchmark.label} mostra una performance email ${performanceLevel}. Attualmente generi il ${currentEmailPercent}% del fatturato mensile dall'email marketing (${formatCurrencyInternal(currentEmailRevenue)}/mese), contro un benchmark di settore del ${benchmarkPercent}%. ${
     automationRating === 'D' || automationRating === 'C'
       ? `Con sole ${activeFlowsCount} automazioni attive su ${totalFlowsCount} disponibili (rating ${automationRating}), stai lasciando sul tavolo opportunità di vendita automatizzate per circa ${formatCurrencyInternal(totalFlowGap)}/mese.` 
       : `Hai una buona base di ${activeFlowsCount} automazioni attive, ma c'è ancora margine per ottimizzare ulteriormente e raggiungere il benchmark di settore.`

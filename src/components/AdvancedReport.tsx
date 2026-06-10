@@ -48,16 +48,18 @@ const getScoreColor = (score: number) => {
 };
 
 const getDimensionScore = (report: AdvancedReport) => {
-  const emailRevScore = Math.min(100, (report.currentEmailPercent / 35) * 100);
+  const benchmarkShare = report.sectorBenchmark.emailShare;
+  const emailRevScore = Math.min(100, (report.currentEmailPercent / benchmarkShare) * 100);
   const flowScore = report.automationCoverage;
-  // Derive segmentation from health score components
-  const segScore = Math.min(100, report.emailHealthScore * 1.1);
+  // Crescita lista: misurata da una risposta reale del quiz (popup attivo o no),
+  // a differenza della vecchia "Segmentazione" che era derivata e non misurabile.
+  const listGrowthScore = report.popupData === undefined ? 40 : report.popupData.hasPopup ? 75 : 20;
   const freqScore = report.listForecast ? Math.min(100, (report.listForecast.sendsPerMonth / 20) * 100) : 0;
   const toolScore = Math.min(100, (report.activeFlowsCount / report.totalFlowsCount) * 100);
   return [
     { label: 'Email Revenue', score: Math.round(emailRevScore), color: emailRevScore >= 60 ? '#2ecc71' : emailRevScore >= 40 ? '#e67e22' : '#ff3b3b' },
     { label: 'Flussi Automazione', score: Math.round(flowScore), color: flowScore >= 60 ? '#2ecc71' : flowScore >= 40 ? '#e67e22' : '#ff3b3b' },
-    { label: 'Segmentazione', score: Math.round(segScore), color: segScore >= 60 ? '#2ecc71' : segScore >= 40 ? '#e67e22' : '#ff3b3b' },
+    { label: 'Crescita Lista', score: Math.round(listGrowthScore), color: listGrowthScore >= 60 ? '#2ecc71' : listGrowthScore >= 40 ? '#e67e22' : '#ff3b3b' },
     { label: 'Frequenza Invio', score: Math.round(freqScore), color: freqScore >= 60 ? '#2ecc71' : freqScore >= 40 ? '#e67e22' : '#ff3b3b' },
     { label: 'Setup & Tool', score: Math.round(toolScore), color: toolScore >= 60 ? '#2ecc71' : toolScore >= 40 ? '#e67e22' : '#ff3b3b' },
   ];
@@ -216,18 +218,11 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
   if (r.popupData?.hasPopup) strengths.push(`Popup opt-in attivo — acquisizione lista automatica`);
   if (strengths.length === 0) strengths.push('Base dati presente per iniziare l\'ottimizzazione');
 
-  if (r.currentEmailPercent < 20) weaknesses.push(`Solo ${r.currentEmailPercent}% del fatturato da email (benchmark: 35%)`);
+  if (r.currentEmailPercent < r.sectorBenchmark.emailShare) weaknesses.push(`Solo ${r.currentEmailPercent}% del fatturato da email (benchmark ${r.sectorBenchmark.label}: ${r.sectorBenchmark.emailShare}%)`);
   if (r.activeFlowsCount < 4) weaknesses.push(`Solo ${r.activeFlowsCount}/${r.totalFlowsCount} automazioni attive`);
   if (r.missingFlows.length > 0) weaknesses.push(`${r.missingFlows.length} flussi mancanti = ${formatCurrency(r.totalFlowGap)}/mese persi`);
   if (r.listForecast && r.listForecast.sendsPerMonth < 8) weaknesses.push(`Frequenza invio bassa (${r.listForecast.sendsPerMonth}/mese)`);
   if (!r.popupData?.hasPopup) weaknesses.push('Nessun popup opt-in — crescita lista lenta');
-
-  // Case study data based on sector
-  const caseStudy = {
-    before: { revenue: formatCurrency(r.monthlyRevenue * 0.8), emailPct: '8%', flows: 2 },
-    after: { revenue: formatCurrency(r.monthlyRevenue * 1.35), emailPct: '32%', flows: 6 },
-    timeframe: '6 mesi',
-  };
 
   return (
     <div className="min-h-screen relative" style={{ background: '#121d2b', fontFamily: "'Syne', sans-serif" }}>
@@ -281,6 +276,10 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
           <p className="font-mono-dm text-sm mt-2" style={{ color: '#ff6b6b' }}>
             {formatCurrency(r.revenueGap * 12)}/anno di fatturato non catturato
           </p>
+          {/* CTA intermedia sul picco emotivo: la CTA finale arriva dopo 12 sezioni di scroll */}
+          <a href="#booking" className="inline-flex items-center gap-2 mt-4 px-6 py-2.5 rounded-full font-syne font-semibold text-sm transition-all hover:scale-105" style={{ background: '#FAB450', color: '#121d2b' }}>
+            Scopri come recuperarli <ArrowRight className="w-4 h-4" />
+          </a>
         </div>
 
         {/* ═══ 3. SCORE COMPLESSIVO ═══ */}
@@ -337,7 +336,7 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
               <p className="font-mono-dm text-[10px]" style={{ color: '#666' }}>{r.currentEmailPercent}% del totale</p>
             </div>
             <div className="rounded-xl p-4" style={{ background: 'rgba(250,180,80,0.05)', border: '1px solid rgba(250,180,80,0.2)' }}>
-              <p className="font-mono-dm text-[10px] tracking-wider" style={{ color: '#FAB450' }}>BENCHMARK 35%</p>
+              <p className="font-mono-dm text-[10px] tracking-wider" style={{ color: '#FAB450' }}>BENCHMARK {r.sectorBenchmark.emailShare}%</p>
               <p className="font-bebas text-2xl mt-1" style={{ color: '#FAB450' }}>{formatCurrency(r.benchmarkEmailRevenue)}</p>
             </div>
             <div className="rounded-xl p-4" style={{ background: 'rgba(255,59,59,0.05)', border: '1px solid rgba(255,59,59,0.2)' }}>
@@ -349,10 +348,10 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
           <div className="mt-5 space-y-2">
             <div className="flex justify-between font-mono-dm text-[10px]">
               <span style={{ color: '#888' }}>Il tuo risultato ({r.currentEmailPercent}%)</span>
-              <span style={{ color: '#FAB450' }}>Benchmark (35%)</span>
+              <span style={{ color: '#FAB450' }}>Benchmark ({r.sectorBenchmark.emailShare}%)</span>
             </div>
             <div className="relative h-3 rounded-full overflow-hidden" style={{ background: '#2a3a52' }}>
-              <div className="absolute h-full rounded-full transition-all duration-1000" style={{ width: `${Math.min(100, r.currentEmailPercent / 35 * 100)}%`, background: 'linear-gradient(90deg, #ff3b3b, #e67e22, #FAB450)' }} />
+              <div className="absolute h-full rounded-full transition-all duration-1000" style={{ width: `${Math.min(100, r.currentEmailPercent / r.sectorBenchmark.emailShare * 100)}%`, background: 'linear-gradient(90deg, #ff3b3b, #e67e22, #FAB450)' }} />
             </div>
           </div>
         </div>
@@ -487,29 +486,11 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
           </div>
         </div>
 
-        {/* ═══ 10. CASO STUDIO ═══ */}
-        <div className="rounded-2xl p-6" style={{ background: '#1a2942', border: '1px solid #2a3a52' }}>
-          <h2 className="font-bebas text-2xl tracking-wide mb-1" style={{ color: '#ffffff' }}>CASO STUDIO: {r.sectorBenchmark.label.toUpperCase()}</h2>
-          <p className="font-mono-dm text-[10px] mb-5" style={{ color: '#666' }}>Risultati tipici per e-commerce simili dopo {caseStudy.timeframe}</p>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-xl p-4" style={{ background: 'rgba(255,59,59,0.05)', border: '1px solid rgba(255,59,59,0.15)' }}>
-              <p className="font-mono-dm text-[10px] tracking-wider mb-3" style={{ color: '#ff3b3b' }}>PRIMA</p>
-              <div className="space-y-2">
-                <div><p className="font-mono-dm text-[10px]" style={{ color: '#666' }}>Fatturato</p><p className="font-bebas text-lg" style={{ color: '#fff' }}>{caseStudy.before.revenue}</p></div>
-                <div><p className="font-mono-dm text-[10px]" style={{ color: '#666' }}>% da Email</p><p className="font-bebas text-lg" style={{ color: '#ff3b3b' }}>{caseStudy.before.emailPct}</p></div>
-                <div><p className="font-mono-dm text-[10px]" style={{ color: '#666' }}>Automazioni</p><p className="font-bebas text-lg" style={{ color: '#fff' }}>{caseStudy.before.flows}</p></div>
-              </div>
-            </div>
-            <div className="rounded-xl p-4" style={{ background: 'rgba(46,204,113,0.05)', border: '1px solid rgba(46,204,113,0.15)' }}>
-              <p className="font-mono-dm text-[10px] tracking-wider mb-3" style={{ color: '#2ecc71' }}>DOPO</p>
-              <div className="space-y-2">
-                <div><p className="font-mono-dm text-[10px]" style={{ color: '#666' }}>Fatturato</p><p className="font-bebas text-lg" style={{ color: '#fff' }}>{caseStudy.after.revenue}</p></div>
-                <div><p className="font-mono-dm text-[10px]" style={{ color: '#666' }}>% da Email</p><p className="font-bebas text-lg" style={{ color: '#2ecc71' }}>{caseStudy.after.emailPct}</p></div>
-                <div><p className="font-mono-dm text-[10px]" style={{ color: '#666' }}>Automazioni</p><p className="font-bebas text-lg" style={{ color: '#fff' }}>{caseStudy.after.flows}</p></div>
-              </div>
-            </div>
-          </div>
-        </div>
+        {/*
+          CASO STUDIO rimosso: i numeri erano generati dal fatturato del prospect
+          (monthlyRevenue × 0.8 → × 1.35), non da risultati reali. Reintrodurre solo
+          con 2-3 case study verificabili hardcoded per settore (vedi roadmap KB).
+        */}
 
         {/* ═══ 11. POTENZIALE ANNUALE ═══ */}
         <div className="rounded-2xl p-8 text-center" style={{ background: 'linear-gradient(135deg, rgba(250,180,80,0.1), rgba(250,180,80,0.02))', border: '2px solid rgba(250,180,80,0.3)' }}>
@@ -761,11 +742,12 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
 
         {/* ═══ 13. SOCIAL PROOF ═══ */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {/* Numeri allineati al track record reale (KB Mailift) — difendibili in call */}
           {[
-            { value: '40+', label: 'Brand e-commerce gestiti', icon: <Users className="w-4 h-4" /> },
-            { value: '€2.5M+', label: 'Revenue email generato', icon: <TrendingUp className="w-4 h-4" /> },
-            { value: '35x', label: 'ROI medio email', icon: <Zap className="w-4 h-4" /> },
-            { value: '96%', label: 'Clienti soddisfatti', icon: <CheckCircle className="w-4 h-4" /> },
+            { value: '5+', label: 'Anni nell\'ecosistema eCommerce', icon: <Users className="w-4 h-4" /> },
+            { value: '€1M+', label: 'Revenue email generata per i clienti', icon: <TrendingUp className="w-4 h-4" /> },
+            { value: '35x', label: 'ROI medio email (benchmark settore)', icon: <Zap className="w-4 h-4" /> },
+            { value: '100%', label: 'Focus Shopify + Klaviyo', icon: <CheckCircle className="w-4 h-4" /> },
           ].map((stat, i) => (
             <div key={i} className="rounded-xl p-4 text-center" style={{ background: '#1a2942', border: '1px solid #2a3a52' }}>
               <div className="flex justify-center mb-2" style={{ color: '#FAB450' }}>{stat.icon}</div>
@@ -775,23 +757,11 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
           ))}
         </div>
 
-        {/* ═══ DOWNLOAD PDF ═══ */}
-        <div className="rounded-2xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4" style={{ background: '#1a2942', border: '1px solid #2a3a52' }}>
-          <div>
-            <h3 className="font-syne text-base font-bold" style={{ color: '#fff' }}>Scarica il tuo Report PDF</h3>
-            <p className="font-mono-dm text-[10px]" style={{ color: '#666' }}>Salva per consultarlo quando vuoi</p>
-          </div>
-          <Button onClick={handleDownloadPdf} disabled={isDownloading} className="rounded-full px-6 py-2.5 font-syne font-semibold text-sm" style={{ background: '#FAB450', color: '#121d2b' }}>
-            {isDownloading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Generazione...</> : <><Download className="w-4 h-4 mr-2" />Scarica PDF</>}
-          </Button>
-        </div>
-
         {/* ═══ 14. CTA FINALE — CALENDARIO ═══ */}
-        <div className="rounded-2xl p-6 md:p-8" style={{ background: '#1a2942', border: '2px solid rgba(250,180,80,0.3)' }}>
+        {/* Il download PDF è DOPO il booking: prima dava un'uscita gratuita pre-conversione */}
+        <div id="booking" className="rounded-2xl p-6 md:p-8" style={{ background: '#1a2942', border: '2px solid rgba(250,180,80,0.3)' }}>
           <div className="text-center mb-6">
-            <span className="font-mono-dm text-[10px] tracking-widest px-3 py-1 rounded-full mb-3 inline-block" style={{ background: 'rgba(255,59,59,0.15)', color: '#ff3b3b', border: '1px solid rgba(255,59,59,0.3)' }}>
-              POSTI LIMITATI — QUESTA SETTIMANA
-            </span>
+            {/* Scarcity statica rimossa: era sempre identica, un prospect di ritorno la smaschera */}
             <h3 className="font-bebas text-3xl md:text-4xl tracking-wide mt-3" style={{ color: '#ffffff' }}>
               PRENOTA LA TUA CONSULENZA GRATUITA
             </h3>
@@ -816,10 +786,23 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
           </div>
         </div>
 
+        {/* ═══ DOWNLOAD PDF (post-booking) ═══ */}
+        <div className="rounded-2xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4" style={{ background: '#1a2942', border: '1px solid #2a3a52' }}>
+          <div>
+            <h3 className="font-syne text-base font-bold" style={{ color: '#fff' }}>Scarica il tuo Report PDF</h3>
+            <p className="font-mono-dm text-[10px]" style={{ color: '#666' }}>Salva per consultarlo quando vuoi</p>
+          </div>
+          <Button onClick={handleDownloadPdf} disabled={isDownloading} className="rounded-full px-6 py-2.5 font-syne font-semibold text-sm" style={{ background: '#FAB450', color: '#121d2b' }}>
+            {isDownloading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Generazione...</> : <><Download className="w-4 h-4 mr-2" />Scarica PDF</>}
+          </Button>
+        </div>
+
       </div>
 
-      {/* ── Pulsante flottante "Simula" ──────────────────── */}
-      <button
+      {/* ── Pulsante flottante "Simula" — SOLO admin: un lead che apre il
+           simulatore vede che il report è parametrico e l'effetto analisi
+           personalizzata svanisce ──────────────────── */}
+      {isAdminMode && <button
         onClick={() => setShowSimPanel(true)}
         className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-full shadow-2xl text-sm font-semibold transition-all hover:scale-105 active:scale-95 font-syne"
         style={{ background: simulatedReport ? '#7c3aed' : '#1a2942', border: `2px solid ${simulatedReport ? '#a78bfa' : '#2a3a52'}`, color: simulatedReport ? '#e9d5ff' : '#888' }}
@@ -827,10 +810,10 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
       >
         <Settings className="w-4 h-4" />
         {simulatedReport ? '✦ Sim. attiva' : 'Simula dati'}
-      </button>
+      </button>}
 
-      {/* ── Pannello laterale "Simula modifiche" ─────────────── */}
-      {showSimPanel && (
+      {/* ── Pannello laterale "Simula modifiche" (solo admin) ─────────────── */}
+      {isAdminMode && showSimPanel && (
         <>
           <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" onClick={() => setShowSimPanel(false)} />
           <div className="fixed top-0 right-0 h-full w-full max-w-md z-50 flex flex-col overflow-hidden" style={{ background: '#121d2b', borderLeft: '1px solid #2a3a52' }}>
