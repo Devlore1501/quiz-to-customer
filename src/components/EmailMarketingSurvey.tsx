@@ -11,6 +11,7 @@ import { trackQuizCompleted, trackCompleteRegistration, trackViewContent } from 
 import { usePartialTracking } from '@/hooks/usePartialTracking';
 import { InsightCard, getInsightForStep } from '@/components/InsightCard';
 import mailiftLogo from '@/assets/mailift-logo.png';
+import lorenzoFounder from '@/assets/lorenzo-founder.jpeg';
 import previewScore from '@/assets/report-preview-score.png';
 import previewRevenue from '@/assets/report-preview-revenue.png';
 import previewActions from '@/assets/report-preview-actions.png';
@@ -553,6 +554,40 @@ const IntroScreen: React.FC<{ onStart: () => void }> = ({ onStart }) => {
                   <div className="text-[13px] text-[#9aa3b0] uppercase tracking-wider">{s.l}</div>
                 </div>
               ))}
+            </div>
+          </div>
+        </section>
+
+        {/* CHI SONO */}
+        <section className="max-w-[900px] mx-auto px-5 py-16">
+          <div className="bg-[#1a2942] border border-[#2a3a52] rounded-[24px] p-7 md:p-10 flex flex-col md:flex-row items-center gap-8">
+            <div className="flex-shrink-0">
+              <img
+                src={lorenzoFounder}
+                alt="Lorenzo Baretta, founder di Mailift"
+                width={400}
+                height={400}
+                loading="lazy"
+                className="w-[180px] h-[180px] md:w-[220px] md:h-[220px] rounded-full object-cover bg-white border-2 border-[#FAB450] shadow-[0_0_0_6px_rgba(250,180,80,0.12)]"
+              />
+            </div>
+            <div className="text-center md:text-left">
+              <p className="text-[11px] tracking-[2px] uppercase text-[#FAB450] font-semibold mb-2">
+                Chi analizzerà i tuoi dati
+              </p>
+              <h2 className="font-['Bebas_Neue',sans-serif] text-[clamp(28px,4vw,40px)] tracking-wider mb-3">
+                Lorenzo Baretta
+              </h2>
+              <p className="text-[15px] text-[#9aa3b0] leading-relaxed mb-4">
+                Email Revenue Strategist e founder di Mailift. Da 6 anni lavoro solo con
+                eCommerce, solo su Shopify e Klaviyo: più di 200 store analizzati e oltre{' '}
+                <strong className="text-[#f0f0eb]">€1M di revenue email generata</strong> per i miei
+                clienti. Il report che riceverai usa gli stessi benchmark e lo stesso metodo che
+                applico ogni giorno sui brand che seguo.
+              </p>
+              <p className="text-[12px] text-[#5a5a5a] uppercase tracking-wider">
+                Founder & Email Revenue Strategist · Mailift
+              </p>
             </div>
           </div>
         </section>
