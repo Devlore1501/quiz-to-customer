@@ -105,4 +105,14 @@ All colors MUST be HSL.
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Playfair Display per tutti gli elementi con testo arancione (#FAB450 / text-orange) */
+  .text-orange,
+  .font-playfair,
+  [style*="#FAB450"],
+  [style*="#fab450"],
+  [style*="250,180,80"],
+  [style*="250, 180, 80"] {
+    font-family: 'Playfair Display', serif !important;
+  }
 }
