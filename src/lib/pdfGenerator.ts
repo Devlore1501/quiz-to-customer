@@ -320,7 +320,7 @@ export const generatePdfReport = async (
   pdf.text('ANNUALE', margin + (cardWidth + 5) * 2 + 5, y + 15);
   pdf.setFontSize(16);
   pdf.setFont('helvetica', 'bold');
-  pdf.text(formatCurrency(report.revenueGap * 12), margin + (cardWidth + 5) * 2 + 5, y + 28);
+  pdf.text(formatCurrency(report.recoverablePotential * 12), margin + (cardWidth + 5) * 2 + 5, y + 28);
   pdf.setFontSize(9);
   pdf.setFont('helvetica', 'normal');
   pdf.text('/anno', margin + (cardWidth + 5) * 2 + 5, y + 36);
@@ -337,7 +337,9 @@ export const generatePdfReport = async (
   
   pdf.setFont('helvetica', 'normal');
   pdf.setTextColor(COLORS.textSecondary);
-  const summaryText = `Il tuo email marketing genera attualmente ${formatCurrency(report.currentEmailRevenue)} al mese, pari al ${report.currentEmailPercent}% del fatturato. Il benchmark di settore indica un potenziale di ${formatCurrency(report.benchmarkEmailRevenue)} mensili. Questo significa un gap di ${formatCurrency(report.revenueGap * 12)} all'anno da recuperare.`;
+  const summaryText = report.potentialMode === 'benchmark'
+    ? `Il tuo email marketing genera attualmente ${formatCurrency(report.currentEmailRevenue)} al mese, pari al ${report.currentEmailPercent}% del fatturato. Il benchmark di settore indica un potenziale di ${formatCurrency(report.benchmarkEmailRevenue)} mensili. Questo significa un gap di ${formatCurrency(report.recoverablePotential * 12)} all'anno da recuperare.`
+    : `Il tuo email marketing genera ${formatCurrency(report.currentEmailRevenue)} al mese (${report.currentEmailPercent}% del fatturato), sopra il benchmark di settore. Il canale funziona, ma frequenza di invio e automazioni mancanti lasciano inespresso un potenziale di ${formatCurrency(report.recoverablePotential * 12)} all'anno.`;
   const wrappedSummary = wrapText(summaryText, contentWidth - 20);
   wrappedSummary.forEach((line, i) => {
     pdf.text(line, margin + 10, y + 20 + (i * 4));
@@ -550,8 +552,8 @@ export const generatePdfReport = async (
   pdf.setTextColor(COLORS.textSecondary);
   pdf.setFontSize(9);
   pdf.setFont('helvetica', 'normal');
-  pdf.text('Le percentuali indicano la quota del gap mensile recuperata rispetto al benchmark di settore.', margin, y);
-  pdf.text(`Gap mensile attuale: ${formatCurrency(report.revenueGap)} (differenza tra benchmark e fatturato email attuale)`, margin, y + 5);
+  pdf.text('Le percentuali indicano la quota del potenziale mensile identificato che viene recuperata.', margin, y);
+  pdf.text(`Potenziale mensile identificato: ${formatCurrency(report.recoverablePotential)} (gap vs benchmark o leve operative non attivate)`, margin, y + 5);
   y += 16;
   
   const scenariosList = [
