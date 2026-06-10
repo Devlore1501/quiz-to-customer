@@ -11,7 +11,7 @@ import { trackQuizCompleted, trackCompleteRegistration, trackViewContent } from 
 import { usePartialTracking } from '@/hooks/usePartialTracking';
 import { InsightCard, getInsightForStep } from '@/components/InsightCard';
 import mailiftLogo from '@/assets/mailift-logo.png';
-import lorenzoFounder from '@/assets/lorenzo-founder.jpeg';
+import lorenzoFounderAsset from '@/assets/lorenzo-founder.png.asset.json';
 import heroFlow from '@/assets/hero-flow.webp';
 import previewScore from '@/assets/report-preview-score.png';
 import previewRevenue from '@/assets/report-preview-revenue.png';
