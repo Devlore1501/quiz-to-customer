@@ -753,7 +753,7 @@ const ConversationalSurvey = () => {
         yearly_potential: advancedReport.yearlyPotential,
         current_email_revenue: advancedReport.currentEmailRevenue,
         benchmark_email_revenue: advancedReport.benchmarkEmailRevenue,
-        revenue_gap: advancedReport.revenueGap,
+        revenue_gap: advancedReport.recoverablePotential,
         lead_quality: adminReport.consultingNotes.leadQuality,
         status: 'completed',
         qualified: true,

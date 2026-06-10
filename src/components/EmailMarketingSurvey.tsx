@@ -538,8 +538,8 @@ const IntroScreen: React.FC<{ onStart: () => void }> = ({ onStart }) => {
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-[760px] mx-auto">
               {[
-                { v: '200+', l: 'audit completati' },
-                { v: '€2.5M+', l: 'revenue recuperata' },
+                { v: '5+', l: 'anni su Shopify e Klaviyo' },
+                { v: '€1M+', l: 'revenue email generata' },
                 { v: '2 min', l: 'di tempo richiesto' },
               ].map((s, i) => (
                 <div key={i}>
@@ -799,7 +799,8 @@ const EmailMarketingSurvey: React.FC = () => {
           yearlyPotential: advancedReport.yearlyPotential,
           currentEmailRevenue: advancedReport.currentEmailRevenue,
           benchmarkEmailRevenue: advancedReport.benchmarkEmailRevenue,
-          revenueGap: advancedReport.revenueGap,
+          revenueGap: advancedReport.recoverablePotential,
+          potentialMode: advancedReport.potentialMode,
 
           // ─── Lead Scoring ───
           leadQuality: adminReport.consultingNotes.leadQuality,
@@ -825,7 +826,7 @@ const EmailMarketingSurvey: React.FC = () => {
         yearly_potential: advancedReport.yearlyPotential,
         current_email_revenue: advancedReport.currentEmailRevenue,
         benchmark_email_revenue: advancedReport.benchmarkEmailRevenue,
-        revenue_gap: advancedReport.revenueGap,
+        revenue_gap: advancedReport.recoverablePotential,
         lead_quality: adminReport.consultingNotes.leadQuality,
         status: 'completed',
         qualified: true,
@@ -923,7 +924,9 @@ const EmailMarketingSurvey: React.FC = () => {
       formData.sector === 'other' ? formData.customSector : undefined,
       formData.emailFrequency
     );
-    const previewGap = previewReport.revenueGap;
+    // Potenziale a due vie: revenueGap puro mostrava €0 ai prospect sopra benchmark
+    const previewGap = previewReport.recoverablePotential;
+    const isLeakMode = previewReport.potentialMode === 'benchmark';
     const yearlyGap = previewGap * 12;
     const fmtMonth = previewGap.toLocaleString('it-IT', { maximumFractionDigits: 0 });
     const fmtYear = yearlyGap.toLocaleString('it-IT', { maximumFractionDigits: 0 });
@@ -947,14 +950,16 @@ const EmailMarketingSurvey: React.FC = () => {
               </p>
             </div>
 
-            {/* Revenue gap highlight + unlock invite */}
-            <div className="mx-5 mt-5 bg-[rgba(255,59,59,0.06)] border border-[rgba(255,59,59,0.2)] rounded-xl p-5">
+            {/* Potenziale highlight + unlock invite — doppia narrativa come l'hero del report */}
+            <div className={`mx-5 mt-5 rounded-xl p-5 ${isLeakMode ? 'bg-[rgba(255,59,59,0.06)] border border-[rgba(255,59,59,0.2)]' : 'bg-[rgba(250,180,80,0.06)] border border-[rgba(250,180,80,0.25)]'}`}>
               <div className="text-center mb-3">
-                <span className="font-['DM_Mono',monospace] text-[10px] tracking-[2px] uppercase text-[#888]">Ecco quanto stai perdendo ogni mese</span>
-                <div className="font-['Bebas_Neue',sans-serif] text-[42px] tracking-wide text-[#ff3b3b] leading-tight mt-1">
+                <span className="font-['DM_Mono',monospace] text-[10px] tracking-[2px] uppercase text-[#888]">
+                  {isLeakMode ? 'Ecco quanto stai perdendo ogni mese' : 'Potenziale non sfruttato ogni mese'}
+                </span>
+                <div className={`font-['Bebas_Neue',sans-serif] text-[42px] tracking-wide leading-tight mt-1 ${isLeakMode ? 'text-[#ff3b3b]' : 'text-[#FAB450]'}`}>
                   {fmtMonth}€<span className="text-[20px] text-[#888]">/mese</span>
                 </div>
-                <div className="font-['Bebas_Neue',sans-serif] text-[22px] tracking-wide text-[#ff3b3b]/70 leading-tight">
+                <div className={`font-['Bebas_Neue',sans-serif] text-[22px] tracking-wide leading-tight ${isLeakMode ? 'text-[#ff3b3b]/70' : 'text-[#FAB450]/70'}`}>
                   {fmtYear}€<span className="text-[16px] text-[#888]">/anno</span>
                 </div>
               </div>
