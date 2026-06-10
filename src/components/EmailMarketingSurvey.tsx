@@ -12,6 +12,7 @@ import { usePartialTracking } from '@/hooks/usePartialTracking';
 import { InsightCard, getInsightForStep } from '@/components/InsightCard';
 import mailiftLogo from '@/assets/mailift-logo.png';
 import lorenzoFounder from '@/assets/lorenzo-founder.jpeg';
+import heroFlow from '@/assets/hero-flow.webp';
 import previewScore from '@/assets/report-preview-score.png';
 import previewRevenue from '@/assets/report-preview-revenue.png';
 import previewActions from '@/assets/report-preview-actions.png';
@@ -374,8 +375,25 @@ const IntroScreen: React.FC<{ onStart: () => void }> = ({ onStart }) => {
   ];
 
   return (
-    <div className="min-h-screen bg-[#121d2b] font-['Syne',sans-serif] text-[#f0f0eb] relative">
+    <div className="min-h-screen bg-[#121d2b] font-['Syne',sans-serif] text-[#f0f0eb] relative overflow-hidden">
       <GridBackground />
+      <style>{`
+        @keyframes heroDrift {
+          0%, 100% { transform: scale(1) translateY(0); }
+          50% { transform: scale(1.06) translateY(-10px); }
+        }
+      `}</style>
+      <img
+        src={heroFlow}
+        alt=""
+        aria-hidden="true"
+        className="absolute top-0 left-0 w-full h-[560px] md:h-[680px] object-cover opacity-40 pointer-events-none select-none"
+        style={{
+          maskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 35%, transparent 100%)',
+          WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 35%, transparent 100%)',
+          animation: 'heroDrift 14s ease-in-out infinite',
+        }}
+      />
 
       <div className="relative z-[1]">
         {/* HERO */}
