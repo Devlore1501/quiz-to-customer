@@ -599,7 +599,7 @@ const IntroScreen: React.FC<{ onStart: () => void }> = ({ onStart }) => {
               <p className="text-[15px] text-[#9aa3b0] leading-relaxed mb-4">
                 Email Revenue Strategist e founder di Mailift. Da 6 anni lavoro solo con
                 eCommerce, solo su Shopify e Klaviyo: più di 200 store analizzati e oltre{' '}
-                <strong className="text-[#f0f0eb]">€1M di revenue email generata</strong> per i miei
+                <strong className="text-[#f0f0eb]">€5M di revenue email generata</strong> per i miei
                 clienti. Il report che riceverai usa gli stessi benchmark e lo stesso metodo che
                 applico ogni giorno sui brand che seguo.
               </p>
