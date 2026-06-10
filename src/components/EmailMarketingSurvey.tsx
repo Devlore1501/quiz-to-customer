@@ -324,7 +324,7 @@ const DisqualifiedScreen: React.FC = () => (
         <p className="text-[#aaa] text-sm mb-4">
           Scarica la nostra guida gratuita per far crescere il tuo e-commerce con l'email marketing.
         </p>
-        <a href="https://gamma.app/docs/Email-Marketing-Secret-2025-mwanhid9h9buczz" target="_blank" rel="noopener noreferrer"
+        <a href="https://www.mailift.com/lm1-page" target="_blank" rel="noopener noreferrer"
           className="block w-full py-3 px-6 bg-[#FAB450] text-[#121d2b] rounded-xl font-semibold hover:bg-[#fbbf6a] transition-colors text-center">
           Scarica Guida Gratuita
         </a>
