@@ -557,12 +557,12 @@ const IntroScreen: React.FC<{ onStart: () => void }> = ({ onStart }) => {
               Trusted by
             </p>
             <p className="text-[20px] md:text-[24px] font-bold text-[#f0f0eb] mb-8 max-w-[640px] mx-auto leading-snug">
-              <span className="text-[#FAB450]">Più di 200 eCommerce analizzati</span> e oltre €1M di revenue email generata per i clienti.
+              <span className="text-[#FAB450]">Più di 200 eCommerce analizzati</span> e oltre €5M di revenue email generata per i clienti.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-[760px] mx-auto">
               {[
                 { v: '200+', l: 'eCommerce analizzati' },
-                { v: '€1M+', l: 'revenue email generata' },
+                { v: '€5M+', l: 'revenue email generata' },
                 { v: '2 min', l: 'di tempo richiesto' },
               ].map((s, i) => (
                 <div key={i}>
