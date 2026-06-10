@@ -11,7 +11,7 @@ import { trackQuizCompleted, trackCompleteRegistration, trackViewContent } from 
 import { usePartialTracking } from '@/hooks/usePartialTracking';
 import { InsightCard, getInsightForStep } from '@/components/InsightCard';
 import mailiftLogo from '@/assets/mailift-logo.png';
-import lorenzoFounder from '@/assets/lorenzo-founder.jpeg';
+import lorenzoFounderAsset from '@/assets/lorenzo-founder.png.asset.json';
 import heroFlow from '@/assets/hero-flow.webp';
 import previewScore from '@/assets/report-preview-score.png';
 import previewRevenue from '@/assets/report-preview-revenue.png';
@@ -581,7 +581,7 @@ const IntroScreen: React.FC<{ onStart: () => void }> = ({ onStart }) => {
           <div className="bg-[#1a2942] border border-[#2a3a52] rounded-[24px] p-7 md:p-10 flex flex-col md:flex-row items-center gap-8">
             <div className="flex-shrink-0">
               <img
-                src={lorenzoFounder}
+                src={lorenzoFounderAsset.url}
                 alt="Lorenzo Baretta, founder di Mailift"
                 width={400}
                 height={400}
