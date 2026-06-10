@@ -340,7 +340,7 @@ const ArrowIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
 );
 
-const CtaButton: React.FC<{ onClick: () => void; label?: string; className?: string }> = ({ onClick, label = 'Inizia il quiz', className = '' }) => (
+const CtaButton: React.FC<{ onClick: () => void; label?: string; className?: string }> = ({ onClick, label = 'Calcola la mia revenue persa', className = '' }) => (
   <button
     onClick={onClick}
     className={`group inline-flex items-center justify-center gap-2 px-8 py-[18px] bg-[#FAB450] text-[#121d2b] rounded-full font-['Syne',sans-serif] text-[17px] font-bold hover:bg-[#fbbf6a] hover:-translate-y-[2px] transition-all shadow-[0_10px_30px_rgba(250,180,80,0.35)] hover:shadow-[0_14px_40px_rgba(250,180,80,0.5)] ${className}`}
@@ -393,9 +393,9 @@ const IntroScreen: React.FC<{ onStart: () => void }> = ({ onStart }) => {
             Revenue Leak Audit
           </div>
 
-          <h1 className="font-['Bebas_Neue',sans-serif] text-[clamp(48px,10vw,84px)] leading-[0.95] tracking-wider mb-5">
-            Scopri quanta revenue stai lasciando sul tavolo.{' '}
-            <span className="text-[#FAB450]">Gratis.</span>
+          <h1 className="font-['Bebas_Neue',sans-serif] text-[clamp(44px,9vw,76px)] leading-[0.95] tracking-wider mb-5">
+            Le email dovrebbero fare il 25–40% del tuo fatturato.{' '}
+            <span className="text-[#FAB450]">Nel tuo eCommerce quanto fanno?</span>
           </h1>
 
           <p className="text-[17px] text-[#9aa3b0] max-w-[560px] mx-auto mb-9 leading-relaxed">
@@ -403,10 +403,64 @@ const IntroScreen: React.FC<{ onStart: () => void }> = ({ onStart }) => {
             <strong className="text-[#f0f0eb]">6 aree chiave</strong> del tuo email marketing.
           </p>
 
+          <p className="text-[13px] text-[#FAB450] font-semibold tracking-wide mb-6">
+            Pensato per eCommerce da 20k€+/mese
+          </p>
+
           <CtaButton onClick={onStart} />
 
           <p className="text-[#5a5a5a] text-[12px] mt-5">
-            🔒 Dati riservati. Nessuno spam.
+            🔒 Gratis · 2 minuti · Nessuno spam
+          </p>
+        </section>
+
+        {/* ANTEPRIMA REPORT */}
+        <section className="max-w-[1100px] mx-auto px-5 py-16">
+          <h2 className="font-['Bebas_Neue',sans-serif] text-[clamp(32px,5vw,48px)] tracking-wider text-center mb-3">
+            Anteprima del report che riceverai
+          </h2>
+          <p className="text-center text-[#888] mb-12 max-w-[600px] mx-auto">
+            Ecco un esempio di cosa troverai dentro — dati reali, formule chiare, azioni prioritizzate.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[
+              { src: previewScore, alt: 'Diagnosi & Score', label: 'Diagnosi & Score' },
+              { src: previewRevenue, alt: 'Stima revenue persa', label: 'Stima revenue persa' },
+              { src: previewActions, alt: "Piano d'azione 90 giorni", label: "Piano d'azione 90 giorni" },
+            ].map((p, i) => (
+              <div
+                key={i}
+                className="group bg-[#1a2942] border border-[#2a3a52] rounded-[14px] overflow-hidden shadow-[0_10px_40px_rgba(0,0,0,0.35)] hover:border-[rgba(250,180,80,0.5)] hover:shadow-[0_20px_60px_rgba(250,180,80,0.15)] hover:-translate-y-1 transition-all duration-300"
+              >
+                {/* macOS title bar */}
+                <div className="flex items-center gap-1.5 px-3 py-2.5 bg-[#0f1825] border-b border-[#2a3a52]">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#ff5f57]" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#febc2e]" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#28c840]" />
+                  <span className="ml-3 text-[10px] text-[#5a6577] tracking-wider uppercase truncate">
+                    mailift.com/report
+                  </span>
+                </div>
+                <div className="bg-white">
+                  <img
+                    src={p.src}
+                    alt={p.alt}
+                    width={1024}
+                    height={768}
+                    loading="lazy"
+                    className="w-full h-auto block"
+                  />
+                </div>
+                <div className="px-4 py-3 bg-[#0f1825] border-t border-[#2a3a52] text-center">
+                  <span className="text-[12px] font-semibold text-[#FAB450] tracking-wider uppercase">
+                    {p.label}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className="text-center text-[#888] text-[14px] mt-10">
+            ↓ Ottieni il <span className="text-[#FAB450] font-semibold">tuo report personalizzato</span> in 2 minuti
           </p>
         </section>
 
@@ -477,56 +531,6 @@ const IntroScreen: React.FC<{ onStart: () => void }> = ({ onStart }) => {
           </div>
         </section>
 
-        {/* ANTEPRIMA REPORT */}
-        <section className="max-w-[1100px] mx-auto px-5 py-16">
-          <h2 className="font-['Bebas_Neue',sans-serif] text-[clamp(32px,5vw,48px)] tracking-wider text-center mb-3">
-            Anteprima del report che riceverai
-          </h2>
-          <p className="text-center text-[#888] mb-12 max-w-[600px] mx-auto">
-            Ecco un esempio di cosa troverai dentro — dati reali, formule chiare, azioni prioritizzate.
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[
-              { src: previewScore, alt: 'Diagnosi & Score', label: 'Diagnosi & Score' },
-              { src: previewRevenue, alt: 'Stima revenue persa', label: 'Stima revenue persa' },
-              { src: previewActions, alt: "Piano d'azione 90 giorni", label: "Piano d'azione 90 giorni" },
-            ].map((p, i) => (
-              <div
-                key={i}
-                className="group bg-[#1a2942] border border-[#2a3a52] rounded-[14px] overflow-hidden shadow-[0_10px_40px_rgba(0,0,0,0.35)] hover:border-[rgba(250,180,80,0.5)] hover:shadow-[0_20px_60px_rgba(250,180,80,0.15)] hover:-translate-y-1 transition-all duration-300"
-              >
-                {/* macOS title bar */}
-                <div className="flex items-center gap-1.5 px-3 py-2.5 bg-[#0f1825] border-b border-[#2a3a52]">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#ff5f57]" />
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#febc2e]" />
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#28c840]" />
-                  <span className="ml-3 text-[10px] text-[#5a6577] tracking-wider uppercase truncate">
-                    mailift.com/report
-                  </span>
-                </div>
-                <div className="bg-white">
-                  <img
-                    src={p.src}
-                    alt={p.alt}
-                    width={1024}
-                    height={768}
-                    loading="lazy"
-                    className="w-full h-auto block"
-                  />
-                </div>
-                <div className="px-4 py-3 bg-[#0f1825] border-t border-[#2a3a52] text-center">
-                  <span className="text-[12px] font-semibold text-[#FAB450] tracking-wider uppercase">
-                    {p.label}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-          <p className="text-center text-[#888] text-[14px] mt-10">
-            ↓ Ottieni il <span className="text-[#FAB450] font-semibold">tuo report personalizzato</span> in 2 minuti
-          </p>
-        </section>
-
         {/* SOCIAL PROOF */}
         <section className="max-w-[1100px] mx-auto px-5 py-16">
           <div className="bg-[#1a2942] border border-[#2a3a52] rounded-[24px] px-6 py-10 text-center">
@@ -534,7 +538,7 @@ const IntroScreen: React.FC<{ onStart: () => void }> = ({ onStart }) => {
               Trusted by
             </p>
             <p className="text-[20px] md:text-[24px] font-bold text-[#f0f0eb] mb-8 max-w-[640px] mx-auto leading-snug">
-              Già usato da <span className="text-[#FAB450]">+200 brand</span> eCommerce italiani per scoprire revenue nascosta.
+              Oltre <span className="text-[#FAB450]">€1M di revenue email</span> generata per eCommerce italiani su Shopify e Klaviyo.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-[760px] mx-auto">
               {[
@@ -570,7 +574,7 @@ const IntroScreen: React.FC<{ onStart: () => void }> = ({ onStart }) => {
         {/* FOOTER */}
         <footer className="border-t border-[#2a3a52] mt-8">
           <div className="max-w-[1100px] mx-auto px-5 py-7 text-center text-[12px] text-[#5a5a5a]">
-            © 2025 <span className="text-[#FAB450] font-semibold">Mailift</span> · Email Revenue Audit
+            © {new Date().getFullYear()} <span className="text-[#FAB450] font-semibold">Mailift</span> · Email Revenue Audit
           </div>
         </footer>
       </div>
@@ -1250,7 +1254,7 @@ const EmailMarketingSurvey: React.FC = () => {
 
         {/* Footer */}
         <footer className="text-center pb-9 text-[11px] text-[#5a5a5a]">
-          © 2025 <span className="text-[#FAB450]">Mailift</span>. Revenue Leak Audit.
+          © {new Date().getFullYear()} <span className="text-[#FAB450]">Mailift</span>. Revenue Leak Audit.
         </footer>
       </div>
     </div>
