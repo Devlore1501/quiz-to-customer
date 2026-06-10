@@ -157,6 +157,13 @@ export interface AdvancedReport {
   revenueGap: number;
   revenueGapPercent: number;
   revenuePerSubGap: number;
+  /** Gap operativo bottom-up: flussi mancanti + frequenza sotto-ottimale */
+  frequencyGap: number;
+  operationalGap: number;
+  /** max(revenueGap, operationalGap) — il numero mostrato in hero e scenari */
+  recoverablePotential: number;
+  /** Quale via domina: 'benchmark' = sotto benchmark %, 'operational' = sopra benchmark ma leve spente */
+  potentialMode: 'benchmark' | 'operational';
   activeFlowsCount: number;
   totalFlowsCount: number;
   automationCoverage: number;
@@ -299,11 +306,14 @@ const _calculateReport = (
   else if (automationCoverage >= 40) automationRating = 'C';
   else automationRating = 'D';
   
+  // Base per l'impatto dei flussi mancanti: per chi è SOPRA il benchmark di %
+  // il suo fatturato email reale è la base giusta (il benchmark sottostimerebbe).
+  const flowBase = Math.max(currentEmailRevenue, benchmarkEmailRevenue);
   const missingFlows = allFlows
     .filter(flow => !activeFlowsFiltered.includes(flow))
     .map(key => {
       const flow = flowImpact[key];
-      const impactValue = benchmarkEmailRevenue * (flow.impactPercent / 100);
+      const impactValue = flowBase * (flow.impactPercent / 100);
       return {
         key, label: flow.label, impactPercent: flow.impactPercent,
         impactValue, priority: flow.priority,
@@ -313,14 +323,54 @@ const _calculateReport = (
     .sort((a, b) => b.impactValue - a.impactValue);
   
   const totalFlowGap = missingFlows.reduce((sum, f) => sum + f.impactValue, 0);
-  
-  // Scenari ancorati al revenue gap (un solo modello: chiusura del leak),
-  // così il "potenziale annuo" coincide con il Revenue Leak in hero.
-  // Gli override admin restano espressi come % sul fatturato totale.
+
+  // ── List Forecast (calcolato qui perché alimenta il gap di frequenza) ──
+  const aov = customAOV ?? sectorAOV[sector] ?? sectorAOV.other;
+  const sendsPerMonth = parseEmailFrequency(emailFrequency || 'none');
+
+  const getAutomationCR = (count: number): number => {
+    if (count === 0) return 0;
+    if (count <= 2) return 0.003;
+    if (count <= 4) return 0.005;
+    if (count <= 6) return 0.007;
+    return 0.01;
+  };
+  const automationCR = getAutomationCR(activeFlowsCount);
+  const REACH_RATE = 0.30;
+
+  const calcScenario = (sends: number) => {
+    const newsletterRevenue = aov * (listSize * REACH_RATE * sends * 0.002);
+    const automationRevenue = aov * (listSize * automationCR);
+    return { sends, newsletterRevenue, automationRevenue, total: newsletterRevenue + automationRevenue };
+  };
+
+  const optimizedSends = Math.max(12, Math.round(sendsPerMonth * 2.5));
+  const benchmarkSends = 20;
+
+  const listForecast = {
+    listSize, sendsPerMonth, sectorAOV: aov, isCustomAov: customAOV !== undefined,
+    current: calcScenario(sendsPerMonth),
+    optimized: calcScenario(optimizedSends),
+    benchmark: calcScenario(benchmarkSends)
+  };
+
+  // ── Potenziale a due vie ──────────────────────────────────────────────
+  // Via 1 (top-down): gap vs benchmark di settore sulla % da email.
+  // Via 2 (bottom-up): gap operativo = flussi mancanti + frequenza sotto-ottimale.
+  // Un prospect sopra benchmark (es. vino al 40%) ma con 2 invii/sett e zero
+  // segmentazione ha via 1 = 0 ma via 2 alta: il potenziale è il MAX delle due
+  // (non la somma: il gap benchmark è in gran parte spiegato dalle stesse leve).
+  const frequencyGap = Math.max(0, listForecast.optimized.total - listForecast.current.total);
+  const operationalGap = totalFlowGap + frequencyGap;
+  const recoverablePotential = Math.max(revenueGap, operationalGap);
+  const potentialMode: 'benchmark' | 'operational' = revenueGap >= operationalGap ? 'benchmark' : 'operational';
+
+  // Scenari ancorati al potenziale recuperabile, così il "potenziale annuo"
+  // coincide sempre con il numero in hero. Override admin = % sul fatturato totale.
   const mkScenario = (pctOverride: number | undefined, gapShare: number, label: string) => {
     const value = pctOverride !== undefined
       ? monthlyRevenue * (pctOverride / 100)
-      : revenueGap * gapShare;
+      : recoverablePotential * gapShare;
     const growthPercent = monthlyRevenue > 0 ? Math.round((value / monthlyRevenue) * 100) : 0;
     return {
       growthPercent,
@@ -332,9 +382,9 @@ const _calculateReport = (
   };
 
   const scenarios = {
-    conservative: mkScenario(scenarioOverrides?.conservative, 0.5, 'Recupero del 50% del gap vs benchmark'),
-    moderate: mkScenario(scenarioOverrides?.moderate, 1.0, 'Allineamento completo al benchmark di settore'),
-    aggressive: mkScenario(scenarioOverrides?.aggressive, 1.3, 'Oltre il benchmark — fascia top performer'),
+    conservative: mkScenario(scenarioOverrides?.conservative, 0.5, 'Recupero del 50% del potenziale identificato'),
+    moderate: mkScenario(scenarioOverrides?.moderate, 1.0, 'Recupero completo del potenziale identificato'),
+    aggressive: mkScenario(scenarioOverrides?.aggressive, 1.3, 'Oltre il potenziale — fascia top performer'),
   };
   
   const topActions: AdvancedReport['topActions'] = [];
@@ -375,7 +425,9 @@ const _calculateReport = (
       : `Hai una buona base di ${activeFlowsCount} automazioni attive, ma c'è ancora margine per ottimizzare ulteriormente e raggiungere il benchmark di settore.`
   }`;
   
-  const desiredSituation = `Allineandoti al benchmark del settore ${sectorBenchmark.label}, potresti generare ${formatCurrencyInternal(benchmarkEmailRevenue)}/mese dall'email marketing, con un incremento di ${formatCurrencyInternal(revenueGap)}/mese rispetto ad oggi. Un sistema completo di automazioni trasformerebbe l'email nel tuo canale più profittevole, con un ROI medio di 35-42x sull'investimento. Questo significa ${formatCurrencyInternal(yearlyPotential)}/anno di fatturato aggiuntivo senza aumentare il budget pubblicitario.`;
+  const desiredSituation = potentialMode === 'benchmark'
+    ? `Allineandoti al benchmark del settore ${sectorBenchmark.label}, potresti generare ${formatCurrencyInternal(benchmarkEmailRevenue)}/mese dall'email marketing, con un incremento di ${formatCurrencyInternal(recoverablePotential)}/mese rispetto ad oggi. Un sistema completo di automazioni trasformerebbe l'email nel tuo canale più profittevole, con un ROI medio di 35-42x sull'investimento. Questo significa ${formatCurrencyInternal(yearlyPotential)}/anno di fatturato aggiuntivo senza aumentare il budget pubblicitario.`
+    : `La tua % da email è già sopra il benchmark di settore: il canale per te funziona, e proprio per questo ogni leva non attivata pesa di più. Portando frequenza e automazioni a regime potresti aggiungere ${formatCurrencyInternal(recoverablePotential)}/mese sul canale che hai già dimostrato essere il tuo migliore. Questo significa ${formatCurrencyInternal(yearlyPotential)}/anno di fatturato aggiuntivo senza aumentare il budget pubblicitario.`;
   
   const potentialObstacles: string[] = [];
   potentialObstacles.push("Mancanza di tempo e risorse interne dedicate all'email marketing");
@@ -385,36 +437,6 @@ const _calculateReport = (
   potentialObstacles.push("Difficoltà nel misurare e attribuire correttamente il ROI dell'email");
   
   const strategicAnalysis = { currentSituation, desiredSituation, potentialObstacles: potentialObstacles.slice(0, 4) };
-  
-  // List Forecast
-  const aov = customAOV ?? sectorAOV[sector] ?? sectorAOV.other;
-  const sendsPerMonth = parseEmailFrequency(emailFrequency || 'none');
-  
-  const getAutomationCR = (count: number): number => {
-    if (count === 0) return 0;
-    if (count <= 2) return 0.003;
-    if (count <= 4) return 0.005;
-    if (count <= 6) return 0.007;
-    return 0.01;
-  };
-  const automationCR = getAutomationCR(activeFlowsCount);
-  const REACH_RATE = 0.30;
-
-  const calcScenario = (sends: number) => {
-    const newsletterRevenue = aov * (listSize * REACH_RATE * sends * 0.002);
-    const automationRevenue = aov * (listSize * automationCR);
-    return { sends, newsletterRevenue, automationRevenue, total: newsletterRevenue + automationRevenue };
-  };
-
-  const optimizedSends = Math.max(12, Math.round(sendsPerMonth * 2.5));
-  const benchmarkSends = 20;
-
-  const listForecast = {
-    listSize, sendsPerMonth, sectorAOV: aov, isCustomAov: customAOV !== undefined,
-    current: calcScenario(sendsPerMonth),
-    optimized: calcScenario(optimizedSends),
-    benchmark: calcScenario(benchmarkSends)
-  };
 
   // Popup data
   let popupData: AdvancedReport['popupData'] = undefined;
@@ -451,6 +473,7 @@ const _calculateReport = (
     currentEmailRevenue, currentEmailPercent, currentRevenuePerSub,
     monthlyRevenue, listSize, sectorBenchmark, benchmarkEmailRevenue,
     benchmarkRevenuePerSub, revenueGap, revenueGapPercent, revenuePerSubGap,
+    frequencyGap, operationalGap, recoverablePotential, potentialMode,
     activeFlowsCount, totalFlowsCount, automationCoverage, automationRating,
     missingFlows, totalFlowGap, scenarios, topActions, strategicAnalysis,
     emailHealthScore, yearlyPotential, listForecast, popupData,

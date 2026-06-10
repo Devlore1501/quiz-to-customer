@@ -267,20 +267,37 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
           </p>
         </div>
 
-        {/* ═══ 2. REVENUE LEAK HERO ═══ */}
-        <div className="rounded-2xl p-6 md:p-8 text-center" style={{ background: 'linear-gradient(135deg, rgba(255,59,59,0.15), rgba(255,59,59,0.05))', border: '1px solid rgba(255,59,59,0.3)' }}>
-          <p className="font-mono-dm text-xs tracking-widest mb-2" style={{ color: '#ff3b3b' }}>REVENUE LEAK MENSILE</p>
-          <p className="font-bebas text-5xl md:text-7xl" style={{ color: '#ff3b3b' }}>
-            -{formatCurrency(r.revenueGap)}
-          </p>
-          <p className="font-mono-dm text-sm mt-2" style={{ color: '#ff6b6b' }}>
-            {formatCurrency(r.revenueGap * 12)}/anno di fatturato non catturato
-          </p>
-          {/* CTA intermedia sul picco emotivo: la CTA finale arriva dopo 12 sezioni di scroll */}
-          <a href="#booking" className="inline-flex items-center gap-2 mt-4 px-6 py-2.5 rounded-full font-syne font-semibold text-sm transition-all hover:scale-105" style={{ background: '#FAB450', color: '#121d2b' }}>
-            Scopri come recuperarli <ArrowRight className="w-4 h-4" />
-          </a>
-        </div>
+        {/* ═══ 2. HERO POTENZIALE — doppia narrativa ═══
+            benchmark: sotto la media di settore → loss aversion (leak rosso)
+            operational: sopra la media ma frequenza/flussi spenti → opportunità
+            sul canale già vincente (oro). Mai più un €0 per prospect qualificati. */}
+        {r.potentialMode === 'benchmark' ? (
+          <div className="rounded-2xl p-6 md:p-8 text-center" style={{ background: 'linear-gradient(135deg, rgba(255,59,59,0.15), rgba(255,59,59,0.05))', border: '1px solid rgba(255,59,59,0.3)' }}>
+            <p className="font-mono-dm text-xs tracking-widest mb-2" style={{ color: '#ff3b3b' }}>REVENUE LEAK MENSILE</p>
+            <p className="font-bebas text-5xl md:text-7xl" style={{ color: '#ff3b3b' }}>
+              -{formatCurrency(r.recoverablePotential)}
+            </p>
+            <p className="font-mono-dm text-sm mt-2" style={{ color: '#ff6b6b' }}>
+              {formatCurrency(r.recoverablePotential * 12)}/anno di fatturato non catturato
+            </p>
+            <a href="#booking" className="inline-flex items-center gap-2 mt-4 px-6 py-2.5 rounded-full font-syne font-semibold text-sm transition-all hover:scale-105" style={{ background: '#FAB450', color: '#121d2b' }}>
+              Scopri come recuperarli <ArrowRight className="w-4 h-4" />
+            </a>
+          </div>
+        ) : (
+          <div className="rounded-2xl p-6 md:p-8 text-center" style={{ background: 'linear-gradient(135deg, rgba(250,180,80,0.15), rgba(250,180,80,0.05))', border: '1px solid rgba(250,180,80,0.3)' }}>
+            <p className="font-mono-dm text-xs tracking-widest mb-2" style={{ color: '#FAB450' }}>POTENZIALE NON SFRUTTATO</p>
+            <p className="font-bebas text-5xl md:text-7xl" style={{ color: '#FAB450' }}>
+              +{formatCurrency(r.recoverablePotential)}
+            </p>
+            <p className="font-mono-dm text-sm mt-2" style={{ color: '#e6b366' }}>
+              Sei sopra la media del tuo settore — ma con {r.listForecast.sendsPerMonth} invii/mese e {r.missingFlows.length} {r.missingFlows.length === 1 ? 'flusso mancante' : 'flussi mancanti'} il tuo canale migliore gira a metà regime
+            </p>
+            <a href="#booking" className="inline-flex items-center gap-2 mt-4 px-6 py-2.5 rounded-full font-syne font-semibold text-sm transition-all hover:scale-105" style={{ background: '#FAB450', color: '#121d2b' }}>
+              Scopri come sbloccarlo <ArrowRight className="w-4 h-4" />
+            </a>
+          </div>
+        )}
 
         {/* ═══ 3. SCORE COMPLESSIVO ═══ */}
         <div className="rounded-2xl p-6" style={{ background: '#1a2942', border: '1px solid #2a3a52' }}>
@@ -339,10 +356,18 @@ export const AdvancedReportComponent: React.FC<AdvancedReportProps> = ({
               <p className="font-mono-dm text-[10px] tracking-wider" style={{ color: '#FAB450' }}>BENCHMARK {r.sectorBenchmark.emailShare}%</p>
               <p className="font-bebas text-2xl mt-1" style={{ color: '#FAB450' }}>{formatCurrency(r.benchmarkEmailRevenue)}</p>
             </div>
-            <div className="rounded-xl p-4" style={{ background: 'rgba(255,59,59,0.05)', border: '1px solid rgba(255,59,59,0.2)' }}>
-              <p className="font-mono-dm text-[10px] tracking-wider" style={{ color: '#ff3b3b' }}>GAP MENSILE</p>
-              <p className="font-bebas text-2xl mt-1" style={{ color: '#ff3b3b' }}>{formatCurrency(r.revenueGap)}</p>
-            </div>
+            {r.potentialMode === 'benchmark' ? (
+              <div className="rounded-xl p-4" style={{ background: 'rgba(255,59,59,0.05)', border: '1px solid rgba(255,59,59,0.2)' }}>
+                <p className="font-mono-dm text-[10px] tracking-wider" style={{ color: '#ff3b3b' }}>GAP MENSILE</p>
+                <p className="font-bebas text-2xl mt-1" style={{ color: '#ff3b3b' }}>{formatCurrency(r.revenueGap)}</p>
+              </div>
+            ) : (
+              <div className="rounded-xl p-4" style={{ background: 'rgba(250,180,80,0.05)', border: '1px solid rgba(250,180,80,0.2)' }}>
+                <p className="font-mono-dm text-[10px] tracking-wider" style={{ color: '#FAB450' }}>POTENZIALE OPERATIVO</p>
+                <p className="font-bebas text-2xl mt-1" style={{ color: '#FAB450' }}>{formatCurrency(r.recoverablePotential)}</p>
+                <p className="font-mono-dm text-[10px]" style={{ color: '#666' }}>flussi + frequenza</p>
+              </div>
+            )}
           </div>
           {/* Gauge bar */}
           <div className="mt-5 space-y-2">
