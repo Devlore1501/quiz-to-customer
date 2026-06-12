@@ -311,7 +311,39 @@ const DropoffAnalytics: React.FC = () => {
         </div>
       </div>
 
+      {/* Landing → Quiz funnel */}
+      {landingStats && (
+        <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-white font-semibold">🚪 Funnel Landing → Quiz</h3>
+            <span className="text-xs text-slate-500">visitatori unici (sessione 24h)</span>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-700">
+              <p className="text-slate-400 text-xs mb-1">Landing views</p>
+              <p className="text-2xl font-bold text-white">{landingStats.views}</p>
+              <p className="text-slate-500 text-[11px] mt-1">hanno visto la pagina</p>
+            </div>
+            <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-700">
+              <p className="text-slate-400 text-xs mb-1">Click CTA</p>
+              <p className="text-2xl font-bold text-white">{landingStats.clicks}</p>
+              <p className="text-slate-500 text-[11px] mt-1">hanno avviato il quiz</p>
+            </div>
+            <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-700">
+              <p className="text-slate-400 text-xs mb-1">CTR landing → quiz</p>
+              <p className="text-2xl font-bold text-orange">
+                {landingStats.views > 0
+                  ? ((landingStats.clicks / landingStats.views) * 100).toFixed(1) + '%'
+                  : '—'}
+              </p>
+              <p className="text-slate-500 text-[11px] mt-1">click / views</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Version Tabs */}
+
       <div className="flex gap-1 bg-slate-800 rounded-lg p-1">
         {VERSIONS.map(v => {
           const vd = versionData[v.id];
