@@ -8,6 +8,7 @@ import AdvancedReportComponent from '@/components/AdvancedReport';
 import { ChevronLeft, Loader2, CheckCircle2, Circle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { trackQuizCompleted, trackCompleteRegistration, trackViewContent } from '@/lib/facebookPixel';
+import { useLandingTracking } from '@/hooks/useLandingTracking';
 import { usePartialTracking } from '@/hooks/usePartialTracking';
 import { InsightCard, getInsightForStep } from '@/components/InsightCard';
 import mailiftLogo from '@/assets/mailift-logo.png';
@@ -353,6 +354,8 @@ const CtaButton: React.FC<{ onClick: () => void; label?: string; className?: str
 );
 
 const IntroScreen: React.FC<{ onStart: () => void }> = ({ onStart }) => {
+  const { trackCtaClick } = useLandingTracking('email_marketing');
+  const handleStart = () => { trackCtaClick(); onStart(); };
   const benefits = [
     { icon: '📊', title: 'Diagnosi completa', desc: 'Analisi delle 6 aree chiave del tuo email marketing.' },
     { icon: '🎯', title: 'Piano d\u2019azione 90 giorni', desc: 'Task prioritizzate per impatto e velocità.' },
@@ -426,7 +429,7 @@ const IntroScreen: React.FC<{ onStart: () => void }> = ({ onStart }) => {
             Pensato per eCommerce da 20k€+/mese
           </p>
 
-          <CtaButton onClick={onStart} />
+          <CtaButton onClick={handleStart} />
 
           <p className="text-[#5a5a5a] text-[12px] mt-5">
             🔒 Gratis · 2 minuti · Nessuno spam
@@ -618,7 +621,7 @@ const IntroScreen: React.FC<{ onStart: () => void }> = ({ onStart }) => {
           <p className="text-[16px] text-[#9aa3b0] max-w-[480px] mx-auto mb-9">
             Bastano 2 minuti per ricevere il tuo report personalizzato.
           </p>
-          <CtaButton onClick={onStart} />
+          <CtaButton onClick={handleStart} />
           <p className="text-[#5a5a5a] text-[12px] mt-5">
             🔒 Gratis · No spam · 2 minuti
           </p>

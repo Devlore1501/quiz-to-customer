@@ -1,47 +1,46 @@
-Obiettivo: sostituire il font corrente di tutti gli elementi con colore arancione nel progetto con **Playfair Display** (Google Font serif).
+## Obiettivo
+Misurare quante persone vedono la landing e quante poi cliccano "Calcola la mia revenue persa" per avviare il quiz. Vista come **sessione unica per browser** (1 view per visitatore ogni 24h).
 
-## Analisi dello stato attuale
-Il progetto usa i seguenti font:
-- **Bebas Neue** (display / numeri grandi)
-- **Syne** (sans-serif / testi)
-- **DM Mono** (monospace / label, tag)
+## 1. Database: nuova tabella `landing_events`
+Migration con grants + RLS:
 
-Il colore arancione brand è **#FAB450** ("giallo-arancio") e appare in decine di elementi: numeri del report, label, tag, bottoni, statistiche, titoli di sezione, progress bar, testi di benchmark, ecc.
+- Colonne: `id`, `session_key` (text, UUID generato lato client e salvato in `localStorage` con TTL 24h), `event_type` (`'view'` | `'cta_click'`), `survey_type` (default `'email_marketing'`, per futuri quiz), `referrer`, `utm_source/medium/campaign`, `user_agent`, `created_at`.
+- Index su `(created_at)` e `(session_key, event_type)` per dedup.
+- GRANT `INSERT` ad `anon` + `authenticated` (scrittura pubblica come per `partial_submissions`).
+- GRANT `SELECT` solo a `authenticated` + admin policy via `has_role`.
+- Policy INSERT: aperta (come tracking).
+- Policy SELECT: solo admin.
 
-## Piano di implementazione
+## 2. Frontend tracking (`EmailMarketingSurvey.tsx`)
+- Nuovo hook `useLandingTracking()` che:
+  - Genera/legge `landing_session_key` da `localStorage` (scadenza 24h).
+  - Su mount della landing, se non già loggato `view` in questa sessione, INSERT `event_type='view'` + marca il flag locale.
+  - Espone `trackCtaClick()` che logga `cta_click` una sola volta per sessione.
+- Aggancio `trackCtaClick()` ai due `<CtaButton onClick={onStart} />` (riga 429 e 621) prima di chiamare `onStart`.
+- Cattura UTM da `window.location.search` e referrer al primo view.
 
-### 1. Caricamento font
-Aggiungere **Playfair Display** (con i pesi 400, 700, e opzionalmente italic) al caricamento Google Fonts in `index.html`.
+## 3. Facebook Pixel
+In `src/lib/facebookPixel.ts` aggiungere:
+- `trackLandingView()` → `trackCustom('LandingView', {...})`
+- `trackQuizCtaClick()` → `trackCustom('QuizCTAClick', {...})` + standard `InitiateCheckout`-like signal opzionale.
+Chiamate dall'hook sopra in parallelo all'insert DB.
 
-### 2. Configurazione CSS / Tailwind
-Aggiungere una nuova utility CSS (es. `.font-playfair` o tramite Tailwind config) che punti alla famiglia `"Playfair Display", serif`. Il font verrà applicato in modo selettivo, non come font globale.
+## 4. Admin UI: nuova card "Funnel Landing → Quiz"
+In `DropoffAnalytics.tsx`, sopra le card esistenti, aggiungere una sezione che legge `landing_events` filtrata sullo stesso `period` (1d/7d/30d/all):
+- **Landing views** (count distinto di `session_key` con `event_type='view'`)
+- **CTA click** (count distinto di `session_key` con `event_type='cta_click'`)
+- **CTR landing → quiz** = click / views in %
+- Mini breakdown opzionale per `utm_source` (top 5).
 
-### 3. Mappatura degli elementi arancione da aggiornare
-Applicare il nuovo font a tutti gli elementi che usano:
-- `color: '#FAB450'`
-- `text-orange`
-- `text-orange-foreground`
-- sfondi arancione con testo bianco/nero (`bg-orange`)
+## Dettagli tecnici
+- Dedup: il flag `localStorage` evita doppi insert su refresh; lato query usiamo comunque `COUNT(DISTINCT session_key)` per sicurezza.
+- Niente PII raccolta (solo session_key anonimo, UA, UTM).
+- Nessun blocco se l'insert fallisce (fire-and-forget, try/catch silenzioso) — il quiz parte comunque.
+- Compatibile con embed iframe (localStorage funziona; in caso bloccato si fa fallback a sessionStorage in memoria → conta come page load, accettabile).
 
-I componenti principali coinvolti sono:
-- `src/components/AdvancedReport.tsx` (titoli, numeri, label, benchmark, tabelle)
-- `src/components/EmailMarketingSurvey.tsx` (testi di introduzione, statistiche)
-- `src/components/InsightCard.tsx` (tag, titolo, statistiche)
-- `src/components/DropoffAnalytics.tsx` (tab, percentuali)
-- `src/pages/AdminReport.tsx` (tab, bottoni, icone)
-- `src/lib/pdfGenerator.ts` (accenti nel PDF)
-
-### 4. Metodologia di applicazione
-Per garantire coerenza senza duplicare codice:
-- Aggiungere una regola CSS globale stile: `[style*="color: '#FAB450'"]` non è affidabile.
-- Approccio consigliato: creare una utility Tailwind `font-playfair` e applicarla agli elementi arancione esistenti tramite sostituzione nelle proprietà `className` o `style` dove presenti.
-- Per elementi con stili inline (`style={{ color: '#FAB450' }}`), aggiungere `fontFamily: "'Playfair Display', serif"` inline o preferibilmente spostare in una classe condivisa.
-
-### 5. Verifica visiva
-Controllare che:
-- I numeri grandi (es. "€5M+", benchmark) risultino leggibili in serif.
-- Le label maiuscole e i tag piccoli (es. "ANALISI", "GAP ANALYSIS") non perdano leggibilità.
-- I bottoni arancione mantengano coerenza tipografica.
-
-## Nota tecnica
-Tailwind v3 non supporta selettori CSS basati su valore attributo (`[style*=...]`) out-of-the-box senza plugin custom. L'implementazione procederà tramite utility class applicata esplicitamente a ogni componente che contiene testo arancione.
+## File toccati
+- `supabase/migrations/<new>.sql` (nuova tabella + policies + grants)
+- `src/lib/facebookPixel.ts` (2 nuovi helper)
+- `src/hooks/useLandingTracking.ts` (nuovo)
+- `src/components/EmailMarketingSurvey.tsx` (mount tracking + onClick wrapper)
+- `src/components/DropoffAnalytics.tsx` (nuova sezione funnel in cima)
