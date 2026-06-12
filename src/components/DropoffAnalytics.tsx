@@ -159,7 +159,7 @@ const DropoffAnalytics: React.FC = () => {
     }
   };
 
-  }, [period]);
+
 
   const fetchData = async () => {
     setLoading(true);
