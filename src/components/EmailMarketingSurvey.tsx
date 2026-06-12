@@ -353,6 +353,8 @@ const CtaButton: React.FC<{ onClick: () => void; label?: string; className?: str
 );
 
 const IntroScreen: React.FC<{ onStart: () => void }> = ({ onStart }) => {
+  const { trackCtaClick } = useLandingTracking('email_marketing');
+  const handleStart = () => { trackCtaClick(); onStart(); };
   const benefits = [
     { icon: '📊', title: 'Diagnosi completa', desc: 'Analisi delle 6 aree chiave del tuo email marketing.' },
     { icon: '🎯', title: 'Piano d\u2019azione 90 giorni', desc: 'Task prioritizzate per impatto e velocità.' },
