@@ -126,9 +126,39 @@ const DropoffAnalytics: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<Period>('7d');
   const [activeVersion, setActiveVersion] = useState(VERSIONS[VERSIONS.length - 1].id);
+  const [landingStats, setLandingStats] = useState<{ views: number; clicks: number } | null>(null);
 
   useEffect(() => {
     fetchData();
+    fetchLandingStats();
+  }, [period]);
+
+  const fetchLandingStats = async () => {
+    try {
+      let query = supabase
+        .from('landing_events')
+        .select('session_key, event_type, created_at')
+        .eq('survey_type', 'email_marketing');
+      if (period !== 'all') {
+        const days = period === '1d' ? 1 : period === '7d' ? 7 : 30;
+        const since = new Date(Date.now() - days * 86400000).toISOString();
+        query = query.gte('created_at', since);
+      }
+      const { data, error } = await query;
+      if (error) { console.error(error); setLandingStats({ views: 0, clicks: 0 }); return; }
+      const viewKeys = new Set<string>();
+      const clickKeys = new Set<string>();
+      (data || []).forEach((r: { session_key: string; event_type: string }) => {
+        if (r.event_type === 'view') viewKeys.add(r.session_key);
+        else if (r.event_type === 'cta_click') clickKeys.add(r.session_key);
+      });
+      setLandingStats({ views: viewKeys.size, clicks: clickKeys.size });
+    } catch (e) {
+      console.error(e);
+      setLandingStats({ views: 0, clicks: 0 });
+    }
+  };
+
   }, [period]);
 
   const fetchData = async () => {
