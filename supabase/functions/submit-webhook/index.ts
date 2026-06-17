@@ -313,6 +313,46 @@ serve(async (req) => {
 
     console.log('Webhook results:', { makeResult, ghlResult });
 
+    // Fire lead enrichment asynchronously after GHL webhook succeeds
+    if (ghlResult?.success && submissionId) {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const submissionDataObj2 = submissionData as Record<string, unknown>;
+      let enrichEmail = validation.email;
+      let enrichName = '';
+      let enrichCompany = '';
+      let enrichWebsite = '';
+
+      if (submissionDataObj2.type === 'admin_report') {
+        const qs = submissionDataObj2.quickSummary as Record<string, unknown> | undefined;
+        enrichName = (qs?.leadName as string) || '';
+        enrichEmail = (qs?.leadEmail as string) || enrichEmail || '';
+        enrichWebsite = (submissionDataObj2.website as string) || '';
+        enrichCompany = (submissionDataObj2.company_name as string) || '';
+      } else {
+        enrichName = (submissionDataObj2.full_name as string) || '';
+        enrichWebsite = (submissionDataObj2.website as string) || '';
+        enrichCompany = (submissionDataObj2.company_name as string) || '';
+      }
+
+      // Fire-and-forget: do not await, enrichment runs in background
+      fetch(`${supabaseUrl}/functions/v1/enrich-ghl-lead`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+        },
+        body: JSON.stringify({
+          submissionId,
+          email: enrichEmail,
+          fullName: enrichName,
+          companyName: enrichCompany,
+          website: enrichWebsite,
+        }),
+      }).catch((e) => console.error('Failed to invoke enrich-ghl-lead:', e));
+
+      console.log('Lead enrichment triggered for submission:', submissionId);
+    }
+
     // Persist sync flags so the Postgres trigger doesn't re-fire and admins can see status
     if (submissionId) {
       try {
