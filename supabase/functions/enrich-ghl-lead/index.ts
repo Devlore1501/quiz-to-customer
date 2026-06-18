@@ -2,17 +2,23 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 // ---------------------------------------------------------------------------
-// Standalone GHL Lead Enrichment Function
+// Standalone GHL Lead Enrichment + Qualification Function
 //
 // Triggered by a GHL Workflow webhook (or any HTTP caller).
-// Accepts two input formats:
 //
-// Format A — GHL native webhook payload:
-//   { type, locationId, id (=contactId), firstName, lastName, email,
-//     companyName, website, phone, ... }
+// Flow:
+//  1. Static qualification checks (no API cost) → hard-reject obvious fakes
+//  2. 5 parallel web searches → web-presence signals feed the score
+//  3. Final score computation → qualified / suspicious / fake
+//  4. GHL update:
+//       - Fake    → tag "squalificato", note with reason, skip synthesis
+//       - Suspect → tag "da-verificare", partial note, skip synthesis
+//       - Real    → tag "enriched" + "qualificato", full sales brief note
+//  5. Log in lead_enrichments table
 //
-// Format B — simple JSON (from submit-webhook or manual call):
-//   { contactId?, email, fullName, companyName?, website?, submissionId? }
+// Accepted payload formats:
+//  A) GHL native webhook: { type, locationId, id, firstName, lastName, email, companyName, website, … }
+//  B) Simple JSON:        { contactId?, email, fullName, companyName?, website?, submissionId? }
 // ---------------------------------------------------------------------------
 
 const corsHeaders = {
@@ -20,15 +26,201 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// ---------------------------------------------------------------------------
+// Static qualification data
+// ---------------------------------------------------------------------------
+
+const DISPOSABLE_DOMAINS = new Set([
+  "mailinator.com","guerrillamail.com","guerrillamail.info","guerrillamail.biz",
+  "guerrillamail.de","guerrillamail.net","guerrillamail.org","sharklasers.com",
+  "grr.la","tempmail.com","throwaway.email","yopmail.com","spam4.me",
+  "trashmail.com","trashmail.me","trashmail.at","trashmail.io","trashmail.net",
+  "dispostable.com","mailnull.com","maildrop.cc","fakeinbox.com","tempinbox.com",
+  "mailexpire.com","discard.email","nwytg.net","zzrgg.com","getairmail.com",
+  "filzmail.com","weg-werf-email.de","spamhereplease.com","spamgourmet.com",
+  "throwam.com","tempail.com","getnada.com","mailnesia.com","tempr.email",
+  "crazymailing.com","jetable.fr","jetable.net","spambox.us","mailforspam.com",
+]);
+
+// Free providers reduce B2B credibility but are not always fake
+const FREE_EMAIL_PROVIDERS = new Set([
+  "gmail.com","yahoo.com","yahoo.it","yahoo.fr","yahoo.es","yahoo.de",
+  "hotmail.com","hotmail.it","hotmail.fr","outlook.com","outlook.it",
+  "live.com","live.it","icloud.com","me.com","mac.com",
+  "libero.it","tin.it","virgilio.it","alice.it","tiscali.it",
+  "email.it","inwind.it","fastwebnet.it","aol.com","protonmail.com",
+  "proton.me","tutanota.com","gmx.com","gmx.it","web.de",
+]);
+
+// Patterns that strongly suggest test/fake company names
+const FAKE_NAME_PATTERNS = [
+  /^test\b/i, /^prova\b/i, /\btest\b/i, /^aaa+/i, /^xxx/i,
+  /^pippo\b/i, /^pluto\b/i, /^paperino\b/i, /^foo\b/i, /^bar\b/i,
+  /^lorem/i, /^asdf/i, /^qwerty/i, /^\d+$/, /^[a-zA-Z]{1,2}$/,
+  /^n\/a$/i, /^none$/i, /^null$/i, /^undefined$/i, /^company$/i,
+  /^azienda$/i, /^empresa$/i,
+];
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+interface QualificationSignals {
+  emailIsDisposable: boolean;
+  emailIsFreeProvider: boolean;
+  emailDomainMatchesWebsite: boolean;
+  companyNameSuspicious: boolean;
+  webResultsCount: number;       // total non-empty search buckets (0–5)
+  financialDataFound: boolean;
+  newsFound: boolean;
+  awardsFound: boolean;
+}
+
+interface QualificationResult {
+  score: number;                  // 0–100
+  verdict: "fake" | "suspicious" | "cold" | "warm" | "hot";
+  isQualified: boolean;
+  disqualificationReason?: string;
+  signals: QualificationSignals;
+}
+
 interface SearchResult {
   title: string;
   link: string;
   snippet: string;
 }
 
+interface NormalizedPayload {
+  contactId?: string;
+  email: string;
+  fullName: string;
+  companyName: string;
+  website: string;
+  submissionId?: string;
+}
+
+// ---------------------------------------------------------------------------
+// Phase 1 — Static checks (no API calls)
+// ---------------------------------------------------------------------------
+
+function staticQualify(
+  email: string,
+  companyName: string,
+  website: string
+): { hardReject: boolean; reason?: string; signals: Partial<QualificationSignals> } {
+  const domain = email.split("@")[1]?.toLowerCase() || "";
+
+  const emailIsDisposable = DISPOSABLE_DOMAINS.has(domain);
+  const emailIsFreeProvider = FREE_EMAIL_PROVIDERS.has(domain);
+
+  // Hard reject: disposable email
+  if (emailIsDisposable) {
+    return {
+      hardReject: true,
+      reason: `Email usa un dominio temporaneo/usa-e-getta (${domain})`,
+      signals: { emailIsDisposable, emailIsFreeProvider: false },
+    };
+  }
+
+  // Hard reject: clearly fake company name
+  const nameToCheck = companyName.trim();
+  if (nameToCheck.length > 0) {
+    for (const pattern of FAKE_NAME_PATTERNS) {
+      if (pattern.test(nameToCheck)) {
+        return {
+          hardReject: true,
+          reason: `Nome azienda chiaramente fittizio: "${companyName}"`,
+          signals: { emailIsDisposable: false, companyNameSuspicious: true },
+        };
+      }
+    }
+  }
+
+  // Derive email/website domain match
+  let emailDomainMatchesWebsite = false;
+  if (website) {
+    try {
+      const websiteDomain = new URL(
+        website.startsWith("http") ? website : `https://${website}`
+      ).hostname.replace(/^www\./, "");
+      emailDomainMatchesWebsite = domain === websiteDomain;
+    } catch {
+      // ignore malformed website URL
+    }
+  }
+
+  return {
+    hardReject: false,
+    signals: {
+      emailIsDisposable: false,
+      emailIsFreeProvider,
+      emailDomainMatchesWebsite,
+      companyNameSuspicious: false,
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Phase 2 — Score computation (after web searches)
+// ---------------------------------------------------------------------------
+
+function computeScore(signals: QualificationSignals): QualificationResult {
+  let score = 50;
+
+  if (signals.emailIsDisposable)        score -= 60; // hard floor
+  if (signals.emailIsFreeProvider)      score -= 15;
+  if (signals.companyNameSuspicious)    score -= 20;
+  if (signals.emailDomainMatchesWebsite) score += 20;
+  if (signals.webResultsCount >= 3)     score += 15;
+  else if (signals.webResultsCount >= 1) score += 5;
+  else                                  score -= 20; // zero web presence
+  if (signals.financialDataFound)       score += 10;
+  if (signals.newsFound)                score += 8;
+  if (signals.awardsFound)              score += 7;
+
+  score = Math.max(0, Math.min(100, score));
+
+  let verdict: QualificationResult["verdict"];
+  let isQualified: boolean;
+  let disqualificationReason: string | undefined;
+
+  if (score < 30) {
+    verdict = "fake";
+    isQualified = false;
+    disqualificationReason = buildDisqualificationReason(signals, score);
+  } else if (score < 50) {
+    verdict = "suspicious";
+    isQualified = false;
+    disqualificationReason = buildDisqualificationReason(signals, score);
+  } else if (score < 65) {
+    verdict = "cold";
+    isQualified = true;
+  } else if (score < 80) {
+    verdict = "warm";
+    isQualified = true;
+  } else {
+    verdict = "hot";
+    isQualified = true;
+  }
+
+  return { score, verdict, isQualified, disqualificationReason, signals };
+}
+
+function buildDisqualificationReason(signals: QualificationSignals, score: number): string {
+  const reasons: string[] = [];
+  if (signals.emailIsDisposable) reasons.push("email usa un dominio temporaneo");
+  if (signals.emailIsFreeProvider) reasons.push("email su provider gratuito (nessun dominio aziendale)");
+  if (signals.companyNameSuspicious) reasons.push("nome azienda sospetto o generico");
+  if (signals.webResultsCount === 0) reasons.push("nessuna presenza online trovata per l'azienda");
+  if (!signals.emailDomainMatchesWebsite && signals.webResultsCount < 2)
+    reasons.push("dominio email non corrisponde al sito web");
+  return `Score: ${score}/100. Motivi: ${reasons.length > 0 ? reasons.join("; ") : "punteggio insufficiente"}.`;
+}
+
 // ---------------------------------------------------------------------------
 // Web search via Serper.dev
 // ---------------------------------------------------------------------------
+
 async function searchWeb(query: string, apiKey: string): Promise<SearchResult[]> {
   try {
     const res = await fetch("https://google.serper.dev/search", {
@@ -47,13 +239,15 @@ async function searchWeb(query: string, apiKey: string): Promise<SearchResult[]>
 }
 
 // ---------------------------------------------------------------------------
-// Claude synthesis — Italian sales brief
+// Claude synthesis — full sales brief with qualification context
 // ---------------------------------------------------------------------------
+
 async function synthesize(
   companyName: string,
   fullName: string,
   website: string,
   results: Record<string, SearchResult[]>,
+  qualification: QualificationResult,
   apiKey: string
 ): Promise<string> {
   const ctx = Object.entries(results)
@@ -66,15 +260,19 @@ async function synthesize(
 
   const prompt = `Sei un assistente esperto in ricerca aziendale per presentazioni di vendita B2B.
 
-Azienda target: ${companyName}
+Azienda: ${companyName}
 Contatto: ${fullName}
 Sito: ${website || "non specificato"}
-Data: ${new Date().toLocaleDateString("it-IT")}
+Qualità lead: ${qualification.verdict.toUpperCase()} (score ${qualification.score}/100)
+Data ricerca: ${new Date().toLocaleDateString("it-IT")}
 
 RISULTATI RICERCA:
 ${ctx}
 
-Crea un briefing di vendita strutturato in italiano. Usa SOLO i dati trovati, non inventare nulla. Se un dato manca scrivilo esplicitamente.
+Crea un briefing di vendita strutturato in italiano. Usa SOLO dati trovati — non inventare nulla. Se un dato manca indicalo esplicitamente.
+
+⚡ QUALITÀ LEAD: ${qualification.verdict.toUpperCase()} (${qualification.score}/100)
+[Spiega brevemente perché il lead ha questo score e cosa significa per l'approccio commerciale]
 
 📊 PANORAMICA AZIENDA
 [Settore, prodotti/servizi, dimensione stimata, anno fondazione]
@@ -95,7 +293,7 @@ Crea un briefing di vendita strutturato in italiano. Usa SOLO i dati trovati, no
 [3 opportunità specifiche da sfruttare con questo cliente]
 
 💡 APPROCCIO CONSIGLIATO
-[Tono, angolazione e personalizzazione del pitch]`;
+[Tono, angolazione e personalizzazione del pitch in base alla qualità del lead]`;
 
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
@@ -119,6 +317,7 @@ Crea un briefing di vendita strutturato in italiano. Usa SOLO i dati trovati, no
 // ---------------------------------------------------------------------------
 // GHL API helpers
 // ---------------------------------------------------------------------------
+
 async function findContact(email: string, apiKey: string, locationId: string): Promise<string | null> {
   try {
     const res = await fetch(
@@ -149,27 +348,29 @@ async function findContactWithRetry(
   return null;
 }
 
+async function updateContactTags(
+  contactId: string,
+  tags: string[],
+  apiKey: string
+): Promise<boolean> {
+  try {
+    const res = await fetch(`https://services.leadconnectorhq.com/contacts/${contactId}`, {
+      method: "PUT",
+      headers: { Authorization: `Bearer ${apiKey}`, Version: "2021-07-28", "Content-Type": "application/json" },
+      body: JSON.stringify({ tags }),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 async function addNote(contactId: string, note: string, apiKey: string): Promise<boolean> {
   try {
     const res = await fetch(`https://services.leadconnectorhq.com/contacts/${contactId}/notes`, {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, Version: "2021-07-28", "Content-Type": "application/json" },
-      body: JSON.stringify({
-        body: `🔍 LEAD ENRICHMENT — ${new Date().toLocaleDateString("it-IT")}\n\n${note}`,
-      }),
-    });
-    return res.ok;
-  } catch {
-    return false;
-  }
-}
-
-async function addTags(contactId: string, apiKey: string): Promise<boolean> {
-  try {
-    const res = await fetch(`https://services.leadconnectorhq.com/contacts/${contactId}`, {
-      method: "PUT",
-      headers: { Authorization: `Bearer ${apiKey}`, Version: "2021-07-28", "Content-Type": "application/json" },
-      body: JSON.stringify({ tags: ["enriched", `researched-${new Date().getFullYear()}`] }),
+      body: JSON.stringify({ body: note }),
     });
     return res.ok;
   } catch {
@@ -178,19 +379,11 @@ async function addTags(contactId: string, apiKey: string): Promise<boolean> {
 }
 
 // ---------------------------------------------------------------------------
-// Payload normalisation — handles both GHL native format and simple JSON
+// Payload normalisation
 // ---------------------------------------------------------------------------
-interface NormalizedPayload {
-  contactId?: string;
-  email: string;
-  fullName: string;
-  companyName: string;
-  website: string;
-  submissionId?: string; // quiz backcompat
-}
 
 function normalizePayload(raw: Record<string, unknown>): NormalizedPayload | null {
-  // GHL native webhook: has "type" and "id" at root level
+  // GHL native webhook format
   if (raw.type && raw.id && typeof raw.id === "string") {
     const firstName = (raw.firstName as string) || "";
     const lastName = (raw.lastName as string) || "";
@@ -205,7 +398,7 @@ function normalizePayload(raw: Record<string, unknown>): NormalizedPayload | nul
     };
   }
 
-  // Simple JSON format
+  // Simple JSON
   const email = (raw.email as string) || "";
   const fullName = (raw.fullName as string) || "";
   if (!email || !fullName) return null;
@@ -222,6 +415,7 @@ function normalizePayload(raw: Record<string, unknown>): NormalizedPayload | nul
 // ---------------------------------------------------------------------------
 // Main handler
 // ---------------------------------------------------------------------------
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -257,7 +451,7 @@ serve(async (req) => {
   const payload = normalizePayload(rawBody);
   if (!payload) {
     return new Response(
-      JSON.stringify({ error: "Missing required fields: email and fullName (or GHL contact payload)" }),
+      JSON.stringify({ error: "Missing required fields: email and fullName (or valid GHL contact payload)" }),
       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
@@ -265,7 +459,7 @@ serve(async (req) => {
   const { email, fullName, companyName, website, submissionId } = payload;
   let { contactId } = payload;
 
-  // Create enrichment log entry
+  // ── Create enrichment log ─────────────────────────────────────────────────
   const { data: logEntry } = await supabase
     .from("lead_enrichments")
     .insert({
@@ -281,7 +475,6 @@ serve(async (req) => {
 
   const logId = logEntry?.id;
 
-  // Also mark quiz submission if applicable
   if (submissionId) {
     await supabase
       .from("survey_submissions")
@@ -290,90 +483,197 @@ serve(async (req) => {
   }
 
   try {
+    // ── Phase 1: Static checks (no API cost) ─────────────────────────────────
+    const staticCheck = staticQualify(email, companyName, website);
+
+    if (staticCheck.hardReject) {
+      // Resolve contact for GHL update if needed
+      if (!contactId) {
+        contactId = (await findContactWithRetry(email, ghlApiKey, ghlLocationId)) || undefined;
+      }
+
+      if (contactId) {
+        await Promise.all([
+          updateContactTags(contactId, ["squalificato", "fake-lead"], ghlApiKey),
+          addNote(
+            contactId,
+            `❌ LEAD SQUALIFICATO — ${new Date().toLocaleDateString("it-IT")}\n\n` +
+            `Motivo: ${staticCheck.reason}\n` +
+            `Fase: controllo statico (pre-ricerca)\n` +
+            `Email: ${email} | Azienda: ${companyName || "n/d"}`,
+            ghlApiKey
+          ),
+        ]);
+      }
+
+      const now = new Date().toISOString();
+      if (logId) {
+        await supabase.from("lead_enrichments").update({
+          ghl_contact_id: contactId || null,
+          status: "completed",
+          qualification_verdict: "fake",
+          qualification_score: 0,
+          disqualification_reason: staticCheck.reason,
+          ghl_note_added: !!contactId,
+          ghl_tagged: !!contactId,
+          completed_at: now,
+        }).eq("id", logId);
+      }
+      if (submissionId) {
+        await supabase.from("survey_submissions")
+          .update({ enrichment_status: "completed", enrichment_completed_at: now })
+          .eq("id", submissionId);
+      }
+
+      return new Response(
+        JSON.stringify({ success: true, qualified: false, verdict: "fake", reason: staticCheck.reason }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ── Phase 2: Web searches ─────────────────────────────────────────────────
     const searchTarget = companyName || fullName;
 
-    // 5 parallel web searches
     const [generalRes, awardsRes, newsRes, financialRes, partnerRes] = await Promise.all([
-      searchWeb(`"${searchTarget}" azienda descrizione settore prodotti`, serperApiKey),
+      searchWeb(`"${searchTarget}" azienda descrizione settore`, serperApiKey),
       searchWeb(`"${searchTarget}" premi riconoscimenti award certificazioni`, serperApiKey),
-      searchWeb(`"${searchTarget}" news 2024 2025 comunicato stampa`, serperApiKey),
+      searchWeb(`"${searchTarget}" news 2024 2025 comunicato`, serperApiKey),
       searchWeb(`"${searchTarget}" fatturato bilancio ricavi finanziamento`, serperApiKey),
-      searchWeb(`"${searchTarget}" partner collaborazione clienti casi studio`, serperApiKey),
+      searchWeb(`"${searchTarget}" partner collaborazione clienti`, serperApiKey),
     ]);
 
-    const report = await synthesize(
-      searchTarget,
-      fullName,
-      website,
-      {
-        "Informazioni Generali": generalRes,
-        "Premi e Riconoscimenti": awardsRes,
-        "News Recenti": newsRes,
-        "Dati Fiscali e Finanziari": financialRes,
-        "Partnership e Collaborazioni": partnerRes,
-      },
-      claudeApiKey
-    );
+    const searchBuckets = [generalRes, awardsRes, newsRes, financialRes, partnerRes];
+    const webResultsCount = searchBuckets.filter((b) => b.length > 0).length;
 
-    // Resolve contact ID if not provided in the payload
+    // ── Phase 3: Final score ──────────────────────────────────────────────────
+    const signals: QualificationSignals = {
+      ...staticCheck.signals as Required<typeof staticCheck.signals>,
+      emailIsDisposable: staticCheck.signals.emailIsDisposable ?? false,
+      emailIsFreeProvider: staticCheck.signals.emailIsFreeProvider ?? false,
+      emailDomainMatchesWebsite: staticCheck.signals.emailDomainMatchesWebsite ?? false,
+      companyNameSuspicious: staticCheck.signals.companyNameSuspicious ?? false,
+      webResultsCount,
+      financialDataFound: financialRes.length > 0,
+      newsFound: newsRes.length > 0,
+      awardsFound: awardsRes.length > 0,
+    };
+
+    const qualification = computeScore(signals);
+
+    // Resolve contact ID
     if (!contactId) {
       contactId = (await findContactWithRetry(email, ghlApiKey, ghlLocationId)) || undefined;
     }
 
     let ghlNoteAdded = false;
     let ghlTagged = false;
+    let report: string | null = null;
 
-    if (contactId) {
-      [ghlNoteAdded, ghlTagged] = await Promise.all([
-        addNote(contactId, report, ghlApiKey),
-        addTags(contactId, ghlApiKey),
-      ]);
+    if (!qualification.isQualified) {
+      // ── Disqualified lead ───────────────────────────────────────────────────
+      if (contactId) {
+        const tags = qualification.verdict === "fake"
+          ? ["squalificato", "fake-lead"]
+          : ["da-verificare", "sospetto"];
+
+        const noteHeader = qualification.verdict === "fake"
+          ? "❌ LEAD SQUALIFICATO"
+          : "⚠️ LEAD SOSPETTO — REVISIONE MANUALE";
+
+        [ghlNoteAdded, ghlTagged] = await Promise.all([
+          addNote(
+            contactId,
+            `${noteHeader} — ${new Date().toLocaleDateString("it-IT")}\n\n` +
+            `Score: ${qualification.score}/100 | Verdict: ${qualification.verdict.toUpperCase()}\n` +
+            `${qualification.disqualificationReason || ""}\n\n` +
+            `Segnali rilevati:\n` +
+            `• Email provider gratuito: ${signals.emailIsFreeProvider ? "Sì" : "No"}\n` +
+            `• Dominio email = sito web: ${signals.emailDomainMatchesWebsite ? "Sì" : "No"}\n` +
+            `• Presenza online (bucket): ${signals.webResultsCount}/5\n` +
+            `• Dati finanziari trovati: ${signals.financialDataFound ? "Sì" : "No"}\n` +
+            `• News trovate: ${signals.newsFound ? "Sì" : "No"}`,
+            ghlApiKey
+          ),
+          updateContactTags(contactId, tags, ghlApiKey),
+        ]);
+      }
     } else {
-      console.warn(`GHL contact not found for: ${email}`);
+      // ── Qualified lead → full synthesis ──────────────────────────────────────
+      report = await synthesize(
+        searchTarget,
+        fullName,
+        website,
+        {
+          "Informazioni Generali": generalRes,
+          "Premi e Riconoscimenti": awardsRes,
+          "News Recenti": newsRes,
+          "Dati Fiscali e Finanziari": financialRes,
+          "Partnership e Collaborazioni": partnerRes,
+        },
+        qualification,
+        claudeApiKey
+      );
+
+      if (contactId) {
+        const tags = ["enriched", `researched-${new Date().getFullYear()}`, qualification.verdict];
+
+        [ghlNoteAdded, ghlTagged] = await Promise.all([
+          addNote(
+            contactId,
+            `🔍 LEAD ENRICHMENT — ${new Date().toLocaleDateString("it-IT")}\n` +
+            `Score: ${qualification.score}/100 | Qualità: ${qualification.verdict.toUpperCase()}\n\n${report}`,
+            ghlApiKey
+          ),
+          updateContactTags(contactId, tags, ghlApiKey),
+        ]);
+      }
     }
 
     const now = new Date().toISOString();
 
-    // Update enrichment log
     if (logId) {
-      await supabase
-        .from("lead_enrichments")
-        .update({
-          ghl_contact_id: contactId || null,
-          status: "completed",
-          report,
-          ghl_note_added: ghlNoteAdded,
-          ghl_tagged: ghlTagged,
-          completed_at: now,
-        })
-        .eq("id", logId);
+      await supabase.from("lead_enrichments").update({
+        ghl_contact_id: contactId || null,
+        status: "completed",
+        qualification_verdict: qualification.verdict,
+        qualification_score: qualification.score,
+        disqualification_reason: qualification.disqualificationReason || null,
+        report: report || null,
+        ghl_note_added: ghlNoteAdded,
+        ghl_tagged: ghlTagged,
+        completed_at: now,
+      }).eq("id", logId);
     }
 
-    // Update quiz submission if applicable
     if (submissionId) {
-      await supabase
-        .from("survey_submissions")
+      await supabase.from("survey_submissions")
         .update({ enrichment_status: "completed", enrichment_completed_at: now })
         .eq("id", submissionId);
     }
 
     return new Response(
-      JSON.stringify({ success: true, contactId: contactId || null, ghlNoteAdded, ghlTagged }),
+      JSON.stringify({
+        success: true,
+        qualified: qualification.isQualified,
+        verdict: qualification.verdict,
+        score: qualification.score,
+        contactId: contactId || null,
+        ghlNoteAdded,
+        ghlTagged,
+      }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
+
   } catch (err) {
-    console.error("Enrichment failed:", err);
+    console.error("Enrichment/qualification failed:", err);
 
     if (logId) {
-      await supabase
-        .from("lead_enrichments")
+      await supabase.from("lead_enrichments")
         .update({ status: "failed", error_message: (err as Error).message })
         .eq("id", logId);
     }
-
     if (submissionId) {
-      await supabase
-        .from("survey_submissions")
+      await supabase.from("survey_submissions")
         .update({ enrichment_status: "failed" })
         .eq("id", submissionId);
     }
