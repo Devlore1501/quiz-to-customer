@@ -73,8 +73,8 @@ function validatePhone(phone: string): { valid: boolean; message?: string } {
 
 // ═══ Constants ═══════════════════════════════════════════════════════════
 
-// Insight steps in NEW order: after Fatturato (3), Revenue Email (6), Automazioni (7)
-const INSIGHT_AFTER_STEPS = [3, 6, 7];
+// Micro-feedback shown inline after: Revenue Email % (step 4), Automazioni (step 5)
+const MICRO_FEEDBACK_STEPS = [4, 5];
 
 const INITIAL_FORM: FormData = {
   companyName: '', monthlyRevenue: '', sector: '', customSector: '', platform: '', emailTool: '',
@@ -170,13 +170,14 @@ const motivationOptions = [
   { id: 'm5', label: 'Sto valutando di cambiare agenzia/consulente', value: 'change_agency' },
 ];
 
-// Step definitions — NEW ORDER: Brand → Sito → Settore → Fatturato → resto invariato
+// Step definitions — ordine ottimizzato per completion rate
+// 0 Settore · 1 Piattaforma · 2 Fatturato (disqualify) · 3 Email Tool
+// 4 Revenue Email % (micro-feedback) · 5 Automazioni (micro-feedback)
+// 6 Segmentazione · 7 Frequenza · 8 Lista · 9 Obiettivo · 10 Brand · 11 Sito
 const STEPS = [
-  { cat: 'Brand', title: "Come si chiama il tuo brand?", type: 'input' as const, field: 'companyName' as const, options: [], placeholder: 'Es. Mailift', helper: '' },
-  { cat: 'Il tuo store', title: "Qual è l'URL del tuo store?", type: 'input' as const, field: 'website' as const, options: [], placeholder: 'www.tuosito.com', helper: 'Puoi scrivere "privato" se preferisci non condividerlo.' },
   { cat: 'Settore', title: "In quale settore opera il tuo eCommerce?", type: 'radio' as const, field: 'sector' as const, options: sectorOptions },
-  { cat: 'Fatturato', title: "Qual è il fatturato mensile medio del tuo eCommerce?", type: 'radio' as const, field: 'monthlyRevenue' as const, options: revenueOptions },
   { cat: 'Piattaforma', title: "Su quale piattaforma gira il tuo store?", type: 'radio' as const, field: 'platform' as const, options: platformOptions },
+  { cat: 'Fatturato', title: "Qual è il fatturato mensile medio del tuo eCommerce?", type: 'radio' as const, field: 'monthlyRevenue' as const, options: revenueOptions },
   { cat: 'Email Tool', title: "Quale strumento usi per inviare le email?", type: 'radio' as const, field: 'emailTool' as const, options: emailToolOptions },
   { cat: 'Revenue Email', title: "Quanto fatturato proviene attualmente dalle email?", type: 'radio' as const, field: 'emailRevenuePercentage' as const, options: emailRevenueOptions },
   { cat: 'Automazioni', title: "Quali automazioni hai attive?", type: 'checkbox' as const, field: 'activeFlows' as const, options: automationOptions, subtitle: 'Seleziona tutte quelle presenti' },
@@ -184,6 +185,8 @@ const STEPS = [
   { cat: 'Frequenza', title: "Quante email invii a settimana?", type: 'radio' as const, field: 'emailFrequency' as const, options: frequencyOptions },
   { cat: 'Lista Email', title: "Quanti iscritti ha la tua lista email?", type: 'radio' as const, field: 'listSize' as const, options: listSizeOptions },
   { cat: 'Obiettivo', title: "Perché vuoi analizzare il tuo email marketing?", type: 'radio' as const, field: 'motivation' as const, options: motivationOptions },
+  { cat: 'Brand', title: "Come si chiama il tuo brand?", type: 'input' as const, field: 'companyName' as const, options: [], placeholder: 'Es. Bella Milano', helper: '' },
+  { cat: 'Il tuo store', title: "Qual è l'URL del tuo store?", type: 'input' as const, field: 'website' as const, options: [], placeholder: 'www.tuosito.com', helper: 'Puoi scrivere "privato" se preferisci non condividerlo.' },
 ];
 
 const TOTAL_STEPS = STEPS.length;
@@ -645,11 +648,12 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
   const [direction, setDirection] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [report, setReport] = useState<AdvancedReport | null>(null);
-  const [phase, setPhase] = useState<'intro' | 'quiz' | 'insight' | 'analyzing' | 'gate' | 'report' | 'disqualified'>(skipIntro ? 'quiz' : 'intro');
+  const [phase, setPhase] = useState<'intro' | 'quiz' | 'analyzing' | 'gate' | 'report' | 'disqualified'>(skipIntro ? 'quiz' : 'intro');
   const [leadId, setLeadId] = useState<string | null>(null);
   const [selectedValue, setSelectedValue] = useState<string | null>(null);
   const [emailValidation, setEmailValidation] = useState<EmailValidation>({ status: 'idle' });
   const [formData, setFormData] = useState<FormData>({ ...INITIAL_FORM });
+  const [microFeedback, setMicroFeedback] = useState<{ icon: string; text: string } | null>(null);
 
   // Facebook Pixel: ViewContent — fires once on quiz mount
   const viewContentSentRef = useRef(false);
@@ -657,6 +661,16 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
     if (viewContentSentRef.current) return;
     viewContentSentRef.current = true;
     trackViewContent();
+  }, []);
+
+  // Pre-fill email from landing redirect: /quiz?email=...
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const emailParam = params.get('email');
+    if (emailParam) {
+      setFormData(prev => ({ ...prev, email: emailParam }));
+      setEmailValidation(validateEmail(emailParam));
+    }
   }, []);
 
   // Partial tracking
@@ -687,25 +701,41 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
   }, [currentStep]);
 
   const advanceFromCurrentStep = useCallback(() => {
-    // Check if we should show insight
-    if (INSIGHT_AFTER_STEPS.includes(currentStep)) {
-      setPhase('insight');
-    } else if (currentStep === TOTAL_STEPS - 1) {
-      // Last step → go to analyzing
-      setPhase('analyzing');
-    } else {
-      goToNextStep();
-    }
-  }, [currentStep, goToNextStep]);
-
-  const handleInsightContinue = useCallback(() => {
-    setPhase('quiz');
     if (currentStep === TOTAL_STEPS - 1) {
       setPhase('analyzing');
     } else {
       goToNextStep();
     }
   }, [currentStep, goToNextStep]);
+
+  // Micro-feedback content per step
+  const getMicroFeedback = useCallback((step: number, data: FormData): { icon: string; text: string } | null => {
+    if (step === 4) {
+      const pct = data.emailRevenuePercentage;
+      const isLow = pct === 'dont-know' || pct === '0-10' || pct === '10-20';
+      return isLow
+        ? { icon: '💸', text: 'Sotto il benchmark — nel report vedrai esattamente quanto vale il gap.' }
+        : { icon: '✅', text: 'Buona base — vediamo dove ottimizzare per andare oltre.' };
+    }
+    if (step === 5) {
+      const count = data.activeFlows.filter(f => f !== 'none').length;
+      if (count <= 2) return { icon: '⚡', text: `${count} flussi attivi — i mancanti sono le leve più veloci per recuperare revenue.` };
+      if (count <= 4) return { icon: '📈', text: 'Base solida — ogni flusso mancante è revenue automatica non sfruttata.' };
+      return { icon: '✅', text: 'Ottima copertura — analizziamo dove affinare.' };
+    }
+    return null;
+  }, []);
+
+  // Advance with optional micro-feedback (step 4 radio, step 5 checkbox)
+  const handleCheckboxContinue = useCallback(() => {
+    const fb = getMicroFeedback(currentStep, formData);
+    if (fb) {
+      setMicroFeedback(fb);
+      setTimeout(() => { setMicroFeedback(null); advanceFromCurrentStep(); }, 2500);
+    } else {
+      advanceFromCurrentStep();
+    }
+  }, [currentStep, formData, getMicroFeedback, advanceFromCurrentStep]);
 
   // ── Event Handlers ──────────────────────────────────────────────────
 
@@ -726,6 +756,20 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
         setPhase('disqualified');
       }, 400);
       return;
+    }
+
+    // Micro-feedback on Revenue Email % (step 4) before advancing
+    if (field === 'emailRevenuePercentage') {
+      const updatedData = { ...formData, emailRevenuePercentage: value };
+      const fb = getMicroFeedback(4, updatedData);
+      if (fb) {
+        setTimeout(() => {
+          setSelectedValue(null);
+          setMicroFeedback(fb);
+          setTimeout(() => { setMicroFeedback(null); advanceFromCurrentStep(); }, 2500);
+        }, 400);
+        return;
+      }
     }
 
     // Auto-advance with delay
@@ -950,12 +994,8 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
 
   // ═══ Phase Rendering ═══════════════════════════════════════════════
 
-  // Intro (welcome screen with CTA)
-  if (phase === 'intro') {
-    return <IntroScreen onStart={() => setPhase('quiz')} />;
-  }
+  if (phase === 'intro') return <IntroScreen onStart={() => setPhase('quiz')} />;
 
-  // Analysis
   if (phase === 'analyzing') {
     return <AnalysisScreen sectorLabel={getSectorLabel()} onComplete={() => setPhase('gate')} />;
   }
@@ -1109,38 +1149,6 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
   const step = STEPS[currentStep];
   const progress = ((currentStep + 1) / TOTAL_STEPS) * 100;
 
-  // Insight interstitial
-  if (phase === 'insight') {
-    const insightData = getInsightForStep(currentStep, formData as unknown as Record<string, unknown>);
-    if (!insightData) { handleInsightContinue(); return null; }
-    return (
-      <div className="min-h-screen bg-[#121d2b] flex flex-col items-center justify-center px-4 font-['Syne',sans-serif] relative">
-        <GridBackground />
-        <div className="w-full max-w-[680px] mx-auto relative z-[1]">
-          <div className="bg-[#1a2942] border border-[#2a3a52] rounded-[18px] overflow-hidden">
-            {/* Progress */}
-            <div className="h-1 bg-[#2a3a52] rounded-t-[18px] overflow-hidden">
-              <div className="h-full bg-[#FAB450] transition-all duration-500" style={{ width: `${progress}%` }} />
-            </div>
-            <div className="flex justify-between px-5 pt-3">
-              <span className="font-['DM_Mono',monospace] text-[11px] text-[#5a5a5a] tracking-wider">ANALISI PRELIMINARE</span>
-              <span className="font-['DM_Mono',monospace] text-[11px] text-[#FAB450]">INSIGHT</span>
-            </div>
-            {/* Back */}
-            <div className="px-5 pt-3">
-              <button onClick={() => { setPhase('quiz'); }} className="flex items-center gap-[6px] text-[#5a5a5a] text-[13px] font-['Syne',sans-serif] hover:text-[#888] transition-colors">
-                <ChevronLeft className="w-4 h-4" /> Indietro
-              </button>
-            </div>
-            <div className="p-5">
-              <InsightCard data={insightData} onContinue={handleInsightContinue} />
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-[#121d2b] font-['Syne',sans-serif] text-[#f0f0eb] relative">
       <GridBackground />
@@ -1286,6 +1294,23 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
             </motion.div>
           </AnimatePresence>
 
+          {/* Micro-feedback banner — appare inline dopo la selezione */}
+          <AnimatePresence>
+            {microFeedback && (
+              <motion.div
+                key="micro-feedback"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.25 }}
+                className="mx-5 mb-4 flex items-start gap-2 bg-[rgba(250,180,80,0.08)] border border-[rgba(250,180,80,0.3)] rounded-[10px] px-4 py-3"
+              >
+                <span className="text-base flex-shrink-0">{microFeedback.icon}</span>
+                <p className="text-[13px] text-[#FAB450] font-medium leading-snug">{microFeedback.text}</p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           {/* Footer buttons */}
           {(step.type === 'checkbox' || step.type === 'input') && (() => {
             const inputValue = step.type === 'input'
@@ -1293,11 +1318,15 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
               : '';
             const disabled =
               (step.type === 'checkbox' && formData.activeFlows.length === 0) ||
-              (step.type === 'input' && !inputValue);
+              (step.type === 'input' && !inputValue) ||
+              !!microFeedback;
+            const onClick = step.type === 'checkbox'
+              ? () => { if (!disabled) handleCheckboxContinue(); }
+              : () => { if (!disabled) advanceFromCurrentStep(); };
             return (
               <div className="px-5 pb-5">
                 <button
-                  onClick={() => { if (!disabled) advanceFromCurrentStep(); }}
+                  onClick={onClick}
                   disabled={disabled}
                   className="w-full py-4 bg-[#FAB450] text-[#121d2b] rounded-[10px] font-['Syne',sans-serif] text-[15px] font-bold flex items-center justify-center gap-2 hover:bg-[#fbbf6a] transition-all disabled:opacity-50 disabled:cursor-not-allowed">
                   Continua
