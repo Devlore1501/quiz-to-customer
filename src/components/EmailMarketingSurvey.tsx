@@ -257,7 +257,7 @@ const AnalysisScreen: React.FC<{ sectorLabel: string; onComplete: () => void }> 
   const dashOffset = circumference - (progress / 100) * circumference;
 
   return (
-    <div className="min-h-screen bg-[#121d2b] flex flex-col items-center justify-center px-4 font-['Syne',sans-serif] relative">
+    <div className="min-h-screen bg-[#121d2b] flex flex-col items-center justify-center px-4 font-['Montserrat',sans-serif] relative">
       <GridBackground />
       <div className="w-full max-w-lg relative z-[1]">
         <div className="bg-[#1a2942] border border-[#2a3a52] rounded-[18px] p-9 text-center">
@@ -269,12 +269,12 @@ const AnalysisScreen: React.FC<{ sectorLabel: string; onComplete: () => void }> 
                 strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={dashOffset}
                 className="transition-all duration-600 ease-out" />
             </svg>
-            <span className="absolute inset-0 flex items-center justify-center font-['Bebas_Neue',sans-serif] text-[32px] text-[#f0f0eb] tracking-wider">
+            <span className="absolute inset-0 flex items-center justify-center font-['Playfair_Display',serif] text-[32px] text-[#f0f0eb] tracking-wider">
               {progress}%
             </span>
           </div>
 
-          <h2 className="font-['Bebas_Neue',sans-serif] text-[26px] tracking-wider text-[#f0f0eb] mb-1">
+          <h2 className="font-['Playfair_Display',serif] text-[26px] tracking-wider text-[#f0f0eb] mb-1">
             Stiamo analizzando i tuoi dati
           </h2>
           <p className="text-[13px] text-[#888] mb-6">
@@ -310,7 +310,7 @@ const AnalysisScreen: React.FC<{ sectorLabel: string; onComplete: () => void }> 
 // ═══ Disqualified Screen ═════════════════════════════════════════════════
 
 const DisqualifiedScreen: React.FC = () => (
-  <div className="min-h-screen bg-[#121d2b] flex flex-col items-center justify-center px-4 font-['Syne',sans-serif] relative">
+  <div className="min-h-screen bg-[#121d2b] flex flex-col items-center justify-center px-4 font-['Montserrat',sans-serif] relative">
     <GridBackground />
     <div className="w-full max-w-md text-center relative z-[1]">
       <div className="text-6xl mb-6">😔</div>
@@ -349,7 +349,7 @@ const ArrowIcon = () => (
 const CtaButton: React.FC<{ onClick: () => void; label?: string; className?: string }> = ({ onClick, label = 'Calcola la mia revenue persa', className = '' }) => (
   <button
     onClick={onClick}
-    className={`group inline-flex items-center justify-center gap-2 px-8 py-[18px] bg-[#FAB450] text-[#121d2b] rounded-full font-['Syne',sans-serif] text-[17px] font-bold hover:bg-[#fbbf6a] hover:-translate-y-[2px] transition-all shadow-[0_10px_30px_rgba(250,180,80,0.35)] hover:shadow-[0_14px_40px_rgba(250,180,80,0.5)] ${className}`}
+    className={`group inline-flex items-center justify-center gap-2 px-8 py-[18px] bg-[#FAB450] text-[#121d2b] rounded-full font-['Montserrat',sans-serif] text-[17px] font-bold hover:bg-[#fbbf6a] hover:-translate-y-[2px] transition-all shadow-[0_10px_30px_rgba(250,180,80,0.35)] hover:shadow-[0_14px_40px_rgba(250,180,80,0.5)] ${className}`}
   >
     {label}
     <span className="transition-transform group-hover:translate-x-1"><ArrowIcon /></span>
@@ -381,7 +381,7 @@ const IntroScreen: React.FC<{ onStart: () => void }> = ({ onStart }) => {
   ];
 
   return (
-    <div className="min-h-screen bg-[#121d2b] font-['Syne',sans-serif] text-[#f0f0eb] relative overflow-hidden">
+    <div className="min-h-screen bg-[#121d2b] font-['Montserrat',sans-serif] text-[#f0f0eb] relative overflow-hidden">
       <GridBackground />
       <style>{`
         @keyframes heroDrift {
@@ -418,7 +418,7 @@ const IntroScreen: React.FC<{ onStart: () => void }> = ({ onStart }) => {
             Revenue Leak Audit
           </div>
 
-          <h1 className="font-['Bebas_Neue',sans-serif] text-[clamp(44px,9vw,76px)] leading-[0.95] tracking-wider mb-5">
+          <h1 className="font-['Playfair_Display',serif] text-[clamp(44px,9vw,76px)] leading-[0.95] tracking-wider mb-5">
             Le email dovrebbero fare il 25–40% del tuo fatturato.{' '}
             <span className="text-[#FAB450]">Nel tuo eCommerce quanto fanno?</span>
           </h1>
@@ -441,7 +441,7 @@ const IntroScreen: React.FC<{ onStart: () => void }> = ({ onStart }) => {
 
         {/* ANTEPRIMA REPORT */}
         <section className="max-w-[1100px] mx-auto px-5 py-16">
-          <h2 className="font-['Bebas_Neue',sans-serif] text-[clamp(32px,5vw,48px)] tracking-wider text-center mb-3">
+          <h2 className="font-['Playfair_Display',serif] text-[clamp(32px,5vw,48px)] tracking-wider text-center mb-3">
             Anteprima del report che riceverai
           </h2>
           <p className="text-center text-[#888] mb-12 max-w-[600px] mx-auto">
@@ -491,7 +491,7 @@ const IntroScreen: React.FC<{ onStart: () => void }> = ({ onStart }) => {
 
         {/* COSA OTTERRAI */}
         <section className="max-w-[1100px] mx-auto px-5 py-16">
-          <h2 className="font-['Bebas_Neue',sans-serif] text-[clamp(32px,5vw,48px)] tracking-wider text-center mb-3">
+          <h2 className="font-['Playfair_Display',serif] text-[clamp(32px,5vw,48px)] tracking-wider text-center mb-3">
             Cosa otterrai dal report
           </h2>
           <p className="text-center text-[#888] mb-12 max-w-[520px] mx-auto">
@@ -515,13 +515,13 @@ const IntroScreen: React.FC<{ onStart: () => void }> = ({ onStart }) => {
 
         {/* COME FUNZIONA */}
         <section className="max-w-[1100px] mx-auto px-5 py-16">
-          <h2 className="font-['Bebas_Neue',sans-serif] text-[clamp(32px,5vw,48px)] tracking-wider text-center mb-12">
+          <h2 className="font-['Playfair_Display',serif] text-[clamp(32px,5vw,48px)] tracking-wider text-center mb-12">
             Come funziona
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
             {steps.map((s, i) => (
               <div key={i} className="relative text-center md:text-left">
-                <div className="font-['Bebas_Neue',sans-serif] text-[64px] leading-none text-[#FAB450] mb-3">
+                <div className="font-['Playfair_Display',serif] text-[64px] leading-none text-[#FAB450] mb-3">
                   {s.n}
                 </div>
                 <h3 className="text-[18px] font-bold mb-2 text-[#f0f0eb]">{s.title}</h3>
@@ -535,7 +535,7 @@ const IntroScreen: React.FC<{ onStart: () => void }> = ({ onStart }) => {
 
         {/* AREE ANALIZZATE */}
         <section className="max-w-[1100px] mx-auto px-5 py-16">
-          <h2 className="font-['Bebas_Neue',sans-serif] text-[clamp(32px,5vw,48px)] tracking-wider text-center mb-3">
+          <h2 className="font-['Playfair_Display',serif] text-[clamp(32px,5vw,48px)] tracking-wider text-center mb-3">
             Le 6 aree analizzate
           </h2>
           <p className="text-center text-[#888] mb-12 max-w-[520px] mx-auto">
@@ -572,7 +572,7 @@ const IntroScreen: React.FC<{ onStart: () => void }> = ({ onStart }) => {
                 { v: '2 min', l: 'di tempo richiesto' },
               ].map((s, i) => (
                 <div key={i}>
-                  <div className="font-['Bebas_Neue',sans-serif] text-[44px] leading-none text-[#FAB450] mb-1">
+                  <div className="font-['Playfair_Display',serif] text-[44px] leading-none text-[#FAB450] mb-1">
                     {s.v}
                   </div>
                   <div className="text-[13px] text-[#9aa3b0] uppercase tracking-wider">{s.l}</div>
@@ -599,7 +599,7 @@ const IntroScreen: React.FC<{ onStart: () => void }> = ({ onStart }) => {
               <p className="text-[11px] tracking-[2px] uppercase text-[#FAB450] font-semibold mb-2">
                 Chi analizzerà i tuoi dati
               </p>
-              <h2 className="font-['Bebas_Neue',sans-serif] text-[clamp(28px,4vw,40px)] tracking-wider mb-3">
+              <h2 className="font-['Playfair_Display',serif] text-[clamp(28px,4vw,40px)] tracking-wider mb-3">
                 Lorenzo Baretta
               </h2>
               <p className="text-[15px] text-[#9aa3b0] leading-relaxed mb-4">
@@ -618,7 +618,7 @@ const IntroScreen: React.FC<{ onStart: () => void }> = ({ onStart }) => {
 
         {/* CTA FINALE */}
         <section className="max-w-[720px] mx-auto px-5 py-20 text-center">
-          <h2 className="font-['Bebas_Neue',sans-serif] text-[clamp(36px,7vw,64px)] tracking-wider leading-[0.95] mb-5">
+          <h2 className="font-['Playfair_Display',serif] text-[clamp(36px,7vw,64px)] tracking-wider leading-[0.95] mb-5">
             Pronto a scoprire quanto puoi <span className="text-[#FAB450]">crescere?</span>
           </h2>
           <p className="text-[16px] text-[#9aa3b0] max-w-[480px] mx-auto mb-9">
@@ -1032,7 +1032,7 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
     const fmtYear = yearlyGap.toLocaleString('it-IT', { maximumFractionDigits: 0 });
 
     return (
-      <div className="min-h-screen bg-[#121d2b] flex flex-col items-center justify-center px-4 font-['Syne',sans-serif] relative">
+      <div className="min-h-screen bg-[#121d2b] flex flex-col items-center justify-center px-4 font-['Montserrat',sans-serif] relative">
         <GridBackground />
         <div className="w-full max-w-[680px] mx-auto relative z-[1]">
           <div className="bg-[#1a2942] border border-[#2a3a52] rounded-[18px] overflow-hidden">
@@ -1042,7 +1042,7 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
               <div className="w-[52px] h-[52px] bg-[rgba(250,180,80,0.1)] border border-[rgba(250,180,80,0.3)] rounded-full flex items-center justify-center mx-auto mb-4 text-xl relative z-10">
                 ✓✓
               </div>
-              <h2 className="font-['Bebas_Neue',sans-serif] text-[32px] tracking-wider text-[#f0f0eb] relative z-10">
+              <h2 className="font-['Playfair_Display',serif] text-[32px] tracking-wider text-[#f0f0eb] relative z-10">
                 Analisi completata!
               </h2>
               <p className="text-[14px] text-[#888] max-w-[340px] mx-auto relative z-10 mt-2 leading-relaxed">
@@ -1053,13 +1053,13 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
             {/* Potenziale highlight + unlock invite — doppia narrativa come l'hero del report */}
             <div className={`mx-5 mt-5 rounded-xl p-5 ${isLeakMode ? 'bg-[rgba(255,59,59,0.06)] border border-[rgba(255,59,59,0.2)]' : 'bg-[rgba(250,180,80,0.06)] border border-[rgba(250,180,80,0.25)]'}`}>
               <div className="text-center mb-3">
-                <span className="font-['DM_Mono',monospace] text-[10px] tracking-[2px] uppercase text-[#888]">
+                <span className="font-['Montserrat',sans-serif] text-[10px] tracking-[2px] uppercase text-[#888]">
                   {isLeakMode ? 'Ecco quanto stai perdendo ogni mese' : 'Potenziale non sfruttato ogni mese'}
                 </span>
-                <div className={`font-['Bebas_Neue',sans-serif] text-[42px] tracking-wide leading-tight mt-1 ${isLeakMode ? 'text-[#ff3b3b]' : 'text-[#FAB450]'}`}>
+                <div className={`font-['Playfair_Display',serif] text-[42px] tracking-wide leading-tight mt-1 ${isLeakMode ? 'text-[#ff3b3b]' : 'text-[#FAB450]'}`}>
                   {fmtMonth}€<span className="text-[20px] text-[#888]">/mese</span>
                 </div>
-                <div className={`font-['Bebas_Neue',sans-serif] text-[22px] tracking-wide leading-tight ${isLeakMode ? 'text-[#ff3b3b]/70' : 'text-[#FAB450]/70'}`}>
+                <div className={`font-['Playfair_Display',serif] text-[22px] tracking-wide leading-tight ${isLeakMode ? 'text-[#ff3b3b]/70' : 'text-[#FAB450]/70'}`}>
                   {fmtYear}€<span className="text-[16px] text-[#888]">/anno</span>
                 </div>
               </div>
@@ -1079,7 +1079,7 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
                 <input type="text" value={formData._hp_field} onChange={e => handleInputChange('_hp_field', e.target.value)} tabIndex={-1} autoComplete="new-password" />
               </div>
 
-              <span className="font-['DM_Mono',monospace] text-[10px] tracking-[2px] uppercase text-[#5a5a5a] block mb-3">
+              <span className="font-['Montserrat',sans-serif] text-[10px] tracking-[2px] uppercase text-[#5a5a5a] block mb-3">
                 // I tuoi dati
               </span>
 
@@ -1087,13 +1087,13 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
                 <div>
                   <span className="text-[11px] text-[#5a5a5a] uppercase tracking-wider block mb-1">Nome e Cognome</span>
                   <input type="text" value={formData.fullName} onChange={e => handleInputChange('fullName', e.target.value)}
-                    className="w-full py-[13px] px-[15px] bg-[#121d2b] border border-[#2a3a52] rounded-[10px] text-[#f0f0eb] font-['Syne',sans-serif] text-[14px] font-medium outline-none focus:border-[rgba(250,180,80,0.4)] transition-colors placeholder:text-[#252525]"
+                    className="w-full py-[13px] px-[15px] bg-[#121d2b] border border-[#2a3a52] rounded-[10px] text-[#f0f0eb] font-['Montserrat',sans-serif] text-[14px] font-medium outline-none focus:border-[rgba(250,180,80,0.4)] transition-colors placeholder:text-[#252525]"
                     placeholder="Mario Rossi" autoComplete="name" />
                 </div>
                 <div>
                   <span className="text-[11px] text-[#5a5a5a] uppercase tracking-wider block mb-1">Email</span>
                   <input type="email" value={formData.email} onChange={e => handleInputChange('email', e.target.value)}
-                    className="w-full py-[13px] px-[15px] bg-[#121d2b] border border-[#2a3a52] rounded-[10px] text-[#f0f0eb] font-['Syne',sans-serif] text-[14px] font-medium outline-none focus:border-[rgba(250,180,80,0.4)] transition-colors placeholder:text-[#252525]"
+                    className="w-full py-[13px] px-[15px] bg-[#121d2b] border border-[#2a3a52] rounded-[10px] text-[#f0f0eb] font-['Montserrat',sans-serif] text-[14px] font-medium outline-none focus:border-[rgba(250,180,80,0.4)] transition-colors placeholder:text-[#252525]"
                     placeholder="nome@tuaemail.com" autoComplete="email" inputMode="email" />
                   {emailValidation.status === 'invalid' && (
                     <p className="text-[#ff3b3b] text-xs mt-1">{emailValidation.message}</p>
@@ -1102,7 +1102,7 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
                 <div>
                   <span className="text-[11px] text-[#5a5a5a] uppercase tracking-wider block mb-1">WhatsApp / Telefono</span>
                   <input type="tel" value={formData.phone} onChange={e => handleInputChange('phone', e.target.value)}
-                    className="w-full py-[13px] px-[15px] bg-[#121d2b] border border-[#2a3a52] rounded-[10px] text-[#f0f0eb] font-['Syne',sans-serif] text-[14px] font-medium outline-none focus:border-[rgba(250,180,80,0.4)] transition-colors placeholder:text-[#252525]"
+                    className="w-full py-[13px] px-[15px] bg-[#121d2b] border border-[#2a3a52] rounded-[10px] text-[#f0f0eb] font-['Montserrat',sans-serif] text-[14px] font-medium outline-none focus:border-[rgba(250,180,80,0.4)] transition-colors placeholder:text-[#252525]"
                     placeholder="+39 xxx xxx xxxx" autoComplete="tel" />
                   {formData.phone.trim() && !validatePhone(formData.phone).valid && (
                     <p className="text-[#ff3b3b] text-xs mt-1">{validatePhone(formData.phone).message}</p>
@@ -1125,7 +1125,7 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
 
               {/* Submit */}
               <button onClick={handleGateSubmit} disabled={!canSubmit}
-                className={`w-full py-4 rounded-[10px] font-['Syne',sans-serif] text-[15px] font-bold flex items-center justify-center gap-2 transition-all
+                className={`w-full py-4 rounded-[10px] font-['Montserrat',sans-serif] text-[15px] font-bold flex items-center justify-center gap-2 transition-all
                   ${canSubmit ? 'bg-[#FAB450] text-[#121d2b] hover:bg-[#fbbf6a] hover:-translate-y-[1px] cursor-pointer' : 'bg-[#FAB450]/60 text-[#121d2b]/60 cursor-not-allowed'}`}>
                 {isSubmitting ? (
                   <><Loader2 className="w-5 h-5 animate-spin" /> Generazione report...</>
@@ -1150,7 +1150,7 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
   const progress = ((currentStep + 1) / TOTAL_STEPS) * 100;
 
   return (
-    <div className="min-h-screen bg-[#121d2b] font-['Syne',sans-serif] text-[#f0f0eb] relative">
+    <div className="min-h-screen bg-[#121d2b] font-['Montserrat',sans-serif] text-[#f0f0eb] relative">
       <GridBackground />
       <div className="max-w-[680px] mx-auto px-[18px] relative z-[1]">
         {/* Header */}
@@ -1164,7 +1164,7 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
             <span className="w-[6px] h-[6px] bg-[#FAB450] rounded-full animate-pulse" />
             Revenue Leak Audit
           </div>
-          <h1 className="font-['Bebas_Neue',sans-serif] text-[clamp(48px,11vw,80px)] leading-[0.92] tracking-wider mb-4">
+          <h1 className="font-['Playfair_Display',serif] text-[clamp(48px,11vw,80px)] leading-[0.92] tracking-wider mb-4">
             Quanto stai<span className="text-[#FAB450] block">perdendo ogni mese?</span>
           </h1>
           <p className="text-[16px] text-[#888] max-w-[440px] mx-auto mb-7 leading-relaxed">
@@ -1180,10 +1180,10 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
             <div className="h-full bg-[#FAB450] transition-all duration-500 ease-out" style={{ width: `${progress}%` }} />
           </div>
           <div className="flex justify-between px-5 pt-3">
-            <span className="font-['DM_Mono',monospace] text-[11px] text-[#5a5a5a] tracking-wider">
+            <span className="font-['Montserrat',sans-serif] text-[11px] text-[#5a5a5a] tracking-wider">
               DOMANDA {currentStep + 1} / {TOTAL_STEPS}
             </span>
-            <span className="font-['DM_Mono',monospace] text-[11px] text-[#FAB450]">
+            <span className="font-['Montserrat',sans-serif] text-[11px] text-[#FAB450]">
               {Math.round(progress)}%
             </span>
           </div>
@@ -1205,7 +1205,7 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
               exit={{ x: direction < 0 ? 80 : -80, opacity: 0 }}
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
               className="p-5 pt-6">
-              <div className="font-['DM_Mono',monospace] text-[10px] tracking-[2px] uppercase text-[#FAB450] mb-2">
+              <div className="font-['Montserrat',sans-serif] text-[10px] tracking-[2px] uppercase text-[#FAB450] mb-2">
                 {step.cat}
               </div>
               <h2 className="text-[18px] font-semibold leading-[1.35] text-[#f0f0eb] mb-5">
@@ -1241,10 +1241,10 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
                     <div className="mt-3 space-y-3">
                       <input value={formData.customSector} onChange={e => handleInputChange('customSector', e.target.value)}
                         placeholder="Specifica il tuo settore..."
-                        className="w-full py-[13px] px-[15px] bg-[#121d2b] border border-[#2a3a52] rounded-[10px] text-[#f0f0eb] font-['Syne',sans-serif] text-[14px] font-medium outline-none focus:border-[rgba(250,180,80,0.45)] transition-colors placeholder:text-[#252525]"
+                        className="w-full py-[13px] px-[15px] bg-[#121d2b] border border-[#2a3a52] rounded-[10px] text-[#f0f0eb] font-['Montserrat',sans-serif] text-[14px] font-medium outline-none focus:border-[rgba(250,180,80,0.45)] transition-colors placeholder:text-[#252525]"
                         autoFocus />
                       <button onClick={() => { if (formData.customSector.trim()) advanceFromCurrentStep(); }}
-                        className="w-full py-4 bg-[#FAB450] text-[#121d2b] rounded-[10px] font-['Syne',sans-serif] text-[15px] font-bold flex items-center justify-center gap-2 hover:bg-[#fbbf6a] transition-all">
+                        className="w-full py-4 bg-[#FAB450] text-[#121d2b] rounded-[10px] font-['Montserrat',sans-serif] text-[15px] font-bold flex items-center justify-center gap-2 hover:bg-[#fbbf6a] transition-all">
                         Continua <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
                       </button>
                     </div>
@@ -1283,7 +1283,7 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
                     onChange={e => handleInputChange(step.field as keyof FormData, e.target.value)}
                     placeholder={(step as { placeholder?: string }).placeholder || ''}
                     autoFocus
-                    className="w-full py-[13px] px-[15px] bg-[#121d2b] border border-[#2a3a52] rounded-[10px] text-[#f0f0eb] font-['Syne',sans-serif] text-[14px] font-medium outline-none focus:border-[rgba(250,180,80,0.45)] transition-colors placeholder:text-[#252525]" />
+                    className="w-full py-[13px] px-[15px] bg-[#121d2b] border border-[#2a3a52] rounded-[10px] text-[#f0f0eb] font-['Montserrat',sans-serif] text-[14px] font-medium outline-none focus:border-[rgba(250,180,80,0.45)] transition-colors placeholder:text-[#252525]" />
                   {(step as { helper?: string }).helper && (
                     <p className="mt-[6px] text-[11px] text-[#5a5a5a]">
                       {(step as { helper?: string }).helper}
@@ -1328,7 +1328,7 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
                 <button
                   onClick={onClick}
                   disabled={disabled}
-                  className="w-full py-4 bg-[#FAB450] text-[#121d2b] rounded-[10px] font-['Syne',sans-serif] text-[15px] font-bold flex items-center justify-center gap-2 hover:bg-[#fbbf6a] transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                  className="w-full py-4 bg-[#FAB450] text-[#121d2b] rounded-[10px] font-['Montserrat',sans-serif] text-[15px] font-bold flex items-center justify-center gap-2 hover:bg-[#fbbf6a] transition-all disabled:opacity-50 disabled:cursor-not-allowed">
                   Continua
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
                 </button>
