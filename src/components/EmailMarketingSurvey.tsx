@@ -269,12 +269,12 @@ const AnalysisScreen: React.FC<{ sectorLabel: string; onComplete: () => void }> 
                 strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={dashOffset}
                 className="transition-all duration-600 ease-out" />
             </svg>
-            <span className="absolute inset-0 flex items-center justify-center font-['Playfair_Display',serif] text-[32px] text-[#f0f0eb] tracking-wider">
+            <span className="absolute inset-0 flex items-center justify-center font-['Montserrat',sans-serif] text-[32px] text-[#f0f0eb] tracking-wider">
               {progress}%
             </span>
           </div>
 
-          <h2 className="font-['Playfair_Display',serif] text-[26px] tracking-wider text-[#f0f0eb] mb-1">
+          <h2 className="font-['Montserrat',sans-serif] text-[26px] tracking-wider text-[#f0f0eb] mb-1">
             Stiamo analizzando i tuoi dati
           </h2>
           <p className="text-[13px] text-[#888] mb-6">
@@ -418,7 +418,7 @@ const IntroScreen: React.FC<{ onStart: () => void }> = ({ onStart }) => {
             Revenue Leak Audit
           </div>
 
-          <h1 className="font-['Playfair_Display',serif] text-[clamp(44px,9vw,76px)] leading-[0.95] tracking-wider mb-5">
+          <h1 className="font-['Montserrat',sans-serif] text-[clamp(44px,9vw,76px)] leading-[0.95] tracking-wider mb-5">
             Le email dovrebbero fare il 25–40% del tuo fatturato.{' '}
             <span className="text-[#FAB450]">Nel tuo eCommerce quanto fanno?</span>
           </h1>
@@ -441,7 +441,7 @@ const IntroScreen: React.FC<{ onStart: () => void }> = ({ onStart }) => {
 
         {/* ANTEPRIMA REPORT */}
         <section className="max-w-[1100px] mx-auto px-5 py-16">
-          <h2 className="font-['Playfair_Display',serif] text-[clamp(32px,5vw,48px)] tracking-wider text-center mb-3">
+          <h2 className="font-['Montserrat',sans-serif] text-[clamp(32px,5vw,48px)] tracking-wider text-center mb-3">
             Anteprima del report che riceverai
           </h2>
           <p className="text-center text-[#888] mb-12 max-w-[600px] mx-auto">
@@ -491,7 +491,7 @@ const IntroScreen: React.FC<{ onStart: () => void }> = ({ onStart }) => {
 
         {/* COSA OTTERRAI */}
         <section className="max-w-[1100px] mx-auto px-5 py-16">
-          <h2 className="font-['Playfair_Display',serif] text-[clamp(32px,5vw,48px)] tracking-wider text-center mb-3">
+          <h2 className="font-['Montserrat',sans-serif] text-[clamp(32px,5vw,48px)] tracking-wider text-center mb-3">
             Cosa otterrai dal report
           </h2>
           <p className="text-center text-[#888] mb-12 max-w-[520px] mx-auto">
@@ -515,13 +515,13 @@ const IntroScreen: React.FC<{ onStart: () => void }> = ({ onStart }) => {
 
         {/* COME FUNZIONA */}
         <section className="max-w-[1100px] mx-auto px-5 py-16">
-          <h2 className="font-['Playfair_Display',serif] text-[clamp(32px,5vw,48px)] tracking-wider text-center mb-12">
+          <h2 className="font-['Montserrat',sans-serif] text-[clamp(32px,5vw,48px)] tracking-wider text-center mb-12">
             Come funziona
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
             {steps.map((s, i) => (
               <div key={i} className="relative text-center md:text-left">
-                <div className="font-['Playfair_Display',serif] text-[64px] leading-none text-[#FAB450] mb-3">
+                <div className="font-['Montserrat',sans-serif] text-[64px] leading-none text-[#FAB450] mb-3">
                   {s.n}
                 </div>
                 <h3 className="text-[18px] font-bold mb-2 text-[#f0f0eb]">{s.title}</h3>
@@ -535,7 +535,7 @@ const IntroScreen: React.FC<{ onStart: () => void }> = ({ onStart }) => {
 
         {/* AREE ANALIZZATE */}
         <section className="max-w-[1100px] mx-auto px-5 py-16">
-          <h2 className="font-['Playfair_Display',serif] text-[clamp(32px,5vw,48px)] tracking-wider text-center mb-3">
+          <h2 className="font-['Montserrat',sans-serif] text-[clamp(32px,5vw,48px)] tracking-wider text-center mb-3">
             Le 6 aree analizzate
           </h2>
           <p className="text-center text-[#888] mb-12 max-w-[520px] mx-auto">
@@ -572,7 +572,7 @@ const IntroScreen: React.FC<{ onStart: () => void }> = ({ onStart }) => {
                 { v: '2 min', l: 'di tempo richiesto' },
               ].map((s, i) => (
                 <div key={i}>
-                  <div className="font-['Playfair_Display',serif] text-[44px] leading-none text-[#FAB450] mb-1">
+                  <div className="font-['Montserrat',sans-serif] text-[44px] leading-none text-[#FAB450] mb-1">
                     {s.v}
                   </div>
                   <div className="text-[13px] text-[#9aa3b0] uppercase tracking-wider">{s.l}</div>
@@ -599,7 +599,7 @@ const IntroScreen: React.FC<{ onStart: () => void }> = ({ onStart }) => {
               <p className="text-[11px] tracking-[2px] uppercase text-[#FAB450] font-semibold mb-2">
                 Chi analizzerà i tuoi dati
               </p>
-              <h2 className="font-['Playfair_Display',serif] text-[clamp(28px,4vw,40px)] tracking-wider mb-3">
+              <h2 className="font-['Montserrat',sans-serif] text-[clamp(28px,4vw,40px)] tracking-wider mb-3">
                 Lorenzo Baretta
               </h2>
               <p className="text-[15px] text-[#9aa3b0] leading-relaxed mb-4">
@@ -618,7 +618,7 @@ const IntroScreen: React.FC<{ onStart: () => void }> = ({ onStart }) => {
 
         {/* CTA FINALE */}
         <section className="max-w-[720px] mx-auto px-5 py-20 text-center">
-          <h2 className="font-['Playfair_Display',serif] text-[clamp(36px,7vw,64px)] tracking-wider leading-[0.95] mb-5">
+          <h2 className="font-['Montserrat',sans-serif] text-[clamp(36px,7vw,64px)] tracking-wider leading-[0.95] mb-5">
             Pronto a scoprire quanto puoi <span className="text-[#FAB450]">crescere?</span>
           </h2>
           <p className="text-[16px] text-[#9aa3b0] max-w-[480px] mx-auto mb-9">
@@ -1042,7 +1042,7 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
               <div className="w-[52px] h-[52px] bg-[rgba(250,180,80,0.1)] border border-[rgba(250,180,80,0.3)] rounded-full flex items-center justify-center mx-auto mb-4 text-xl relative z-10">
                 ✓✓
               </div>
-              <h2 className="font-['Playfair_Display',serif] text-[32px] tracking-wider text-[#f0f0eb] relative z-10">
+              <h2 className="font-['Montserrat',sans-serif] text-[32px] tracking-wider text-[#f0f0eb] relative z-10">
                 Analisi completata!
               </h2>
               <p className="text-[14px] text-[#888] max-w-[340px] mx-auto relative z-10 mt-2 leading-relaxed">
@@ -1056,10 +1056,10 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
                 <span className="font-['Montserrat',sans-serif] text-[10px] tracking-[2px] uppercase text-[#888]">
                   {isLeakMode ? 'Ecco quanto stai perdendo ogni mese' : 'Potenziale non sfruttato ogni mese'}
                 </span>
-                <div className={`font-['Playfair_Display',serif] text-[42px] tracking-wide leading-tight mt-1 ${isLeakMode ? 'text-[#ff3b3b]' : 'text-[#FAB450]'}`}>
+                <div className={`font-['Montserrat',sans-serif] text-[42px] tracking-wide leading-tight mt-1 ${isLeakMode ? 'text-[#ff3b3b]' : 'text-[#FAB450]'}`}>
                   {fmtMonth}€<span className="text-[20px] text-[#888]">/mese</span>
                 </div>
-                <div className={`font-['Playfair_Display',serif] text-[22px] tracking-wide leading-tight ${isLeakMode ? 'text-[#ff3b3b]/70' : 'text-[#FAB450]/70'}`}>
+                <div className={`font-['Montserrat',sans-serif] text-[22px] tracking-wide leading-tight ${isLeakMode ? 'text-[#ff3b3b]/70' : 'text-[#FAB450]/70'}`}>
                   {fmtYear}€<span className="text-[16px] text-[#888]">/anno</span>
                 </div>
               </div>
@@ -1164,8 +1164,9 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
             <span className="w-[6px] h-[6px] bg-[#FAB450] rounded-full animate-pulse" />
             Revenue Leak Audit
           </div>
-          <h1 className="font-['Playfair_Display',serif] text-[clamp(48px,11vw,80px)] leading-[0.92] tracking-wider mb-4">
-            Quanto stai<span className="text-[#FAB450] block">perdendo ogni mese?</span>
+          <h1 className="font-['Montserrat',sans-serif] text-[clamp(48px,11vw,80px)] leading-[0.92] tracking-wider mb-4">
+            Quanto stai{' '}
+            <span className="text-[#FAB450] font-['Playfair_Display',serif] italic">perdendo ogni mese?</span>
           </h1>
           <p className="text-[16px] text-[#888] max-w-[440px] mx-auto mb-7 leading-relaxed">
             Hai una lista. Hai un eCommerce che fattura.<br />
