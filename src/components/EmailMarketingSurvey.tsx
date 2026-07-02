@@ -73,8 +73,8 @@ function validatePhone(phone: string): { valid: boolean; message?: string } {
 
 // ═══ Constants ═══════════════════════════════════════════════════════════
 
-// Micro-feedback shown inline after: Revenue Email % (step 4), Automazioni (step 5)
-const MICRO_FEEDBACK_STEPS = [4, 5];
+// Micro-feedback shown inline after: Revenue Email % (step 3), Automazioni (step 4)
+const MICRO_FEEDBACK_STEPS = [3, 4];
 
 const INITIAL_FORM: FormData = {
   companyName: '', monthlyRevenue: '', sector: '', customSector: '', platform: '', emailTool: '',
@@ -171,21 +171,19 @@ const motivationOptions = [
 ];
 
 // Step definitions — ordine ottimizzato per completion rate
-// 0 Settore · 1 Piattaforma · 2 Fatturato (disqualify) · 3 Email Tool
-// 4 Revenue Email % (micro-feedback) · 5 Automazioni (micro-feedback)
-// 6 Segmentazione · 7 Frequenza · 8 Lista · 9 Obiettivo · 10 Brand · 11 Sito
+// 0 Settore · 1 Piattaforma · 2 Fatturato (disqualify)
+// 3 Revenue Email % (micro-feedback) · 4 Automazioni (micro-feedback)
+// 5 Segmentazione · 6 Frequenza · 7 Lista · 8 Obiettivo · 9 Sito
 const STEPS = [
   { cat: 'Settore', title: "In quale settore opera il tuo eCommerce?", type: 'radio' as const, field: 'sector' as const, options: sectorOptions },
   { cat: 'Piattaforma', title: "Su quale piattaforma gira il tuo store?", type: 'radio' as const, field: 'platform' as const, options: platformOptions },
   { cat: 'Fatturato', title: "Qual è il fatturato mensile medio del tuo eCommerce?", type: 'radio' as const, field: 'monthlyRevenue' as const, options: revenueOptions },
-  { cat: 'Email Tool', title: "Quale strumento usi per inviare le email?", type: 'radio' as const, field: 'emailTool' as const, options: emailToolOptions },
   { cat: 'Revenue Email', title: "Quanto fatturato proviene attualmente dalle email?", type: 'radio' as const, field: 'emailRevenuePercentage' as const, options: emailRevenueOptions },
   { cat: 'Automazioni', title: "Quali automazioni hai attive?", type: 'checkbox' as const, field: 'activeFlows' as const, options: automationOptions, subtitle: 'Seleziona tutte quelle presenti' },
   { cat: 'Segmentazione', title: "Come gestisci l'invio delle campagne email?", type: 'radio' as const, field: 'segmentation' as const, options: segmentationOptions },
   { cat: 'Frequenza', title: "Quante email invii a settimana?", type: 'radio' as const, field: 'emailFrequency' as const, options: frequencyOptions },
   { cat: 'Lista Email', title: "Quanti iscritti ha la tua lista email?", type: 'radio' as const, field: 'listSize' as const, options: listSizeOptions },
   { cat: 'Obiettivo', title: "Perché vuoi analizzare il tuo email marketing?", type: 'radio' as const, field: 'motivation' as const, options: motivationOptions },
-  { cat: 'Brand', title: "Come si chiama il tuo brand?", type: 'input' as const, field: 'companyName' as const, options: [], placeholder: 'Es. Bella Milano', helper: '' },
   { cat: 'Il tuo store', title: "Qual è l'URL del tuo store?", type: 'input' as const, field: 'website' as const, options: [], placeholder: 'www.tuosito.com', helper: 'Puoi scrivere "privato" se preferisci non condividerlo.' },
 ];
 
@@ -712,14 +710,14 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
 
   // Micro-feedback content per step
   const getMicroFeedback = useCallback((step: number, data: FormData): { icon: string; text: string } | null => {
-    if (step === 4) {
+    if (step === 3) {
       const pct = data.emailRevenuePercentage;
       const isLow = pct === 'dont-know' || pct === '0-10' || pct === '10-20';
       return isLow
         ? { icon: '💸', text: 'Sotto il benchmark — nel report vedrai esattamente quanto vale il gap.' }
         : { icon: '✅', text: 'Buona base — vediamo dove ottimizzare per andare oltre.' };
     }
-    if (step === 5) {
+    if (step === 4) {
       const count = data.activeFlows.filter(f => f !== 'none').length;
       if (count <= 2) return { icon: '⚡', text: `${count} flussi attivi — i mancanti sono le leve più veloci per recuperare revenue.` };
       if (count <= 4) return { icon: '📈', text: 'Base solida — ogni flusso mancante è revenue automatica non sfruttata.' };
@@ -763,7 +761,7 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
     // Micro-feedback on Revenue Email % (step 4) before advancing
     if (field === 'emailRevenuePercentage') {
       const updatedData = { ...formData, emailRevenuePercentage: value };
-      const fb = getMicroFeedback(4, updatedData);
+      const fb = getMicroFeedback(3, updatedData);
       if (fb) {
         setTimeout(() => {
           setSelectedValue(null);
