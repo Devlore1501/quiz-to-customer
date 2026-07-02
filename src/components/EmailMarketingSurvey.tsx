@@ -7,7 +7,7 @@ import { generateAdminReport } from '@/lib/adminReportGenerator';
 import AdvancedReportComponent from '@/components/AdvancedReport';
 import { ChevronLeft, Loader2, CheckCircle2, Circle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { trackQuizCompleted, trackCompleteRegistration, trackViewContent } from '@/lib/facebookPixel';
+import { trackQuizCompleted, trackCompleteRegistration, trackViewContent, trackEngagedLead } from '@/lib/facebookPixel';
 import { useLandingTracking } from '@/hooks/useLandingTracking';
 import { usePartialTracking } from '@/hooks/usePartialTracking';
 import { InsightCard, getInsightForStep } from '@/components/InsightCard';
@@ -664,12 +664,14 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
   }, []);
 
   // Pre-fill email from landing redirect: /quiz?email=...
+  // Also fires EngagedLead pixel — user has opted in on landing AND started quiz
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const emailParam = params.get('email');
     if (emailParam) {
       setFormData(prev => ({ ...prev, email: emailParam }));
       setEmailValidation(validateEmail(emailParam));
+      trackEngagedLead(emailParam);
     }
   }, []);
 

@@ -51,6 +51,19 @@ export const trackCompleteRegistration = (data: {
 };
 
 /**
+ * Track engaged lead — fires when user arrives on /quiz with ?email= from landing optin.
+ * Signals that the lead has opted in AND started the quiz funnel.
+ */
+export const trackEngagedLead = (email?: string): void => {
+  window.fbq?.('trackCustom', 'EngagedLead', {
+    content_name: 'Revenue Leak Calculator',
+    content_category: 'quiz_funnel',
+    ...(email ? { em: email } : {}),
+  });
+  console.log('[Facebook Pixel] EngagedLead', { email });
+};
+
+/**
  * Track quiz completion as a Lead event
  * This fires after successful webhook delivery for CAPI matching
  */
