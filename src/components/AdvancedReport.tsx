@@ -54,10 +54,10 @@ function getConsigli(r: AdvancedReport): Consiglio[] {
   const sendsPerMonth = r.listForecast?.sendsPerMonth ?? 0;
   const isUnderBenchmark = r.currentEmailPercent < r.sectorBenchmark.emailShare;
   const missingCount = r.missingFlows.length;
-  const hasAbandoned = !r.missingFlows.find(f => f.key === 'abandoned_cart');
-  const hasBrowse = !r.missingFlows.find(f => f.key === 'browse_abandon');
-  const hasWelcome = !r.missingFlows.find(f => f.key === 'welcome_series');
-  const hasPostPurchase = !r.missingFlows.find(f => f.key === 'post_purchase');
+  const hasAbandoned = !r.missingFlows.find(f => f.key === 'cart_recovery');
+  const hasBrowse = !r.missingFlows.find(f => f.key === 'browse_abandonment');
+  const hasWelcome = !r.missingFlows.find(f => f.key === 'welcome');
+  const hasPostPurchase = !r.missingFlows.find(f => f.key === 'upsell');
 
   // Priorità flussi vs newsletter
   if (missingCount >= 3 && sendsPerMonth >= 8) {

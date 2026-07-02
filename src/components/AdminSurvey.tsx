@@ -921,7 +921,7 @@ export const AdminSurvey: React.FC = () => {
           website={formData.website}
           onRestart={handleRestart}
           investmentData={investmentData}
-
+          isAdminMode={true}
         />
       </div>
     );
