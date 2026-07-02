@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      daily_digests: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          digest_data: Json | null
+          digest_date: string
+          email_sent: boolean
+          error: string | null
+          id: string
+          model: string | null
+          sources_summary: Json | null
+          status: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          digest_data?: Json | null
+          digest_date: string
+          email_sent?: boolean
+          error?: string | null
+          id?: string
+          model?: string | null
+          sources_summary?: Json | null
+          status?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          digest_data?: Json | null
+          digest_date?: string
+          email_sent?: boolean
+          error?: string | null
+          id?: string
+          model?: string | null
+          sources_summary?: Json | null
+          status?: string
+        }
+        Relationships: []
+      }
       landing_events: {
         Row: {
           created_at: string
@@ -198,6 +237,65 @@ export type Database = {
           yearly_potential?: number | null
         }
         Relationships: []
+      }
+      saved_news_items: {
+        Row: {
+          created_at: string
+          digest_date: string | null
+          digest_id: string | null
+          id: string
+          item_data: Json
+          last_reproposed_at: string | null
+          notes: string | null
+          source: string | null
+          status: string
+          tags: string[]
+          times_reproposed: number
+          title: string
+          url: string | null
+          used_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          digest_date?: string | null
+          digest_id?: string | null
+          id?: string
+          item_data: Json
+          last_reproposed_at?: string | null
+          notes?: string | null
+          source?: string | null
+          status?: string
+          tags?: string[]
+          times_reproposed?: number
+          title: string
+          url?: string | null
+          used_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          digest_date?: string | null
+          digest_id?: string | null
+          id?: string
+          item_data?: Json
+          last_reproposed_at?: string | null
+          notes?: string | null
+          source?: string | null
+          status?: string
+          tags?: string[]
+          times_reproposed?: number
+          title?: string
+          url?: string | null
+          used_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_news_items_digest_id_fkey"
+            columns: ["digest_id"]
+            isOneToOne: false
+            referencedRelation: "daily_digests"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {

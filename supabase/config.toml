@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.verify-website]
 verify_jwt = false
+
+[functions.generate-daily-digest]
+verify_jwt = false
