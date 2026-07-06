@@ -1,4 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -31,27 +32,60 @@ async function sha256Hex(input: string): Promise<string> {
 }
 
 /**
- * Helper: all partial_submissions requests pass `x-session-secret` so the RLS
- * policy can hash it and compare against the stored `session_secret_hash`.
+ * Insert uses the REST endpoint (RLS INSERT policy checks the with_check clause
+ * only, no secret needed). Updates go through the `update_partial_submission`
+ * RPC which validates the secret server-side — this bypasses the fact that the
+ * Supabase gateway does not reliably forward custom request headers to
+ * PostgREST, which used to make every UPDATE silently affect 0 rows.
  */
-function partialFetch(
-  sessionSecret: string,
-  method: 'POST' | 'PATCH',
-  body: Record<string, unknown>,
-  filter?: string,
-  keepalive = false,
-) {
-  const url = `${SUPABASE_URL}/rest/v1/partial_submissions${filter || ''}`;
-  return fetch(url, {
-    method,
+function insertPartial(body: Record<string, unknown>) {
+  return fetch(`${SUPABASE_URL}/rest/v1/partial_submissions`, {
+    method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       apikey: SUPABASE_KEY,
       Authorization: `Bearer ${SUPABASE_KEY}`,
       Prefer: 'return=minimal',
-      'x-session-secret': sessionSecret,
     },
     body: JSON.stringify(body),
+  });
+}
+
+async function rpcUpdate(
+  sessionId: string,
+  sessionSecret: string,
+  patch: {
+    currentStep?: number;
+    stepName?: string;
+    totalSteps?: number;
+    formData?: Record<string, unknown>;
+    abandoned?: boolean;
+    completed?: boolean;
+    submissionId?: string | null;
+  },
+  keepalive = false,
+) {
+  const payload = {
+    p_session_id: sessionId,
+    p_session_secret: sessionSecret,
+    p_current_step: patch.currentStep ?? null,
+    p_current_step_name: patch.stepName ?? null,
+    p_total_steps: patch.totalSteps ?? null,
+    p_form_data: patch.formData ?? null,
+    p_abandoned: patch.abandoned ?? null,
+    p_completed: patch.completed ?? null,
+    p_submission_id: patch.submissionId ?? null,
+  };
+
+  // Use raw fetch so we can pass `keepalive` on beforeunload.
+  return fetch(`${SUPABASE_URL}/rest/v1/rpc/update_partial_submission`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      apikey: SUPABASE_KEY,
+      Authorization: `Bearer ${SUPABASE_KEY}`,
+    },
+    body: JSON.stringify(payload),
     keepalive,
   });
 }
@@ -70,19 +104,18 @@ export function usePartialTracking({
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const formDataRef = useRef(formData);
 
-  // Always keep formDataRef fresh
   useEffect(() => {
     formDataRef.current = formData;
   }, [formData]);
 
-  // Create initial record (with hashed secret)
+  // Create initial record
   useEffect(() => {
     if (!enabled || recordCreatedRef.current) return;
     recordCreatedRef.current = true;
 
     (async () => {
       const secretHash = await sha256Hex(sessionSecretRef.current);
-      partialFetch(sessionSecretRef.current, 'POST', {
+      insertPartial({
         session_id: sessionIdRef.current,
         session_secret_hash: secretHash,
         survey_type: surveyType,
@@ -94,24 +127,18 @@ export function usePartialTracking({
     })();
   }, [enabled, surveyType]);
 
-  // Debounced update on step OR formData change
+  // Debounced update on step or formData change
   useEffect(() => {
     if (!enabled || !recordCreatedRef.current) return;
 
     if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
     debounceTimerRef.current = setTimeout(() => {
-      partialFetch(
-        sessionSecretRef.current,
-        'PATCH',
-        {
-          current_step: currentStep,
-          current_step_name: stepName,
-          total_steps: totalSteps,
-          form_data: formData,
-          updated_at: new Date().toISOString(),
-        },
-        `?session_id=eq.${sessionIdRef.current}`,
-      ).catch((err) => console.error('Partial tracking update error:', err));
+      rpcUpdate(sessionIdRef.current, sessionSecretRef.current, {
+        currentStep,
+        stepName,
+        totalSteps,
+        formData,
+      }).catch((err) => console.error('Partial tracking update error:', err));
     }, 500);
   }, [currentStep, stepName, formData, enabled, totalSteps]);
 
@@ -119,36 +146,24 @@ export function usePartialTracking({
   useEffect(() => {
     if (!enabled) return;
     const handler = () => {
-      partialFetch(
+      rpcUpdate(
+        sessionIdRef.current,
         sessionSecretRef.current,
-        'PATCH',
-        {
-          abandoned: true,
-          updated_at: new Date().toISOString(),
-          form_data: formDataRef.current,
-        },
-        `?session_id=eq.${sessionIdRef.current}`,
-        true, // keepalive
+        { abandoned: true, formData: formDataRef.current },
+        true,
       ).catch(() => {});
     };
     window.addEventListener('beforeunload', handler);
     return () => window.removeEventListener('beforeunload', handler);
   }, [enabled]);
 
-  // Mark completed
   const markCompleted = useCallback(async (submissionId?: string) => {
-    await partialFetch(
-      sessionSecretRef.current,
-      'PATCH',
-      {
-        completed: true,
-        abandoned: false,
-        submission_id: submissionId || null,
-        updated_at: new Date().toISOString(),
-        form_data: formDataRef.current,
-      },
-      `?session_id=eq.${sessionIdRef.current}`,
-    );
+    await rpcUpdate(sessionIdRef.current, sessionSecretRef.current, {
+      completed: true,
+      abandoned: false,
+      submissionId: submissionId || null,
+      formData: formDataRef.current,
+    });
   }, []);
 
   return { markCompleted, sessionId: sessionIdRef.current };
