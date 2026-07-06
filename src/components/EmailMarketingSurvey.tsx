@@ -948,18 +948,11 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
         } as never);
       }
 
-      // FB Pixel — sparati subito, incondizionati rispetto al webhook
+      // FB Pixel — CompleteRegistration = quiz completato (Lead spara sull'atterraggio in Quiz.tsx)
       trackCompleteRegistration({
         sector: advancedReport.sectorBenchmark.label,
         email: formData.email,
         companyName: formData.companyName?.trim() || '',
-      });
-      trackQuizCompleted({
-        sector: advancedReport.sectorBenchmark.label,
-        yearlyPotential: advancedReport.yearlyPotential,
-        emailHealthScore: advancedReport.emailHealthScore,
-        leadQuality: adminReport.consultingNotes.leadQuality,
-        monthlyRevenue: advancedReport.monthlyRevenue,
       });
 
       // Webhook
