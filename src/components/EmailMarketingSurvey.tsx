@@ -948,11 +948,18 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
         } as never);
       }
 
-      // FB Pixel
+      // FB Pixel — sparati subito, incondizionati rispetto al webhook
       trackCompleteRegistration({
         sector: advancedReport.sectorBenchmark.label,
         email: formData.email,
         companyName: formData.companyName?.trim() || '',
+      });
+      trackQuizCompleted({
+        sector: advancedReport.sectorBenchmark.label,
+        yearlyPotential: advancedReport.yearlyPotential,
+        emailHealthScore: advancedReport.emailHealthScore,
+        leadQuality: adminReport.consultingNotes.leadQuality,
+        monthlyRevenue: advancedReport.monthlyRevenue,
       });
 
       // Webhook
@@ -962,13 +969,6 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
         });
         if (webhookResponse.data?.webhookSent && newLeadId) {
           await supabase.from('survey_submissions').update({ make_synced: true } as never).eq('id', newLeadId);
-          trackQuizCompleted({
-            sector: advancedReport.sectorBenchmark.label,
-            yearlyPotential: advancedReport.yearlyPotential,
-            emailHealthScore: advancedReport.emailHealthScore,
-            leadQuality: adminReport.consultingNotes.leadQuality,
-            monthlyRevenue: advancedReport.monthlyRevenue,
-          });
         }
       } catch (e) { console.error('Webhook failed:', e); }
 

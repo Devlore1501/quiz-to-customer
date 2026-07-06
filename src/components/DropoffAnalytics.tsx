@@ -26,8 +26,15 @@ const VERSIONS = [
   },
   {
     id: 'v1b',
-    label: 'Quiz v1b (10 step)',
-    detectFn: (row: any) => row.total_steps === 10,
+    label: 'Quiz v1b (obsoleto)',
+    // v1b had 10 steps but included fullName/phone/adsInvestment
+    detectFn: (row: any) => {
+      if (row.total_steps !== 10) return false;
+      const v1bNames = ['fullName', 'phone', 'adsInvestment', 'acceptTerms'];
+      if (v1bNames.includes(row.current_step_name)) return true;
+      const fd = row.form_data;
+      return fd && typeof fd === 'object' && 'fullName' in fd;
+    },
     stepOrder: ['sector', 'website', 'monthlyRevenue', 'fullName'],
     stepLabels: {
       sector: 'Settore',
@@ -38,7 +45,7 @@ const VERSIONS = [
   },
   {
     id: 'v2',
-    label: 'Quiz v2 (precedente)',
+    label: 'Quiz v2 (11 step)',
     detectFn: (row: any) => row.total_steps === 11,
     stepOrder: ['monthlyRevenue', 'sector', 'platform', 'emailTool', 'emailRevenuePercentage', 'activeFlows', 'segmentation', 'emailFrequency', 'listSize', 'motivation', 'website'],
     stepLabels: {
@@ -57,7 +64,7 @@ const VERSIONS = [
   },
   {
     id: 'v3',
-    label: 'Quiz v3 (attuale)',
+    label: 'Quiz v3 (12 step)',
     detectFn: (row: any) => row.total_steps === 12,
     stepOrder: ['companyName', 'website', 'sector', 'monthlyRevenue', 'platform', 'emailTool', 'emailRevenuePercentage', 'activeFlows', 'segmentation', 'emailFrequency', 'listSize', 'motivation'],
     stepLabels: {
@@ -73,6 +80,32 @@ const VERSIONS = [
       emailFrequency: 'Frequenza',
       listSize: 'Lista Email',
       motivation: 'Obiettivo',
+    } as Record<string, string>,
+  },
+  {
+    id: 'v4',
+    label: 'Quiz v4 (attuale)',
+    // Current quiz: 10 steps, no emailTool/companyName, not v1b (no fullName in data)
+    detectFn: (row: any) => {
+      if (row.total_steps !== 10) return false;
+      const v1bNames = ['fullName', 'phone', 'adsInvestment', 'acceptTerms'];
+      if (v1bNames.includes(row.current_step_name)) return false;
+      const fd = row.form_data;
+      if (fd && typeof fd === 'object' && 'fullName' in fd) return false;
+      return true;
+    },
+    stepOrder: ['sector', 'platform', 'monthlyRevenue', 'emailRevenuePercentage', 'activeFlows', 'segmentation', 'emailFrequency', 'listSize', 'motivation', 'website'],
+    stepLabels: {
+      sector: 'Settore',
+      platform: 'Piattaforma',
+      monthlyRevenue: 'Fatturato',
+      emailRevenuePercentage: 'Revenue Email',
+      activeFlows: 'Automazioni',
+      segmentation: 'Segmentazione',
+      emailFrequency: 'Frequenza',
+      listSize: 'Lista Email',
+      motivation: 'Obiettivo',
+      website: 'URL Store',
     } as Record<string, string>,
   },
 ];
