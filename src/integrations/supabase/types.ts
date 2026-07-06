@@ -234,6 +234,20 @@ export type Database = {
         }
         Returns: boolean
       }
+      update_partial_submission: {
+        Args: {
+          p_abandoned?: boolean
+          p_completed?: boolean
+          p_current_step: number
+          p_current_step_name: string
+          p_form_data: Json
+          p_session_id: string
+          p_session_secret: string
+          p_submission_id?: string
+          p_total_steps: number
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"

@@ -681,7 +681,7 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
     currentStep,
     stepName: currentStepName,
     totalSteps: TOTAL_STEPS,
-    enabled: phase === 'quiz' || phase === 'insight',
+    enabled: phase === 'quiz',
   });
 
   // ── Navigation ──────────────────────────────────────────────────────
