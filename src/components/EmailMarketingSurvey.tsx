@@ -675,7 +675,7 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
 
   // Partial tracking
   const currentStepName = STEPS[currentStep]?.field || 'unknown';
-  const { markCompleted } = usePartialTracking({
+  const { markCompleted, sessionId: partialSessionId, sessionSecret: partialSessionSecret } = usePartialTracking({
     surveyType: 'email_marketing',
     formData: formData as unknown as Record<string, unknown>,
     currentStep,
