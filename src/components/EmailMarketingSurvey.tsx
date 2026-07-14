@@ -811,8 +811,8 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
 
   // ── Save & Submit ───────────────────────────────────────────────────
 
-  const saveLeadToDatabase = useCallback(async (): Promise<string | null> => {
-    if (formData._hp_field) return null;
+  const saveLeadToDatabase = useCallback(async (): Promise<{ id: string | null; error: string | null }> => {
+    if (formData._hp_field) return { id: null, error: 'honeypot' };
     try {
       const { data, error } = await supabase.from('survey_submissions')
         .insert({
@@ -825,10 +825,16 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
           qualified: null,
         } as never)
         .select('id').single();
-      if (error) { console.error('Lead save error:', error); return null; }
-      if (data) { setLeadId(data.id); return data.id; }
-      return null;
-    } catch (err) { console.error('Error saving lead:', err); return null; }
+      if (error) {
+        console.error('Lead save error:', error);
+        return { id: null, error: error.message };
+      }
+      if (data) { setLeadId(data.id); return { id: data.id, error: null }; }
+      return { id: null, error: 'no_row_returned' };
+    } catch (err) {
+      console.error('Error saving lead:', err);
+      return { id: null, error: err instanceof Error ? err.message : 'unknown' };
+    }
   }, [formData]);
 
   const handleGateSubmit = useCallback(async () => {
