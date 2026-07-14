@@ -844,8 +844,18 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
     }
     setIsSubmitting(true);
     try {
-      // Save lead first
-      const newLeadId = await saveLeadToDatabase();
+      // Save lead first (initial "in_progress" row)
+      const { id: newLeadId, error: leadSaveError } = await saveLeadToDatabase();
+      if (!newLeadId) {
+        console.error('Initial lead insert failed:', leadSaveError);
+        toast({
+          title: 'Errore invio',
+          description: 'Non siamo riusciti a salvare i tuoi dati. Riprova tra qualche secondo.',
+          variant: 'destructive',
+        });
+        setIsSubmitting(false);
+        return;
+      }
 
       // Calculate report
       const advancedReport = calculateAdvancedReport(
@@ -856,7 +866,7 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
       );
 
       const adminReport = generateAdminReport(formData as any, advancedReport);
-      const reportUrl = newLeadId ? `https://quiz-to-customer.lovable.app/report/${newLeadId}` : null;
+      const reportUrl = `https://quiz-to-customer.lovable.app/report/${newLeadId}`;
       const normalizedWebsite = formData.website ? normalizeWebsiteUrl(formData.website) : null;
 
       const dataToSend = {
@@ -865,29 +875,22 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
         source: 'email-marketing-quiz',
         reportUrl,
         quickSummary: {
-          // ─── Lead Contact ───
           leadName: formData.fullName,
           leadEmail: formData.email,
           leadPhone: formData.phone,
           companyName: formData.companyName?.trim() || '',
           website: normalizedWebsite,
           acceptedTerms: true,
-
-          // ─── Business Profile ───
           sector: advancedReport.sectorBenchmark.label,
           sectorRaw: formData.sector,
           customSector: formData.sector === 'other' ? formData.customSector : null,
           monthlyRevenue: advancedReport.monthlyRevenue,
           monthlyRevenueLabel: labelFor(revenueOptions, formData.monthlyRevenue),
           monthlyRevenueRaw: formData.monthlyRevenue,
-
-          // ─── Tech Stack ───
           platform: formData.platform,
           platformLabel: labelFor(platformOptions, formData.platform),
           emailTool: formData.emailTool,
           emailToolLabel: labelFor(emailToolOptions, formData.emailTool),
-
-          // ─── Email Marketing Setup ───
           emailRevenuePercentage: formData.emailRevenuePercentage,
           emailRevenuePercentageLabel: labelFor(emailRevenueOptions, formData.emailRevenuePercentage),
           activeFlows: formData.activeFlows,
@@ -899,79 +902,73 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
           emailFrequencyLabel: labelFor(frequencyOptions, formData.emailFrequency),
           listSize: formData.listSize,
           listSizeLabel: labelFor(listSizeOptions, formData.listSize),
-
-          // ─── Motivation ───
           motivation: formData.motivation,
           motivationLabel: adminReport.quizResponses.motivationLabel,
-
-          // ─── Calculated Report Metrics ───
           emailHealthScore: advancedReport.emailHealthScore,
           yearlyPotential: advancedReport.yearlyPotential,
           currentEmailRevenue: advancedReport.currentEmailRevenue,
           benchmarkEmailRevenue: advancedReport.benchmarkEmailRevenue,
           revenueGap: advancedReport.recoverablePotential,
           potentialMode: advancedReport.potentialMode,
-
-          // ─── Lead Scoring ───
           leadQuality: adminReport.consultingNotes.leadQuality,
           priorityLevel: adminReport.consultingNotes.priorityLevel,
-
-          // ─── Links ───
           reportUrl,
         },
         adminReport,
         clientReport: advancedReport,
       };
 
-      // Update DB
-      const updateData = {
-        sector: formData.sector,
-        custom_sector: formData.sector === 'other' ? formData.customSector : null,
-        monthly_revenue: formData.monthlyRevenue,
-        email_revenue_percentage: formData.emailRevenuePercentage,
-        list_size: formData.listSize,
-        active_flows: formData.activeFlows,
-        motivation: formData.motivation,
-        email_health_score: advancedReport.emailHealthScore,
-        yearly_potential: advancedReport.yearlyPotential,
-        current_email_revenue: advancedReport.currentEmailRevenue,
-        benchmark_email_revenue: advancedReport.benchmarkEmailRevenue,
-        revenue_gap: advancedReport.recoverablePotential,
-        lead_quality: adminReport.consultingNotes.leadQuality,
-        status: 'completed',
-        qualified: true,
-        make_synced: false,
-        ghl_synced: false,
-        report_data: dataToSend,
-      };
+      // Finalize via SECURITY DEFINER RPC (bypasses the missing anon UPDATE policy
+      // in a controlled way, verifying the session secret).
+      const { data: finalizeOk, error: finalizeError } = await supabase.rpc('finalize_submission', {
+        p_submission_id: newLeadId,
+        p_session_id: partialSessionId,
+        p_session_secret: partialSessionSecret,
+        p_sector: formData.sector,
+        p_custom_sector: formData.sector === 'other' ? formData.customSector : null,
+        p_monthly_revenue: formData.monthlyRevenue,
+        p_email_revenue_percentage: formData.emailRevenuePercentage,
+        p_list_size: formData.listSize,
+        p_active_flows: formData.activeFlows,
+        p_motivation: formData.motivation,
+        p_email_health_score: advancedReport.emailHealthScore as never,
+        p_yearly_potential: advancedReport.yearlyPotential as never,
+        p_current_email_revenue: advancedReport.currentEmailRevenue as never,
+        p_benchmark_email_revenue: advancedReport.benchmarkEmailRevenue as never,
+        p_revenue_gap: advancedReport.recoverablePotential as never,
+        p_lead_quality: adminReport.consultingNotes.leadQuality,
+        p_report_data: dataToSend as never,
+      } as never);
 
-      if (newLeadId) {
-        await supabase.from('survey_submissions').update(updateData as never).eq('id', newLeadId);
-      } else {
-        await supabase.from('survey_submissions').insert({
-          company_name: formData.companyName?.trim() || '', full_name: formData.fullName, email: formData.email,
-          phone: formData.phone || null, website: normalizedWebsite, ...updateData,
-        } as never);
+      if (finalizeError || finalizeOk !== true) {
+        console.error('finalize_submission failed:', finalizeError, 'result:', finalizeOk);
+        toast({
+          title: 'Errore invio',
+          description: 'Non siamo riusciti a completare l\'invio. Riprova.',
+          variant: 'destructive',
+        });
+        setIsSubmitting(false);
+        return;
       }
 
-      // FB Pixel — CompleteRegistration = quiz completato (Lead spara sull'atterraggio in Quiz.tsx)
+      // FB Pixel
       trackCompleteRegistration({
         sector: advancedReport.sectorBenchmark.label,
         email: formData.email,
         companyName: formData.companyName?.trim() || '',
       });
 
-      // Webhook
+      // Webhook (fallback — a DB trigger also fires it automatically)
       try {
         const webhookResponse = await supabase.functions.invoke('submit-webhook', {
           body: { submissionData: dataToSend, submissionId: newLeadId },
         });
-        if (webhookResponse.data?.webhookSent && newLeadId) {
+        if (webhookResponse.data?.webhookSent) {
           await supabase.from('survey_submissions').update({ make_synced: true } as never).eq('id', newLeadId);
         }
       } catch (e) { console.error('Webhook failed:', e); }
 
-      await markCompleted(newLeadId || undefined);
+      await markCompleted(newLeadId);
       setReport(advancedReport);
       setPhase('report');
     } catch (error) {
@@ -979,7 +976,7 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
       toast({ title: 'Errore', description: 'Si è verificato un errore. Riprova.', variant: 'destructive' });
       setIsSubmitting(false);
     }
-  }, [formData, saveLeadToDatabase, markCompleted]);
+  }, [formData, saveLeadToDatabase, markCompleted, partialSessionId, partialSessionSecret]);
 
   const handleRestart = useCallback(() => {
     setCurrentStep(0);
