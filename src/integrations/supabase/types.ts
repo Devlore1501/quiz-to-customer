@@ -226,6 +226,28 @@ export type Database = {
     }
     Functions: {
       current_session_secret_hash: { Args: never; Returns: string }
+      finalize_submission: {
+        Args: {
+          p_active_flows: string[]
+          p_benchmark_email_revenue: number
+          p_current_email_revenue: number
+          p_custom_sector: string
+          p_email_health_score: number
+          p_email_revenue_percentage: string
+          p_lead_quality: string
+          p_list_size: string
+          p_monthly_revenue: string
+          p_motivation: string
+          p_report_data: Json
+          p_revenue_gap: number
+          p_sector: string
+          p_session_id: string
+          p_session_secret: string
+          p_submission_id: string
+          p_yearly_potential: number
+        }
+        Returns: boolean
+      }
       get_report_by_id: { Args: { report_id: string }; Returns: Json }
       has_role: {
         Args: {

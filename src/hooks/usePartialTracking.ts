@@ -166,5 +166,9 @@ export function usePartialTracking({
     });
   }, []);
 
-  return { markCompleted, sessionId: sessionIdRef.current };
+  return {
+    markCompleted,
+    sessionId: sessionIdRef.current,
+    sessionSecret: sessionSecretRef.current,
+  };
 }
