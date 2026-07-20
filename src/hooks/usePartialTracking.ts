@@ -11,6 +11,7 @@ interface UsePartialTrackingOptions {
   stepName: string;
   totalSteps: number;
   enabled?: boolean;
+  initialFormData?: Record<string, unknown>;
 }
 
 /**
@@ -97,16 +98,22 @@ export function usePartialTracking({
   stepName,
   totalSteps,
   enabled = true,
+  initialFormData,
 }: UsePartialTrackingOptions) {
   const sessionIdRef = useRef<string>(crypto.randomUUID());
   const sessionSecretRef = useRef<string>(generateSessionSecret());
   const recordCreatedRef = useRef(false);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const formDataRef = useRef(formData);
+  const initialFormDataRef = useRef(initialFormData);
 
   useEffect(() => {
     formDataRef.current = formData;
   }, [formData]);
+
+  useEffect(() => {
+    initialFormDataRef.current = initialFormData;
+  }, [initialFormData]);
 
   // Create initial record
   useEffect(() => {
@@ -122,7 +129,7 @@ export function usePartialTracking({
         current_step: 0,
         current_step_name: stepName,
         total_steps: totalSteps,
-        form_data: {},
+        form_data: initialFormDataRef.current ?? {},
       }).catch((err) => console.error('Partial tracking insert error:', err));
     })();
   }, [enabled, surveyType]);
