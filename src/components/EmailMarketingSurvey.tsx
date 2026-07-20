@@ -972,6 +972,10 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
         p_revenue_gap: advancedReport.recoverablePotential as never,
         p_lead_quality: adminReport.consultingNotes.leadQuality,
         p_report_data: dataToSend as never,
+        p_platform: formData.platform || null,
+        p_email_tool: formData.emailTool || null,
+        p_segmentation: formData.segmentation || null,
+        p_email_frequency: formData.emailFrequency || null,
       } as never);
 
       if (finalizeError || finalizeOk !== true) {
