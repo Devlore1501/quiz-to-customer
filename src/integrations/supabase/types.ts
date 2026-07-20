@@ -61,6 +61,8 @@ export type Database = {
           current_step_name: string | null
           form_data: Json | null
           id: string
+          partial_synced: boolean
+          partial_synced_at: string | null
           session_id: string
           session_secret_hash: string | null
           started_at: string
@@ -76,6 +78,8 @@ export type Database = {
           current_step_name?: string | null
           form_data?: Json | null
           id?: string
+          partial_synced?: boolean
+          partial_synced_at?: string | null
           session_id: string
           session_secret_hash?: string | null
           started_at?: string
@@ -91,6 +95,8 @@ export type Database = {
           current_step_name?: string | null
           form_data?: Json | null
           id?: string
+          partial_synced?: boolean
+          partial_synced_at?: string | null
           session_id?: string
           session_secret_hash?: string | null
           started_at?: string
@@ -119,9 +125,11 @@ export type Database = {
           custom_sector: string | null
           disqualification_reason: string | null
           email: string
+          email_frequency: string | null
           email_health_score: number | null
           email_revenue_percentage: string | null
           email_satisfaction: string | null
+          email_tool: string | null
           full_name: string
           ghl_synced: boolean | null
           id: string
@@ -131,10 +139,12 @@ export type Database = {
           monthly_revenue: string | null
           motivation: string | null
           phone: string | null
+          platform: string | null
           qualified: boolean | null
           report_data: Json | null
           revenue_gap: number | null
           sector: string | null
+          segmentation: string | null
           status: string | null
           website: string | null
           yearly_potential: number | null
@@ -148,9 +158,11 @@ export type Database = {
           custom_sector?: string | null
           disqualification_reason?: string | null
           email: string
+          email_frequency?: string | null
           email_health_score?: number | null
           email_revenue_percentage?: string | null
           email_satisfaction?: string | null
+          email_tool?: string | null
           full_name: string
           ghl_synced?: boolean | null
           id?: string
@@ -160,10 +172,12 @@ export type Database = {
           monthly_revenue?: string | null
           motivation?: string | null
           phone?: string | null
+          platform?: string | null
           qualified?: boolean | null
           report_data?: Json | null
           revenue_gap?: number | null
           sector?: string | null
+          segmentation?: string | null
           status?: string | null
           website?: string | null
           yearly_potential?: number | null
@@ -177,9 +191,11 @@ export type Database = {
           custom_sector?: string | null
           disqualification_reason?: string | null
           email?: string
+          email_frequency?: string | null
           email_health_score?: number | null
           email_revenue_percentage?: string | null
           email_satisfaction?: string | null
+          email_tool?: string | null
           full_name?: string
           ghl_synced?: boolean | null
           id?: string
@@ -189,10 +205,12 @@ export type Database = {
           monthly_revenue?: string | null
           motivation?: string | null
           phone?: string | null
+          platform?: string | null
           qualified?: boolean | null
           report_data?: Json | null
           revenue_gap?: number | null
           sector?: string | null
+          segmentation?: string | null
           status?: string | null
           website?: string | null
           yearly_potential?: number | null
@@ -232,15 +250,19 @@ export type Database = {
           p_benchmark_email_revenue: number
           p_current_email_revenue: number
           p_custom_sector: string
+          p_email_frequency?: string
           p_email_health_score: number
           p_email_revenue_percentage: string
+          p_email_tool?: string
           p_lead_quality: string
           p_list_size: string
           p_monthly_revenue: string
           p_motivation: string
+          p_platform?: string
           p_report_data: Json
           p_revenue_gap: number
           p_sector: string
+          p_segmentation?: string
           p_session_id: string
           p_session_secret: string
           p_submission_id: string

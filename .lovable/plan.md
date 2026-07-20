@@ -1,38 +1,80 @@
-## Recupero lead perso + fix del flusso di submit
+## Implementazione: partial webhooks + nuovi campi + prefill URL
 
-### 1. Recupero manuale di Giuseppe Tassatone
+### 1. Migration DB
 
-- Inserire in `survey_submissions` la riga mancante usando i dati salvati nella `partial_submission` di stamattina (14 lug 2026): nome, email `giuseppetassatone2@gmail.com`, telefono `3804944836`, `report_data` ricostruito dal `form_data` del partial, `qualified` calcolato in base alle soglie, `lead_quality` derivato.
-- Il trigger `trigger_submit_webhook` scatterà automaticamente all'insert (report_data passa da NULL a valorizzato) e invierà il payload a Make + GHL.
-- Collegare la partial esistente valorizzando `submission_id` con l'id della nuova riga.
-- Mario Rossi: skip (email chiaramente fake `info@mariotossi.com`).
+- `survey_submissions`: aggiungi 4 colonne nullable → `platform`, `email_tool`, `segmentation`, `email_frequency`.
+- `partial_submissions`: aggiungi `partial_synced boolean NOT NULL DEFAULT false` + `partial_synced_at timestamptz` + indice parziale `(updated_at) WHERE completed = false AND partial_synced = false`.
+- `finalize_submission`: **DROP** della firma vecchia (17 arg), poi **CREATE** identica ma con 4 parametri in coda (`p_platform`, `p_email_tool`, `p_segmentation`, `p_email_frequency`, tutti `DEFAULT NULL`). Inseriti nell'`UPDATE` con `COALESCE`. Mantiene `SECURITY DEFINER`, validazione `session_secret`, collegamento partial. GRANT EXECUTE ad `anon, authenticated` sulla nuova firma.
 
-### 2. Patch al flusso di submit per non perdere più lead
+### 2. Edge Function `send-partial-webhooks`
 
-**File:** `src/components/EmailMarketingSurvey.tsx` (`handleGateSubmit` + `saveLeadToDatabase`)
+Nuova function in `supabase/functions/send-partial-webhooks/index.ts`:
 
-- `saveLeadToDatabase` oggi ritorna `null` in silenzio se la INSERT iniziale fallisce. Modificarla per: (a) fare `.select('id').single()` e propagare l'errore, (b) mostrare toast d'errore all'utente, (c) NON procedere oltre.
-- In `handleGateSubmit`, se `newLeadId` è `null` → bloccare il flusso, mostrare errore "Riprova", e NON chiamare `markCompleted`. Rimuovere il ramo fallback che tenta una INSERT completa (viene comunque bloccato dalla RLS `qualified IS NULL AND report_data IS NULL AND lead_quality IS NULL`).
-- Sull'UPDATE finale (quella che aggiunge `qualified` + `report_data` + `lead_quality`): controllare `error` esplicitamente e, in caso di fallimento, mostrare toast e NON marcare `completed`.
-- Chiamare `markCompleted(submissionId)` solo dopo conferma che sia la UPDATE che il webhook siano andati a buon fine (o almeno la UPDATE, dato che il trigger DB lancia comunque il webhook).
+- Modellata su `submit-webhook` (stessi CORS + secrets `MAKE_WEBHOOK_URL` / `GHL_WEBHOOK_URL`).
+- `?minutes=` in query (default 30).
+- Query con service role: `partial_submissions` dove `completed=false AND partial_synced=false AND updated_at < now() - '<minutes> min' AND form_data->>'email' IS NOT NULL AND form_data->>'email' <> ''`.
+- Per ogni riga: costruisce payload **flat** con etichette leggibili (replica `labelFor`/`labelsFor` + tutti gli array `sectorOptions`, `platformOptions`, ecc. dentro la function), aggiunge `tag: "partial"`, `session_id`, `current_step`, `current_step_name`, `total_steps`, `started_at`, `updated_at`, `report_url` (`quiz-to-customer.lovable.app/quiz?resume=<session_id>` — informativo).
+- POST parallelo a Make + GHL. Se almeno uno OK → `UPDATE partial_synced=true, partial_synced_at=now()`. Se entrambi falliscono → riga intatta (retry al prossimo giro).
+- Ritorna `{processed, sent, failed}`.
+- Aggiunge blocco `[functions.send-partial-webhooks] verify_jwt = false` in `supabase/config.toml`.
 
-### 3. Policy RLS UPDATE per anon su `survey_submissions`
+### 3. Cron via `supabase--insert`
 
-Oggi la UPDATE finale (aggiunta di `report_data`, `qualified`, `lead_quality`) funziona solo perché la INSERT iniziale ha creato la riga con lo stesso session. Ma non c'è nessuna UPDATE policy per anon → la UPDATE viene bloccata silenziosamente in alcuni percorsi.
+Abilita `pg_cron` e `pg_net`, poi:
 
-- Aggiungere una policy UPDATE per `anon` su `survey_submissions` che consenta la modifica solo della riga con `session_id` corrispondente all'header `x-session-id` verificato dal segreto (stesso pattern RPC già usato per `partial_submissions`).
-- In alternativa più semplice: creare una RPC `finalize_submission(session_id, session_secret, report_data, qualified, lead_quality)` con `SECURITY DEFINER` che verifica l'hash del segreto contro la `partial_submission` collegata e fa la UPDATE server-side. Il client chiama l'RPC invece della UPDATE diretta.
+```sql
+select cron.schedule(
+  'send-partial-webhooks-every-10min',
+  '*/10 * * * *',
+  $$ select net.http_post(
+       url:='https://vsvffgngmzgpgvzwkdwr.supabase.co/functions/v1/send-partial-webhooks',
+       headers:='{"Content-Type":"application/json","apikey":"<anon>"}'::jsonb,
+       body:='{}'::jsonb
+     ); $$
+);
+```
 
-Approccio consigliato: **RPC `finalize_submission`** — coerente col pattern `update_partial_submission` già in uso, evita di aprire una policy UPDATE per anon che sarebbe più difficile da vincolare in modo sicuro.
+### 4. Prefill da URL (anti-PII a Meta)
 
-### Ordine di esecuzione
+**`index.html`** — inline script come **PRIMO** child di `<head>`, sopra Hyros/GTAG/Meta Pixel:
 
-1. Migrazione: creare RPC `finalize_submission` (SECURITY DEFINER, verifica hash segreto).
-2. Recovery data: INSERT manuale Giuseppe + UPDATE partial con `submission_id`.
-3. Codice: refactor `saveLeadToDatabase` + `handleGateSubmit` per usare l'RPC e gestire gli errori esplicitamente con toast.
-4. Verifica end-to-end su `/quiz` in sandbox: compilazione completa → riga in `survey_submissions` + `partial.submission_id` popolato + webhook triggered.
+```js
+(function(){
+  try{
+    var p=new URLSearchParams(location.search), out={};
+    ['email','e','name','n','fullName','phone'].forEach(function(k){
+      var v=p.get(k); if(v){ out[k]=v; p.delete(k); }
+    });
+    if(Object.keys(out).length){
+      sessionStorage.setItem('ml_prefill', JSON.stringify(out));
+      history.replaceState(null,'', location.pathname+(p.toString()?'?'+p:'')+location.hash);
+    }
+  }catch(_){}
+})();
+```
+
+Così quando GTAG/Meta Pixel leggono `location.href` per `PageView`, la query è già pulita → niente PII a Meta, niente ad-account a rischio.
+
+**`EmailMarketingSurvey.tsx`** — estendo il `useEffect` esistente (riga ~666) senza toccare `trackEngagedLead`: legge da URL con fallback a `sessionStorage.ml_prefill`; supporta `email`/`e`, `name`/`n`/`fullName`, `phone`; popola `formData` (email + fullName + phone); mantiene `setEmailValidation` + `trackEngagedLead(email)`.
+
+**`usePartialTracking.ts`** — accetta `initialFormData?: Record<string,unknown>` e lo usa nell'insert iniziale al posto di `{}`, così email/nome sono presenti dal PRIMO record (abbandoni <500ms).
+
+### 5. Nuovi campi in `handleGateSubmit`
+
+- INSERT iniziale `survey_submissions`: aggiungo `platform`, `email_tool`, `segmentation`, `email_frequency`.
+- Chiamata a `finalize_submission`: aggiungo i 4 nuovi parametri.
+- `AdminSurvey.tsx` + `DropoffAnalytics.tsx`: aggiungo le 4 colonne nella visualizzazione admin.
+
+### 6. Test end-to-end via Playwright + curl edge
+
+1. `/quiz?email=test@test.com&name=Mario%20Rossi` → URL pulito, email prefillata.
+2. Verifico primo `partial_submissions` con `form_data.email` già valorizzato.
+3. `curl` a `send-partial-webhooks?minutes=0` → controllo payload arrivi + `partial_synced=true`.
+4. Rilancio → 0 righe processate.
+5. Completo il quiz → webhook normale parte con tag diverso, campi nuovi salvati.
 
 ### Note tecniche
 
-- Il trigger `trigger_submit_webhook` scatta su INSERT o UPDATE quando `report_data` passa da NULL a NOT NULL — quindi con la nuova RPC (che fa UPDATE del `report_data`) il webhook parte automaticamente lato DB, rendendo la chiamata client-side a `submit-webhook` ridondante (ma la teniamo come fallback).
-- La policy `Allow public inserts` su `survey_submissions` resta invariata: continua a permettere solo INSERT "vuote" (name/email/phone senza report), coerente con la separazione INSERT-iniziale vs UPDATE-finale.
+- Nessuna modifica a `submit-webhook` (tag "partial" implicito nell'assenza; per completezza si può aggiungere `tag: "completed"` nel payload lato `handleGateSubmit`, opzionale).
+- Retrocompatibilità: le 4 nuove colonne sono nullable, le vecchie righe restano valide.
+- Sicurezza: solo il cron e chiamate autenticate con anon key possono invocare l'edge; il payload contiene PII, quindi il logging è minimo.

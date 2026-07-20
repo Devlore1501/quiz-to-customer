@@ -653,6 +653,32 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
   const [formData, setFormData] = useState<FormData>({ ...INITIAL_FORM });
   const [microFeedback, setMicroFeedback] = useState<{ icon: string; text: string } | null>(null);
 
+  // Prefill data captured from URL: read once synchronously so the very first
+  // partial_submissions insert already contains email/name/phone.
+  const prefillRef = useRef<Record<string, string> | null>(null);
+  if (prefillRef.current === null) {
+    const collected: Record<string, string> = {};
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const stored = sessionStorage.getItem('ml_prefill');
+      const fromStorage: Record<string, string> = stored ? JSON.parse(stored) : {};
+      const pick = (...keys: string[]) => {
+        for (const k of keys) {
+          const v = params.get(k) ?? fromStorage[k];
+          if (v && typeof v === 'string' && v.trim()) return v.trim();
+        }
+        return '';
+      };
+      const email = pick('email', 'e');
+      const name = pick('fullName', 'name', 'n');
+      const phone = pick('phone');
+      if (email) collected.email = email;
+      if (name) collected.fullName = name;
+      if (phone) collected.phone = phone;
+    } catch (_) { /* ignore */ }
+    prefillRef.current = collected;
+  }
+
   // Facebook Pixel: ViewContent — fires once on quiz mount
   const viewContentSentRef = useRef(false);
   useEffect(() => {
@@ -661,20 +687,23 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
     trackViewContent();
   }, []);
 
-  // Pre-fill email from landing redirect: /quiz?email=...
-  // Also fires EngagedLead pixel — user has opted in on landing AND started quiz
+  // Apply prefill to formData + fire EngagedLead once
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const emailParam = params.get('email');
-    if (emailParam) {
-      setFormData(prev => ({ ...prev, email: emailParam }));
-      setEmailValidation(validateEmail(emailParam));
-      trackEngagedLead(emailParam);
+    const p = prefillRef.current;
+    if (!p || Object.keys(p).length === 0) return;
+    setFormData(prev => ({ ...prev, ...p }));
+    if (p.email) {
+      setEmailValidation(validateEmail(p.email));
+      trackEngagedLead(p.email);
     }
   }, []);
 
   // Partial tracking
   const currentStepName = STEPS[currentStep]?.field || 'unknown';
+  const initialFormDataForPartial = useMemo(
+    () => (prefillRef.current && Object.keys(prefillRef.current).length ? prefillRef.current : undefined),
+    [],
+  );
   const { markCompleted, sessionId: partialSessionId, sessionSecret: partialSessionSecret } = usePartialTracking({
     surveyType: 'email_marketing',
     formData: formData as unknown as Record<string, unknown>,
@@ -682,6 +711,7 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
     stepName: currentStepName,
     totalSteps: TOTAL_STEPS,
     enabled: phase === 'quiz',
+    initialFormData: initialFormDataForPartial,
   });
 
   // ── Navigation ──────────────────────────────────────────────────────
@@ -821,6 +851,10 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
           email: formData.email,
           phone: formData.phone || null,
           website: formData.website ? normalizeWebsiteUrl(formData.website) : null,
+          platform: formData.platform || null,
+          email_tool: formData.emailTool || null,
+          segmentation: formData.segmentation || null,
+          email_frequency: formData.emailFrequency || null,
           status: 'in_progress',
           qualified: null,
         } as never)
@@ -938,6 +972,10 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
         p_revenue_gap: advancedReport.recoverablePotential as never,
         p_lead_quality: adminReport.consultingNotes.leadQuality,
         p_report_data: dataToSend as never,
+        p_platform: formData.platform || null,
+        p_email_tool: formData.emailTool || null,
+        p_segmentation: formData.segmentation || null,
+        p_email_frequency: formData.emailFrequency || null,
       } as never);
 
       if (finalizeError || finalizeOk !== true) {
