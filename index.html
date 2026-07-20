@@ -1,12 +1,29 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
+    <!-- Strip PII from URL BEFORE analytics/pixels read location.href -->
+    <script>
+      (function(){
+        try{
+          var p = new URLSearchParams(location.search), out = {};
+          ['email','e','name','n','fullName','phone'].forEach(function(k){
+            var v = p.get(k); if(v){ out[k] = v; p.delete(k); }
+          });
+          if(Object.keys(out).length){
+            sessionStorage.setItem('ml_prefill', JSON.stringify(out));
+            history.replaceState(null,'', location.pathname + (p.toString()?'?'+p:'') + location.hash);
+          }
+        }catch(_){}
+      })();
+    </script>
+
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>report email strategico</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,800;0,900;1,700;1,800&display=swap" rel="stylesheet">
+
 
     <!-- Hyros Universal Script -->
     <script>
