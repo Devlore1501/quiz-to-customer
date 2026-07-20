@@ -851,6 +851,10 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
           email: formData.email,
           phone: formData.phone || null,
           website: formData.website ? normalizeWebsiteUrl(formData.website) : null,
+          platform: formData.platform || null,
+          email_tool: formData.emailTool || null,
+          segmentation: formData.segmentation || null,
+          email_frequency: formData.emailFrequency || null,
           status: 'in_progress',
           qualified: null,
         } as never)
