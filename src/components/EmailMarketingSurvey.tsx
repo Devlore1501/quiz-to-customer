@@ -8,6 +8,7 @@ import AdvancedReportComponent from '@/components/AdvancedReport';
 import { ChevronLeft, Loader2, CheckCircle2, Circle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { trackQuizCompleted, trackCompleteRegistration, trackViewContent, trackEngagedLead } from '@/lib/facebookPixel';
+import { isValidUrlFormat, debounce } from '@/lib/website';
 import { useLandingTracking } from '@/hooks/useLandingTracking';
 import { usePartialTracking } from '@/hooks/usePartialTracking';
 import { InsightCard, getInsightForStep } from '@/components/InsightCard';
@@ -51,7 +52,7 @@ interface EmailValidation {
 function normalizeWebsiteUrl(url: string): string {
   if (!url) return '';
   let normalized = url.trim().toLowerCase();
-  if (normalized === 'privato' || normalized === 'private') return normalized;
+  // Il valore "privato" non è più accettato: il sito è obbligatorio e verificato.
   normalized = normalized.replace(/^https?:\/\//, '');
   normalized = normalized.replace(/\/+$/, '');
   return `https://${normalized}`;
@@ -184,7 +185,7 @@ const STEPS = [
   { cat: 'Frequenza', title: "Quante email invii a settimana?", type: 'radio' as const, field: 'emailFrequency' as const, options: frequencyOptions },
   { cat: 'Lista Email', title: "Quanti iscritti ha la tua lista email?", type: 'radio' as const, field: 'listSize' as const, options: listSizeOptions },
   { cat: 'Obiettivo', title: "Perché vuoi analizzare il tuo email marketing?", type: 'radio' as const, field: 'motivation' as const, options: motivationOptions },
-  { cat: 'Il tuo store', title: "Qual è l'URL del tuo store?", type: 'input' as const, field: 'website' as const, options: [], placeholder: 'www.tuosito.com', helper: 'Puoi scrivere "privato" se preferisci non condividerlo.' },
+  { cat: 'Il tuo store', title: "Qual è l'URL del tuo store?", type: 'input' as const, field: 'website' as const, options: [], placeholder: 'www.tuostore.com', helper: 'Ci serve per analizzare il tuo store e calcolare il benchmark.' },
 ];
 
 const TOTAL_STEPS = STEPS.length;
@@ -698,6 +699,58 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
     }
   }, []);
 
+  // ── Verifica sito ────────────────────────────────────────────────────────
+  // Il sito è obbligatorio (prima si poteva scrivere "privato"). Due filtri:
+  // formato lato client, raggiungibilità via edge function `verify-website`.
+  const [websiteCheck, setWebsiteCheck] = useState<{
+    status: 'idle' | 'checking' | 'valid' | 'invalid';
+    message?: string;
+  }>({ status: 'idle' });
+
+  const verificaSito = useCallback(async (url: string, sector: string) => {
+    const formato = isValidUrlFormat(url);
+    if (!formato.isValid) {
+      setWebsiteCheck({ status: 'invalid', message: formato.error });
+      return;
+    }
+    setWebsiteCheck({ status: 'checking' });
+    try {
+      const { data, error } = await supabase.functions.invoke('verify-website', {
+        body: { url: formato.normalized, sector },
+      });
+      if (error) {
+        setWebsiteCheck({ status: 'invalid', message: 'Verifica non riuscita. Riprova.' });
+        return;
+      }
+      if (data?.isValid) {
+        setWebsiteCheck({ status: 'valid' });
+        if (data.details?.normalizedUrl) {
+          setFormData(prev => ({ ...prev, website: data.details.normalizedUrl }));
+        }
+      } else {
+        setWebsiteCheck({
+          status: 'invalid',
+          message: data?.error || 'Il sito non risponde. Controlla l\'indirizzo.',
+        });
+      }
+    } catch {
+      setWebsiteCheck({ status: 'invalid', message: 'Errore di connessione. Riprova.' });
+    }
+  }, []);
+
+  const verificaSitoDebounced = useMemo(
+    () => debounce((url: string, sector: string) => {
+      if ((url || '').trim().length > 3) verificaSito(url, sector);
+    }, 800),
+    [verificaSito]
+  );
+
+  // Il settore serve alla verifica ma non deve entrare nelle deps di
+  // handleInputChange, altrimenti la funzione (e il debounce) si ricreano a ogni
+  // battitura e il timer non scatta mai.
+  const settoreRef = useRef(formData.sector);
+  useEffect(() => { settoreRef.current = formData.sector; }, [formData.sector]);
+
   // Partial tracking
   const currentStepName = STEPS[currentStep]?.field || 'unknown';
   const initialFormDataForPartial = useMemo(
@@ -829,7 +882,13 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
     if (field === 'email' && typeof value === 'string') {
       setEmailValidation(validateEmail(value));
     }
-  }, []);
+    if (field === 'website' && typeof value === 'string') {
+      // Torna a "idle" subito: evita che resti visibile il verde della verifica
+      // precedente mentre l'utente sta già modificando l'indirizzo.
+      setWebsiteCheck({ status: 'idle' });
+      verificaSitoDebounced(value, settoreRef.current);
+    }
+  }, [verificaSitoDebounced]);
 
   // ── Sector Label ────────────────────────────────────────────────────
 
@@ -1322,7 +1381,19 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
                     placeholder={(step as { placeholder?: string }).placeholder || ''}
                     autoFocus
                     className="w-full py-[13px] px-[15px] bg-[#121d2b] border border-[#2a3a52] rounded-[10px] text-[#f0f0eb] font-['Montserrat',sans-serif] text-[14px] font-medium outline-none focus:border-[rgba(250,180,80,0.45)] transition-colors placeholder:text-[#252525]" />
-                  {(step as { helper?: string }).helper && (
+                  {/* Esito verifica sito — sostituisce l'helper mentre è in corso */}
+                  {step.field === 'website' && websiteCheck.status !== 'idle' ? (
+                    <p className={`mt-[6px] text-[11px] flex items-center gap-1.5 ${
+                      websiteCheck.status === 'valid' ? 'text-[#4db67a]'
+                      : websiteCheck.status === 'invalid' ? 'text-[#e05c5c]'
+                      : 'text-[#888]'}`}>
+                      {websiteCheck.status === 'checking' && (
+                        <><Loader2 className="w-3 h-3 animate-spin" /> Verifico il sito…</>
+                      )}
+                      {websiteCheck.status === 'valid' && <>✓ Sito verificato</>}
+                      {websiteCheck.status === 'invalid' && <>✕ {websiteCheck.message}</>}
+                    </p>
+                  ) : (step as { helper?: string }).helper && (
                     <p className="mt-[6px] text-[11px] text-[#5a5a5a]">
                       {(step as { helper?: string }).helper}
                     </p>
@@ -1357,6 +1428,9 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
             const disabled =
               (step.type === 'checkbox' && formData.activeFlows.length === 0) ||
               (step.type === 'input' && !inputValue) ||
+              // Il sito deve essere verificato prima di proseguire: è il dato su cui
+              // si valuta il lead, un URL sbagliato lo rende inutile.
+              (step.field === 'website' && websiteCheck.status !== 'valid') ||
               !!microFeedback;
             const onClick = step.type === 'checkbox'
               ? () => { if (!disabled) handleCheckboxContinue(); }
