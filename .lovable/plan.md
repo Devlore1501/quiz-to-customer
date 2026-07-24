@@ -1,80 +1,78 @@
-## Implementazione: partial webhooks + nuovi campi + prefill URL
+## Diagnosi (invariata)
 
-### 1. Migration DB
+L'INSERT iniziale in `survey_submissions` fallisce con `42501` perché la policy INSERT richiede `qualified IS NULL` ma la colonna ha `DEFAULT true` e il client non riesce a forzare NULL sulla riga finale → check clause = false → toast "Errore invio".
 
-- `survey_submissions`: aggiungi 4 colonne nullable → `platform`, `email_tool`, `segmentation`, `email_frequency`.
-- `partial_submissions`: aggiungi `partial_synced boolean NOT NULL DEFAULT false` + `partial_synced_at timestamptz` + indice parziale `(updated_at) WHERE completed = false AND partial_synced = false`.
-- `finalize_submission`: **DROP** della firma vecchia (17 arg), poi **CREATE** identica ma con 4 parametri in coda (`p_platform`, `p_email_tool`, `p_segmentation`, `p_email_frequency`, tutti `DEFAULT NULL`). Inseriti nell'`UPDATE` con `COALESCE`. Mantiene `SECURITY DEFINER`, validazione `session_secret`, collegamento partial. GRANT EXECUTE ad `anon, authenticated` sulla nuova firma.
+## Nuova regola di qualificazione
 
-### 2. Edge Function `send-partial-webhooks`
+`qualified = true` solo se il lead è davvero in target, cioè `monthly_revenue` **non è** la fascia `under-10k` (fascia "Meno di 10.000€/mese"). Tutti gli altri casi → `qualified = false`. Al momento dell'INSERT iniziale il lead è ancora "in_progress", quindi non ancora qualificato: parte a `false`.
 
-Nuova function in `supabase/functions/send-partial-webhooks/index.ts`:
+## Fix — una singola migrazione
 
-- Modellata su `submit-webhook` (stessi CORS + secrets `MAKE_WEBHOOK_URL` / `GHL_WEBHOOK_URL`).
-- `?minutes=` in query (default 30).
-- Query con service role: `partial_submissions` dove `completed=false AND partial_synced=false AND updated_at < now() - '<minutes> min' AND form_data->>'email' IS NOT NULL AND form_data->>'email' <> ''`.
-- Per ogni riga: costruisce payload **flat** con etichette leggibili (replica `labelFor`/`labelsFor` + tutti gli array `sectorOptions`, `platformOptions`, ecc. dentro la function), aggiunge `tag: "partial"`, `session_id`, `current_step`, `current_step_name`, `total_steps`, `started_at`, `updated_at`, `report_url` (`quiz-to-customer.lovable.app/quiz?resume=<session_id>` — informativo).
-- POST parallelo a Make + GHL. Se almeno uno OK → `UPDATE partial_synced=true, partial_synced_at=now()`. Se entrambi falliscono → riga intatta (retry al prossimo giro).
-- Ritorna `{processed, sent, failed}`.
-- Aggiunge blocco `[functions.send-partial-webhooks] verify_jwt = false` in `supabase/config.toml`.
-
-### 3. Cron via `supabase--insert`
-
-Abilita `pg_cron` e `pg_net`, poi:
+### 1. Default colonna e stato iniziale coerente
 
 ```sql
-select cron.schedule(
-  'send-partial-webhooks-every-10min',
-  '*/10 * * * *',
-  $$ select net.http_post(
-       url:='https://vsvffgngmzgpgvzwkdwr.supabase.co/functions/v1/send-partial-webhooks',
-       headers:='{"Content-Type":"application/json","apikey":"<anon>"}'::jsonb,
-       body:='{}'::jsonb
-     ); $$
+ALTER TABLE public.survey_submissions
+  ALTER COLUMN qualified SET DEFAULT false;
+
+-- allinea i record "in_progress" senza report a non-qualificato
+UPDATE public.survey_submissions
+   SET qualified = false
+ WHERE status = 'in_progress' AND report_data IS NULL;
+```
+
+### 2. Policy INSERT: consente solo lo stato iniziale non-qualificato
+
+```sql
+DROP POLICY "Allow public inserts" ON public.survey_submissions;
+
+CREATE POLICY "Allow public inserts"
+ON public.survey_submissions
+FOR INSERT
+TO anon, authenticated
+WITH CHECK (
+  has_role(auth.uid(), 'admin'::app_role)
+  OR (
+    (status IS NULL OR status = ANY (ARRAY['completed','in_progress','disqualified']))
+    AND (qualified IS NULL OR qualified = false)     -- ← al primo insert NON è qualificato
+    AND lead_quality IS NULL
+    AND report_data IS NULL
+    AND email_health_score IS NULL
+    AND yearly_potential IS NULL
+    AND current_email_revenue IS NULL
+    AND benchmark_email_revenue IS NULL
+    AND revenue_gap IS NULL
+    AND disqualification_reason IS NULL
+    AND (make_synced IS NULL OR make_synced = false)
+    AND (ghl_synced IS NULL OR ghl_synced = false)
+  )
 );
 ```
 
-### 4. Prefill da URL (anti-PII a Meta)
+Ora il `.insert({..., qualified: null})` del client passa (default = false, check = OK).
 
-**`index.html`** — inline script come **PRIMO** child di `<head>`, sopra Hyros/GTAG/Meta Pixel:
+### 3. `finalize_submission`: calcola `qualified` in base al fatturato
 
-```js
-(function(){
-  try{
-    var p=new URLSearchParams(location.search), out={};
-    ['email','e','name','n','fullName','phone'].forEach(function(k){
-      var v=p.get(k); if(v){ out[k]=v; p.delete(k); }
-    });
-    if(Object.keys(out).length){
-      sessionStorage.setItem('ml_prefill', JSON.stringify(out));
-      history.replaceState(null,'', location.pathname+(p.toString()?'?'+p:'')+location.hash);
-    }
-  }catch(_){}
-})();
+Sostituire la vecchia funzione (stessa firma a 21 parametri) e cambiare la riga fissa `qualified = true` con:
+
+```sql
+qualified = (p_monthly_revenue IS NOT NULL AND p_monthly_revenue <> 'under-10k'),
 ```
 
-Così quando GTAG/Meta Pixel leggono `location.href` per `PageView`, la query è già pulita → niente PII a Meta, niente ad-account a rischio.
+Tutto il resto della funzione resta invariato. `GRANT EXECUTE` uguale a quello attuale.
 
-**`EmailMarketingSurvey.tsx`** — estendo il `useEffect` esistente (riga ~666) senza toccare `trackEngagedLead`: legge da URL con fallback a `sessionStorage.ml_prefill`; supporta `email`/`e`, `name`/`n`/`fullName`, `phone`; popola `formData` (email + fullName + phone); mantiene `setEmailValidation` + `trackEngagedLead(email)`.
+## Frontend
 
-**`usePartialTracking.ts`** — accetta `initialFormData?: Record<string,unknown>` e lo usa nell'insert iniziale al posto di `{}`, così email/nome sono presenti dal PRIMO record (abbandoni <500ms).
+Nessuna modifica funzionale al codice React necessaria:
 
-### 5. Nuovi campi in `handleGateSubmit`
+- `saveLeadToDatabase` continua a mandare `qualified: null` → default `false` → policy OK.
+- `handleGateSubmit` chiama `finalize_submission`, che ora imposta `qualified` correttamente.
 
-- INSERT iniziale `survey_submissions`: aggiungo `platform`, `email_tool`, `segmentation`, `email_frequency`.
-- Chiamata a `finalize_submission`: aggiungo i 4 nuovi parametri.
-- `AdminSurvey.tsx` + `DropoffAnalytics.tsx`: aggiungo le 4 colonne nella visualizzazione admin.
+`AdminSurvey.tsx` legge già `qualified` dal DB, quindi mostrerà lo stato reale (true solo per lead ≥10k).
 
-### 6. Test end-to-end via Playwright + curl edge
+## Verifica dopo il fix
 
-1. `/quiz?email=test@test.com&name=Mario%20Rossi` → URL pulito, email prefillata.
-2. Verifico primo `partial_submissions` con `form_data.email` già valorizzato.
-3. `curl` a `send-partial-webhooks?minutes=0` → controllo payload arrivi + `partial_synced=true`.
-4. Rilancio → 0 righe processate.
-5. Completo il quiz → webhook normale parte con tag diverso, campi nuovi salvati.
-
-### Note tecniche
-
-- Nessuna modifica a `submit-webhook` (tag "partial" implicito nell'assenza; per completezza si può aggiungere `tag: "completed"` nel payload lato `handleGateSubmit`, opzionale).
-- Retrocompatibilità: le 4 nuove colonne sono nullable, le vecchie righe restano valide.
-- Sicurezza: solo il cron e chiamate autenticate con anon key possono invocare l'edge; il payload contiene PII, quindi il logging è minimo.
+1. `curl` diretto come anon con il payload del client → 201, riga con `qualified=false, status='in_progress'`.
+2. Compilazione end-to-end in preview con `monthly_revenue = "under-10k"` → riga finale `qualified=false`, `status='completed'`.
+3. Compilazione con `monthly_revenue ∈ {10-25k, 25-50k, …}` → riga finale `qualified=true`.
+4. Webhook trigger (`submit_webhook_on_report_ready`) parte da solo in entrambi i casi; il payload include `qualified` reale per Make/GHL.
+5. Admin: filtro "qualificati" mostra solo i ≥10k.
