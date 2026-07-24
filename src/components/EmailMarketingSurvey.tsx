@@ -175,16 +175,17 @@ const motivationOptions = [
 // 0 Settore · 1 Piattaforma · 2 Fatturato (disqualify)
 // 3 Revenue Email % (micro-feedback) · 4 Automazioni (micro-feedback)
 // 5 Segmentazione · 6 Frequenza · 7 Lista · 8 Obiettivo · 9 Sito
+// Flusso a 6 domande: teniamo solo gli input che alimentano il calcolo del
+// report (settore, fatturato, % email, automazioni, lista) + l'URL. Piattaforma,
+// segmentazione, frequenza e obiettivo sono state tolte per ridurre l'attrito;
+// i loro campi restano in FormData con default e non entrano nel calcolo
+// (frequenza usa un default neutro '1-2' al momento del calcolo).
 const STEPS = [
-  { cat: 'Settore', title: "In quale settore opera il tuo eCommerce?", type: 'radio' as const, field: 'sector' as const, options: sectorOptions },
-  { cat: 'Piattaforma', title: "Su quale piattaforma gira il tuo store?", type: 'radio' as const, field: 'platform' as const, options: platformOptions },
-  { cat: 'Fatturato', title: "Qual è il fatturato mensile medio del tuo eCommerce?", type: 'radio' as const, field: 'monthlyRevenue' as const, options: revenueOptions },
-  { cat: 'Revenue Email', title: "Quanto fatturato proviene attualmente dalle email?", type: 'radio' as const, field: 'emailRevenuePercentage' as const, options: emailRevenueOptions },
-  { cat: 'Automazioni', title: "Quali automazioni hai attive?", type: 'checkbox' as const, field: 'activeFlows' as const, options: automationOptions, subtitle: 'Seleziona tutte quelle presenti' },
-  { cat: 'Segmentazione', title: "Come gestisci l'invio delle campagne email?", type: 'radio' as const, field: 'segmentation' as const, options: segmentationOptions },
-  { cat: 'Frequenza', title: "Quante email invii a settimana?", type: 'radio' as const, field: 'emailFrequency' as const, options: frequencyOptions },
-  { cat: 'Lista Email', title: "Quanti iscritti ha la tua lista email?", type: 'radio' as const, field: 'listSize' as const, options: listSizeOptions },
-  { cat: 'Obiettivo', title: "Perché vuoi analizzare il tuo email marketing?", type: 'radio' as const, field: 'motivation' as const, options: motivationOptions },
+  { cat: 'Settore', title: "In che settore vendi?", type: 'radio' as const, field: 'sector' as const, options: sectorOptions },
+  { cat: 'Fatturato', title: "Quanto fattura il tuo store al mese?", type: 'radio' as const, field: 'monthlyRevenue' as const, options: revenueOptions },
+  { cat: 'Revenue Email', title: "Quanta parte del fatturato arriva dalle email?", type: 'radio' as const, field: 'emailRevenuePercentage' as const, options: emailRevenueOptions },
+  { cat: 'Automazioni', title: "Quali automazioni hai già attive?", type: 'checkbox' as const, field: 'activeFlows' as const, options: automationOptions, subtitle: 'Seleziona tutte quelle presenti' },
+  { cat: 'Lista Email', title: "Quanto è grande la tua lista email?", type: 'radio' as const, field: 'listSize' as const, options: listSizeOptions },
   { cat: 'Il tuo store', title: "Qual è l'URL del tuo store?", type: 'input' as const, field: 'website' as const, options: [], placeholder: 'www.tuostore.com', helper: 'Ci serve per analizzare il tuo store e calcolare il benchmark.' },
 ];
 
@@ -791,16 +792,16 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
     }
   }, [currentStep, goToNextStep]);
 
-  // Micro-feedback content per step
-  const getMicroFeedback = useCallback((step: number, data: FormData): { icon: string; text: string } | null => {
-    if (step === 3) {
+  // Micro-feedback content per field (indipendente dall'ordine degli step)
+  const getMicroFeedback = useCallback((field: string, data: FormData): { icon: string; text: string } | null => {
+    if (field === 'emailRevenuePercentage') {
       const pct = data.emailRevenuePercentage;
       const isLow = pct === 'dont-know' || pct === '0-10' || pct === '10-20';
       return isLow
         ? { icon: '💸', text: 'Sotto il benchmark — nel report vedrai esattamente quanto vale il gap.' }
         : { icon: '✅', text: 'Buona base — vediamo dove ottimizzare per andare oltre.' };
     }
-    if (step === 4) {
+    if (field === 'activeFlows') {
       const count = data.activeFlows.filter(f => f !== 'none').length;
       if (count <= 2) return { icon: '⚡', text: `${count} flussi attivi — i mancanti sono le leve più veloci per recuperare revenue.` };
       if (count <= 4) return { icon: '📈', text: 'Base solida — ogni flusso mancante è revenue automatica non sfruttata.' };
@@ -811,7 +812,7 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
 
   // Advance with optional micro-feedback (step 4 radio, step 5 checkbox)
   const handleCheckboxContinue = useCallback(() => {
-    const fb = getMicroFeedback(currentStep, formData);
+    const fb = getMicroFeedback(STEPS[currentStep]?.field ?? '', formData);
     if (fb) {
       setMicroFeedback(fb);
       setTimeout(() => { setMicroFeedback(null); advanceFromCurrentStep(); }, 2500);
@@ -844,7 +845,7 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
     // Micro-feedback on Revenue Email % (step 4) before advancing
     if (field === 'emailRevenuePercentage') {
       const updatedData = { ...formData, emailRevenuePercentage: value };
-      const fb = getMicroFeedback(3, updatedData);
+      const fb = getMicroFeedback('emailRevenuePercentage', updatedData);
       if (fb) {
         setTimeout(() => {
           setSelectedValue(null);
@@ -958,7 +959,9 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
         formData.sector, formData.monthlyRevenue, formData.emailRevenuePercentage,
         formData.listSize, formData.activeFlows,
         formData.sector === 'other' ? formData.customSector : undefined,
-        formData.emailFrequency
+        // La frequenza non è più chiesta: default neutro '1-2' (~5 invii/mese)
+        // per non gonfiare il "leak" con l'assunzione 'none' (0 invii).
+        formData.emailFrequency || '1-2'
       );
 
       const adminReport = generateAdminReport(formData as any, advancedReport);
@@ -1129,7 +1132,7 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
       formData.sector, formData.monthlyRevenue, formData.emailRevenuePercentage,
       formData.listSize, formData.activeFlows,
       formData.sector === 'other' ? formData.customSector : undefined,
-      formData.emailFrequency
+      formData.emailFrequency || '1-2'
     );
     // Potenziale a due vie: revenueGap puro mostrava €0 ai prospect sopra benchmark
     const previewGap = previewReport.recoverablePotential;
@@ -1260,26 +1263,31 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
     <div className="min-h-screen bg-[#121d2b] font-['Montserrat',sans-serif] text-[#f0f0eb] relative">
       <GridBackground />
       <div className="max-w-[680px] mx-auto px-[18px] relative z-[1]">
-        {/* Header */}
-        <header className="pt-6 text-center">
-          <img src={mailiftLogo} alt="Mailift" className="h-10 w-auto mx-auto" />
-        </header>
-
-        {/* Hero */}
-        <div className="pt-9 pb-7 text-center">
-          <div className="inline-flex items-center gap-2 bg-[rgba(250,180,80,0.1)] border border-[rgba(250,180,80,0.25)] rounded-full px-[14px] py-[5px] text-[11px] font-semibold tracking-[2px] uppercase text-[#FAB450] mb-5">
-            <span className="w-[6px] h-[6px] bg-[#FAB450] rounded-full animate-pulse" />
-            Revenue Leak Audit
+        {/* Header: logo + badge + headline. Headline ridimensionata (era
+            clamp(48-80px): su mobile riempiva lo schermo e spingeva la domanda
+            sotto la piega). Ora compatta così resta visibile con la domanda. */}
+        <header className="pt-5 pb-4 text-center">
+          <img src={mailiftLogo} alt="Mailift" className="h-7 w-auto mx-auto mb-4" />
+          {/* Foto founder in cornice tonda con anello dorato — la faccia di chi
+              fa l'analisi aumenta la fiducia. */}
+          <div className="mx-auto mb-2 w-[68px] h-[68px] rounded-full p-[3px] bg-gradient-to-br from-[#FAB450] to-[#d98f16] shadow-[0_6px_20px_-8px_rgba(250,180,80,0.6)]">
+            <img
+              src={lorenzoFounderAsset.url}
+              alt="Lorenzo Baretta, founder di Mailift"
+              className="w-full h-full rounded-full object-cover border-2 border-[#121d2b]"
+            />
           </div>
-          <h1 className="font-['Montserrat',sans-serif] text-[clamp(48px,11vw,80px)] leading-[0.92] tracking-wider mb-4">
+          <p className="text-[11px] uppercase tracking-[1.5px] text-[#8a97a8] font-semibold mb-3">
+            Lorenzo · Founder Mailift
+          </p>
+          <h1 className="text-[clamp(24px,6.4vw,36px)] leading-[1.06] tracking-tight max-w-[440px] mx-auto text-balance">
             Quanto stai{' '}
             <span className="text-[#FAB450] font-['Playfair_Display',serif] italic">perdendo ogni mese?</span>
           </h1>
-          <p className="text-[16px] text-[#888] max-w-[440px] mx-auto mb-7 leading-relaxed">
-            Hai una lista. Hai un eCommerce che fattura.<br />
-            Ma sai quanta <strong className="text-[#f0f0eb]">revenue</strong> stai lasciando sul tavolo ogni mese?
+          <p className="text-[13px] text-[#8a97a8] max-w-[380px] mx-auto mt-2">
+            Rispondi a 6 domande, scopri quanta revenue email stai lasciando sul tavolo.
           </p>
-        </div>
+        </header>
 
         {/* Quiz Card */}
         <div className="bg-[#1a2942] border border-[#2a3a52] rounded-[18px] mb-12 pb-1">
@@ -1306,17 +1314,17 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
           )}
 
           {/* Question */}
-          <AnimatePresence mode="wait" custom={direction}>
-            <motion.div key={currentStep} custom={direction}
-              initial={{ x: direction > 0 ? 80 : -80, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: direction < 0 ? 80 : -80, opacity: 0 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+          <AnimatePresence mode="wait">
+            <motion.div key={currentStep}
+              initial={{ y: 10, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: -6, opacity: 0 }}
+              transition={{ duration: 0.16, ease: 'easeOut' }}
               className="p-5 pt-6">
               <div className="font-['Montserrat',sans-serif] text-[10px] tracking-[2px] uppercase text-[#FAB450] mb-2">
                 {step.cat}
               </div>
-              <h2 className="text-[18px] font-semibold leading-[1.35] text-[#f0f0eb] mb-5">
+              <h2 className="text-[21px] font-bold leading-[1.2] tracking-tight text-[#f0f0eb] mb-5">
                 {step.title}
               </h2>
               {step.subtitle && (
@@ -1331,13 +1339,13 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
                     return (
                       <button key={opt.id}
                         onClick={() => handleRadioSelect(step.field as keyof FormData, opt.value)}
-                        className={`flex items-center gap-3 py-[13px] px-[15px] rounded-[10px] border text-[14px] font-medium text-left transition-all select-none
+                        className={`flex items-center gap-3 min-h-[56px] py-[14px] px-[18px] rounded-[14px] border text-[15px] font-medium text-left transition-all duration-150 select-none
                           ${isSelected
-                            ? 'border-[#FAB450] bg-[rgba(250,180,80,0.1)] text-[#f0f0eb]'
-                            : 'border-[#2a3a52] bg-[#121d2b] text-[#aaa] hover:border-[rgba(250,180,80,0.35)] hover:bg-[rgba(250,180,80,0.05)] hover:text-[#f0f0eb]'}`}>
-                        <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all
+                            ? 'border-[#FAB450] bg-[rgba(250,180,80,0.12)] text-[#f0f0eb] shadow-[0_6px_18px_-10px_rgba(250,180,80,0.6)] -translate-y-[1px]'
+                            : 'border-[#243449] bg-[#141f2e] text-[#b3bdc9] hover:border-[rgba(250,180,80,0.4)] hover:bg-[#1a2836] hover:text-[#f0f0eb] hover:-translate-y-[1px]'}`}>
+                        <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all
                           ${isSelected ? 'border-[#FAB450] bg-[#FAB450]' : 'border-[#34465e]'}`}>
-                          {isSelected && <span className="w-[5px] h-[5px] bg-[#121d2b] rounded-full" />}
+                          {isSelected && <span className="w-[7px] h-[7px] bg-[#121d2b] rounded-full" />}
                         </div>
                         <span>{opt.label}</span>
                       </button>
@@ -1368,13 +1376,13 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
                     return (
                       <button key={opt.id}
                         onClick={() => handleCheckboxChange(opt.value, !isSelected)}
-                        className={`flex items-center gap-3 py-[13px] px-[15px] rounded-[10px] border text-[14px] font-medium text-left transition-all select-none
+                        className={`flex items-center gap-3 min-h-[56px] py-[14px] px-[18px] rounded-[14px] border text-[15px] font-medium text-left transition-all duration-150 select-none
                           ${isSelected
-                            ? 'border-[#FAB450] bg-[rgba(250,180,80,0.1)] text-[#f0f0eb]'
-                            : 'border-[#2a3a52] bg-[#121d2b] text-[#aaa] hover:border-[rgba(250,180,80,0.35)] hover:bg-[rgba(250,180,80,0.05)] hover:text-[#f0f0eb]'}`}>
-                        <div className={`w-4 h-4 rounded-[3px] border-2 flex-shrink-0 flex items-center justify-center transition-all
+                            ? 'border-[#FAB450] bg-[rgba(250,180,80,0.12)] text-[#f0f0eb] shadow-[0_6px_18px_-10px_rgba(250,180,80,0.6)] -translate-y-[1px]'
+                            : 'border-[#243449] bg-[#141f2e] text-[#b3bdc9] hover:border-[rgba(250,180,80,0.4)] hover:bg-[#1a2836] hover:text-[#f0f0eb] hover:-translate-y-[1px]'}`}>
+                        <div className={`w-5 h-5 rounded-[5px] border-2 flex-shrink-0 flex items-center justify-center transition-all
                           ${isSelected ? 'border-[#FAB450] bg-[#FAB450]' : 'border-[#34465e]'}`}>
-                          {isSelected && <span className="text-[10px] text-[#121d2b] font-bold">✓</span>}
+                          {isSelected && <span className="text-[11px] text-[#121d2b] font-bold">✓</span>}
                         </div>
                         <span>{opt.label}</span>
                       </button>
