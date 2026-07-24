@@ -844,8 +844,12 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
   const saveLeadToDatabase = useCallback(async (): Promise<{ id: string | null; error: string | null }> => {
     if (formData._hp_field) return { id: null, error: 'honeypot' };
     try {
-      const { data, error } = await supabase.from('survey_submissions')
+      // Client-side id: anon has no SELECT policy on survey_submissions, so we can't
+      // rely on `.select()` after insert. Generate the id here and use return=minimal.
+      const newId = crypto.randomUUID();
+      const { error } = await supabase.from('survey_submissions')
         .insert({
+          id: newId,
           company_name: formData.companyName?.trim() || '',
           full_name: formData.fullName,
           email: formData.email,
@@ -856,15 +860,14 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
           segmentation: formData.segmentation || null,
           email_frequency: formData.emailFrequency || null,
           status: 'in_progress',
-          qualified: null,
-        } as never)
-        .select('id').single();
+          qualified: false,
+        } as never);
       if (error) {
         console.error('Lead save error:', error);
         return { id: null, error: error.message };
       }
-      if (data) { setLeadId(data.id); return { id: data.id, error: null }; }
-      return { id: null, error: 'no_row_returned' };
+      setLeadId(newId);
+      return { id: newId, error: null };
     } catch (err) {
       console.error('Error saving lead:', err);
       return { id: null, error: err instanceof Error ? err.message : 'unknown' };
