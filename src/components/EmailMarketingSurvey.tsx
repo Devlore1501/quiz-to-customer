@@ -757,7 +757,7 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
     () => (prefillRef.current && Object.keys(prefillRef.current).length ? prefillRef.current : undefined),
     [],
   );
-  const { markCompleted, sessionId: partialSessionId, sessionSecret: partialSessionSecret } = usePartialTracking({
+  const { markCompleted, syncNow, sessionId: partialSessionId, sessionSecret: partialSessionSecret } = usePartialTracking({
     surveyType: 'email_marketing',
     formData: formData as unknown as Record<string, unknown>,
     currentStep,
@@ -1014,6 +1014,17 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
         clientReport: advancedReport,
       };
 
+      // Sincronizza l'email (e i dati del gate) nel record partial PRIMA di
+      // finalizzare: il tracking è attivo solo in fase 'quiz', quindi senza questo
+      // flush il partial resta senza email e finalize_submission fallisce il match.
+      try {
+        await syncNow({
+          email: formData.email,
+          fullName: formData.fullName,
+          phone: formData.phone,
+        });
+      } catch (e) { console.error('syncNow before finalize failed:', e); }
+
       // Finalize via SECURITY DEFINER RPC (bypasses the missing anon UPDATE policy
       // in a controlled way, verifying the session secret).
       const { data: finalizeOk, error: finalizeError } = await supabase.rpc('finalize_submission', {
@@ -1076,7 +1087,7 @@ const EmailMarketingSurvey: React.FC<{ skipIntro?: boolean }> = ({ skipIntro = f
       toast({ title: 'Errore', description: 'Si è verificato un errore. Riprova.', variant: 'destructive' });
       setIsSubmitting(false);
     }
-  }, [formData, saveLeadToDatabase, markCompleted, partialSessionId, partialSessionSecret]);
+  }, [formData, saveLeadToDatabase, markCompleted, syncNow, partialSessionId, partialSessionSecret]);
 
   const handleRestart = useCallback(() => {
     setCurrentStep(0);

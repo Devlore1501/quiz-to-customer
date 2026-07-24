@@ -173,8 +173,20 @@ export function usePartialTracking({
     });
   }, []);
 
+  // Flush immediato (senza debounce, indipendente da `enabled`) del form_data
+  // corrente sul record partial. Serve al gate finale: l'email si inserisce lì,
+  // ma il tracking è attivo solo in fase 'quiz', quindi senza questo flush il
+  // partial resta senza email e `finalize_submission` fallisce il match email.
+  const syncNow = useCallback(async (extra?: Record<string, unknown>) => {
+    if (!recordCreatedRef.current) return;
+    await rpcUpdate(sessionIdRef.current, sessionSecretRef.current, {
+      formData: { ...formDataRef.current, ...(extra || {}) },
+    });
+  }, []);
+
   return {
     markCompleted,
+    syncNow,
     sessionId: sessionIdRef.current,
     sessionSecret: sessionSecretRef.current,
   };
