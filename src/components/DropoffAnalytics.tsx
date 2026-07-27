@@ -135,13 +135,35 @@ interface StepData {
   abandonRate: number;
 }
 
+interface RevenueData {
+  value: string;          // valore grezzo di monthlyRevenue
+  label: string;
+  inTarget: boolean;      // ICP Mailift: 25k+/mese
+  abbandoni: number;      // non completati che hanno dichiarato questa fascia
+  conEmail: number;       // …di cui hanno lasciato l'email → contattabili subito
+  conSito: number;        // …di cui hanno lasciato l'URL store → azienda identificabile
+}
+
 interface VersionData {
   total: number;          // page loads (all sessions)
   realAttempts: number;   // sessions with actual interaction
   completed: number;
   steps: StepData[];
   timing: TimingStats;
+  revenue: RevenueData[]; // fatturato dichiarato da CHI NON HA COMPLETATO
 }
+
+/* Fasce fatturato del quiz. inTarget = ICP Mailift (25k–300k+).
+   Serve a distinguere due diagnosi opposte: "non arriva traffico in target"
+   (problema di angle/crowd) vs "arriva ma lo perdo" (problema di funnel). */
+const REVENUE_BANDS: { value: string; label: string; inTarget: boolean }[] = [
+  { value: 'under-10k', label: 'Meno di 10k',   inTarget: false },
+  { value: '10-25k',    label: '10 – 25k',      inTarget: false },
+  { value: '25-50k',    label: '25 – 50k',      inTarget: true  },
+  { value: '50-100k',   label: '50 – 100k',     inTarget: true  },
+  { value: '100-300k',  label: '100 – 300k',    inTarget: true  },
+  { value: '300k+',     label: 'Oltre 300k',    inTarget: true  },
+];
 
 const isGhostSession = (row: any): boolean => {
   // Ghost = page load with no interaction at all
@@ -296,7 +318,25 @@ const DropoffAnalytics: React.FC = () => {
           max: durations.length ? durations[durations.length - 1] : 0,
         };
 
-        result[version.id] = { total, realAttempts, completed, steps, timing };
+        /* Fatturato dichiarato da chi NON ha completato.
+           Chi ha risposto alla domanda fatturato ha già dichiarato il dato più
+           importante: se è in target ed è uscito, è un lead perso, non traffico
+           sbagliato. `conEmail` e `conSito` dicono quanti sono ancora
+           raggiungibili (l'email arriva dal prefill della landing, l'URL store
+           identifica comunque l'azienda anche senza email). */
+        const revenue: RevenueData[] = REVENUE_BANDS.map(band => {
+          const righe = vRows.filter(r =>
+            !r.completed && (r.form_data as any)?.monthlyRevenue === band.value);
+          const nonVuoto = (v: unknown) => typeof v === 'string' && v.trim() !== '';
+          return {
+            ...band,
+            abbandoni: righe.length,
+            conEmail: righe.filter(r => nonVuoto((r.form_data as any)?.email)).length,
+            conSito:  righe.filter(r => nonVuoto((r.form_data as any)?.website)).length,
+          };
+        });
+
+        result[version.id] = { total, realAttempts, completed, steps, timing, revenue };
       }
 
       setVersionData(result);
@@ -476,6 +516,70 @@ const DropoffAnalytics: React.FC = () => {
                   </div>
                 )}
               </div>
+
+              {/* Fatturato di chi ha abbandonato — distingue "crowd sbagliato"
+                  da "lead in target perso nel funnel" */}
+              {(() => {
+                const bands = current.revenue || [];
+                const totale = bands.reduce((s, b) => s + b.abbandoni, 0);
+                const target = bands.filter(b => b.inTarget);
+                const nTarget = target.reduce((s, b) => s + b.abbandoni, 0);
+                const nRecuperabili = target.reduce((s, b) => s + Math.max(b.conEmail, b.conSito), 0);
+                return (
+                  <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
+                    <div className="flex items-center justify-between mb-1 flex-wrap gap-2">
+                      <h3 className="text-white font-semibold">💰 Fatturato di chi NON ha completato</h3>
+                      <span className="text-xs text-slate-500">{totale} abbandoni con fatturato dichiarato</span>
+                    </div>
+                    <p className="text-slate-500 text-xs mb-4">
+                      Se qui trovi gente in target, il problema è il funnel — non il pubblico.
+                    </p>
+
+                    {totale === 0 ? (
+                      <p className="text-slate-500 text-sm">
+                        Nessuno ha abbandonato dopo aver dichiarato il fatturato nel periodo scelto.
+                      </p>
+                    ) : (
+                      <>
+                        <div className="space-y-2">
+                          {bands.map(b => {
+                            const pct = totale > 0 ? (b.abbandoni / totale) * 100 : 0;
+                            return (
+                              <div key={b.value} className="flex items-center gap-3">
+                                <span className={`w-28 shrink-0 text-xs ${b.inTarget ? 'text-amber-300 font-semibold' : 'text-slate-400'}`}>
+                                  {b.label}{b.inTarget && ' ★'}
+                                </span>
+                                <div className="flex-1 h-5 bg-slate-900/60 rounded overflow-hidden">
+                                  <div
+                                    className={`h-full ${b.inTarget ? 'bg-amber-400' : 'bg-slate-600'}`}
+                                    style={{ width: `${pct}%` }}
+                                  />
+                                </div>
+                                <span className="w-10 shrink-0 text-right text-sm font-bold text-white">{b.abbandoni}</span>
+                                <span className="w-32 shrink-0 text-right text-[11px] text-slate-500">
+                                  {b.abbandoni > 0 ? `${b.conEmail} email · ${b.conSito} sito` : '—'}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        <div className="mt-4 pt-4 border-t border-slate-700 grid grid-cols-2 gap-3">
+                          <div className="bg-slate-900/50 rounded-lg p-3 border border-slate-700">
+                            <p className="text-slate-400 text-xs mb-1">In target (25k+) persi</p>
+                            <p className="text-lg font-bold text-amber-300">{nTarget}</p>
+                          </div>
+                          <div className="bg-slate-900/50 rounded-lg p-3 border border-slate-700">
+                            <p className="text-slate-400 text-xs mb-1">…di cui raggiungibili</p>
+                            <p className="text-lg font-bold text-green-400">{nRecuperabili}</p>
+                            <p className="text-slate-500 text-[11px] mt-1">hanno lasciato email o URL store</p>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                );
+              })()}
 
               {/* Funnel */}
               <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
