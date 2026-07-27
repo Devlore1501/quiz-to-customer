@@ -3,6 +3,7 @@ import type { Session } from '@supabase/supabase-js';
 import { Input } from '@/components/ui/input';
 import { AdminSurvey } from '@/components/AdminSurvey';
 import DropoffAnalytics from '@/components/DropoffAnalytics';
+import RecoverableLeads from '@/components/RecoverableLeads';
 import AdminWebhookTester from '@/components/AdminWebhookTester';
 import { Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -268,6 +269,9 @@ const AdminReport: React.FC = () => {
         </div>
         {adminTab === 'survey' ? <AdminSurvey /> : adminTab === 'dropoff' ? (
           <div className="max-w-6xl mx-auto px-4 pb-8">
+            {/* Prima le persone da ricontattare, poi le statistiche:
+                è l'unico blocco su cui si agisce oggi stesso. */}
+            <RecoverableLeads />
             <DropoffAnalytics />
           </div>
         ) : (
